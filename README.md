@@ -1,6 +1,12 @@
-# singlet
+# singlet v.0.0.99
 
-Easy and fast single-cell analysis in R for decomposing coordinated gene activities and classifying cell identities, without devils in the details.
+Singlet is an R toolkit for fast and simple single-cell analysis:
+* clustering
+* dimensional reduction
+
+For vignettes, examples, and documentation, see https://zachdebruine.com/singlet
+
+Singlet stable releases are publicly available on CRAN. Development versions on GitHub may be unstable. Singlet is being actively developed.
 
 Get started: `install.packages("singlet")`
 
@@ -9,21 +15,18 @@ Get started: `install.packages("singlet")`
 cluster cells by alternating division/agglomeration from raw counts, find nearest neighbors by recursive bipartitioning from raw counts, and visualize on a UMAP reduction:
 UMAP plot, heatmap of marker genes in clusters
 
-Run non-negative matrix factorization on raw counts, find coordinated gene activities, map paracrine signaling activity between factors, and plot paracrine signaling networks on a UMAP reduction:
-PLOTS
+Run non-negative matrix factorization on raw counts, find coordinated gene activities.
 
 Transfer metadata from cells in one experiment onto cells in another experiment.
 
 basic data QC/preprocessing
 
 ## Why singlet?
-* very fast. Almost no patience needed
-* algos are simple, almost no hyperparameters
-* simple functions return simple results
-* friendly to memory
+* fastest-in-class performance
+* simple and intuitive algorithms
+* simple functions returning simple results
+* friendly to memory (your computers memory, that is)
 * pretty plots
-* normalization, scaling, and centering are NEVER needed. Raw counts to the moon!
-* always uses all genes, because only highly variable genes are NOT ENOUGH
 
 # Dependencies
 * `RcppEigen` C++ library for all heavy lifting
