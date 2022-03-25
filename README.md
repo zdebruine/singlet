@@ -1,36 +1,31 @@
 # singlet v.0.0.99
 
-Singlet is an R toolkit for fast and simple single-cell analysis:
-* clustering
-* dimensional reduction
+Singlet is an R toolkit for fast, robust, and interpretable single-cell experiment analysis:
 
-For vignettes, examples, and documentation, see https://zachdebruine.com/singlet
+* dimensional reduction with NMF
+* dataset integration
+* multimodal integration
+* biological process discovery
+* clustering (divisive and graph-based clustering)
+* spatial RNA deconvolution
 
-Singlet stable releases are publicly available on CRAN. Development versions on GitHub may be unstable. Singlet is being actively developed.
+## Plan
 
-Get started: `install.packages("singlet")`
+End-to-end single-cell analysis package capable of scaling to the largest datasets being generated today.
 
-### What singlet can do:
+Performant sparse matrix operations, dimensional reduction, and clustering. R S4 front-end with backend largely in Rcpp, and Eigen C++ BLAS for linear algebra operations.
 
-cluster cells by alternating division/agglomeration from raw counts, find nearest neighbors by recursive bipartitioning from raw counts, and visualize on a UMAP reduction:
-UMAP plot, heatmap of marker genes in clusters
+Likely not a Bioconductor package, because the Bioconductor S4 ecosystem is very unfriendly to C++ wrappers.
+
 
 Run non-negative matrix factorization on raw counts, find coordinated gene activities.
 
-Transfer metadata from cells in one experiment onto cells in another experiment.
+## Development timeline
 
-basic data QC/preprocessing
+Before Bioc2022:  Package skeleton with automated NMF dimensional reduction, UMAP visualization, graph-based and divisive clustering, factor annotation against GO terms and any sample metadata in the assay.
 
-## Why singlet?
-* fastest-in-class performance
-* simple and intuitive algorithms
-* simple functions returning simple results
-* friendly to memory (your computers memory, that is)
-* pretty plots
+Late 2022: Add support for multi-experiment integration (identify and remove batch effect factors) and multi-modal integration.
 
-# Dependencies
-* `RcppEigen` C++ library for all heavy lifting
-* `ggplot2` for visualization
-* `Matrix` for sparse matrix support
+Publish first major manuscript for the project.
 
-Absolutely everything else is done in-house in C++. YAY!
+2023: Meta-analysis of existing data across many experiments and modalities to learn master models of biological information. Use this information to annotate single-cell RNA, CITE, ATAC assays.
