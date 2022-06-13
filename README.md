@@ -6,6 +6,20 @@ Singlet is an R toolkit for single-cell data analysis using non-negative matrix 
 
 Analyze your single-cell assay with NMF:
 
+```{R}
+devtools::install_github("zdebruine/singlet")
+library(singlet)
+library(Seurat)
+library(SeuratData)
+data(pbmc3k)
+pbmc3k <- pbmc3k %>% 
+  NormalizeData() %>% 
+  RunNMF(k = 2:30, n_replicates = 3) %>% 
+  RunUMAP()
+RankPlot(pbmc3k)
+DimPlot(pbmc3k)
+```
+
 ![NMF workflow](https://github.com/zdebruine/singlet/blob/main/readme_figures/Picture1.png)
 
 NMF can do almost anything that PCA can do, but also:
@@ -22,13 +36,27 @@ Singlet directly provides the **absolute fastest implementation of NMF**. Cross-
 
 Learn an integrated model of information across modalities or experiments and explore **shared and unique** signals in each of your groups.
 
+```{R}
+library(singlet)
+library(Seurat)
+library(SeuratData)
+data(ifnb)
+ifnb <- ifnb %>% 
+  NormalizeData() %>% 
+  RunNMF(k = 30, split.by = "stim") %>% 
+  RunLNMF(split.by = "stim")
+MetadataPlot(ifnb, split.by = "stim")
+ifnb <- RunUMAP(ifnb, reduction = "lnmf", dims = GetSharedFactors(ifnb))
+DimPlot(ifnb)
+```
+
 ![Integration with NMF](https://github.com/zdebruine/singlet/blob/main/readme_figures/Picture2.png)
 
-Unlike Seurat anchor-based methods, integration with LNMF preserves unique signal and thus allows you to understand both the **shared and unique** signals in your different modalities/experiments.
+Unlike Seurat anchor-based methods, integration with LNMF preserves unique signals in the reduction and thus allows you to understand both the **shared and unique** signals in your different modalities/experiments.
 
-Unlike LIGER integrative NMF, integration with LNMF perfectly separates unique signal and does not assume that shared and unique signals are of equal rank and linearly and additively correspond to one another.
+Unlike LIGER integrative NMF, integration with LNMF perfectly separates unique signal and does not assume that shared and unique signals are of equal rank or correspond linearly and additively to one another.
 
-LNMF falls short when a joint model does not capture significant overlap between groups. Work is ongoing to provide initializations to LNMF that address this.
+Why not LNMF? If the initialization for LNMF (a joint NMF model from `RunNMF`) cannot capture significant overlap between groups, then LNMF will not be able to do so either. Work is ongoing to provide initializations to LNMF that address this. However, if joint NMF cannot detect significant signal overlap, care should be taken in interpreting results and "forcing" too much integration between highly disparate signals.
 
 ## Ongoing Work
 
