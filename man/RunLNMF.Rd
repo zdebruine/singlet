@@ -26,6 +26,8 @@
   link.balance.rate = 0.1
 )
 
+RunLNMF(object, ...)
+
 \method{MetadataPlot}{Seurat}(object, split.by, reduction = "lnmf")
 
 GetSharedFactors(object, split.by, reduction = "lnmf")
