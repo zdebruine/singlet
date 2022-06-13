@@ -4,6 +4,10 @@ Singlet is an R toolkit for single-cell data analysis using non-negative matrix 
 
 ## Dimensional Reduction with NMF
 
+Analyze your single-cell assay with NMF!  NMF can do anything that PCA can do, but better:
+
+![NMF workflow](https://github.com/zdebruine/singlet/blob/main/readme_figures/Picture1.png)
+
 NMF can be used to do almost anything that PCA can do. In addition, NMF:
 * imputes missing signal
 * always has an optimal rank
