@@ -249,10 +249,16 @@ RankPlot <- function(object, reduction = "nmf") {
   UseMethod("RankPlot")
 }
 
+#' @export 
+#' @rdname RunNMF
+#'
 RunNMF <- function(object, ...){
   UseMethod("RunNMF")
 }
 
+#' @export
+#' @rdname RunLNMF
+#'
 RunLNMF <- function(object, ...){
   UseMethod("RunLNMF")
 }
@@ -293,3 +299,11 @@ GetUniqueFactors <- function(object, split.by, reduction = "lnmf"){
     stop("this Seurat object does not contain the requested reductions slot")
   which((colnames(object@reductions[[reduction]]@cell.embeddings) %in% names(which(apply(MetadataSummary(t(object@reductions[[reduction]]@cell.embeddings), object@meta.data[[split.by]]), 1, function(x) min(x) == 0)))))
 }
+
+#' Run Gene Set Enrichment Analysis
+#' 
+#' Perform GSEA on feature loadings in a reduction contained within a Seurat object (i.e. NMF factors) using MSIGDBR pathways or manually provided pathways.
+#' 
+RunGSEA.Seurat <- function(object, reduction = "nmf"){
+  
+} 
