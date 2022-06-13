@@ -267,8 +267,19 @@ MetadataPlot <- function(object, ...){
   UseMethod("MetadataPlot")
 }
 
+#' @export
+#' @rdname RunNMF
+#'
 .S3method("RunNMF", "Seurat", RunNMF.Seurat)
+
+#' @export
+#' @rdname RunLNMF
+#'
 .S3method("RunLNMF", "Seurat", RunLNMF.Seurat)
+
+#' @export
+#' @rdname RankPlot
+#'
 .S3method("RankPlot", "Seurat", RankPlot.Seurat)
 
 #' @export
