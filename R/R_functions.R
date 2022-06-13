@@ -1,4 +1,4 @@
-#' Run Non-negative Matrix Factorization
+#' @title Run Non-negative Matrix Factorization
 #' 
 #' @description Run NMF on a sparse matrix
 #' @param A sparse matrix (ideally variance-stabilized) of data for genes x cells (rows x columns)
@@ -9,14 +9,16 @@
 #' @param L1 L1/LASSO penalty to increase sparsity of model
 #' @param threads number of threads for parallelization across CPUs, 0 = use all available threads
 #' @param precision \code{"float"} or \code{"double"}. High tolerance models may not be achievable with \code{"float"} precision.
+#' @rdname run_nmf
+#' @export
 #' 
 run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, threads = 0, precision = "float"){
   if(L1 >= 1)
     stop("L1 penalty must be strictly in the range (0, 1]")
-
+  
   A <- as(A, "dgCMatrix")
   
-  w_init <- matrix(runif(nrow(A) * rank), rank, nrow(A))
+  w_init <- matrix(stats::runif(nrow(A) * rank), rank, nrow(A))
   model <- c_nmf(A, t(A), tol, maxit, verbose, L1, threads, w_init, matrix(), matrix(), 1, 0, precision == "float")
   sort_index <- order(model$d, decreasing = TRUE)
   model$d <- model$d[sort_index]
@@ -27,39 +29,44 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
 
 #' Determine best rank for NMF using cross-validation
 #' 
-#' @description 
+#' @description Find the rank that minimizes the mean squared error of test set reconstruction using cross-validation.
+#' 
 #' @inheritParams run_nmf
 #' @param ranks a vector of ranks at which to fit a model and compute test set reconstruction error
 #' @param n_replicates number of random test sets
 #' @param test_density fraction of values to include in the test set
-#' @param ... arguments to \code{\link{scNMF}}
+#' @return a \code{data.frame} of test set reconstruction error vs. rank of class \code{nmf_cross_validate_data}. Use \code{plot} method to visualize or \code{min} to compute optimal rank.
+#' @rdname cross_validate_nmf
+#' @param ... additional arguments (not implemented)
+#' @export
+#' 
 cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 100, verbose = 1, L1 = 0.01, threads = 0, test_density = 0.05, precision = "float"){
   if(L1 >= 1)
     stop("L1 penalty must be strictly in the range (0, 1]")
   
   if(test_density > 0.2 | test_density < 0.01)
     stop("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb")
-
+  
   A <- as(A, "dgCMatrix")
-  At <- t(A)
-
+  At <- Matrix::t(A)
+  
   df <- expand.grid("k" = ranks, "rep" = 1:n_replicates)
-  w_init <- lapply(1:n_replicates, function(x) matrix(runif(nrow(A) * max(ranks)), max(ranks), nrow(A)))
+  w_init <- lapply(1:n_replicates, function(x) matrix(stats::runif(nrow(A) * max(ranks)), max(ranks), nrow(A)))
   df$test_error <- 0
   if(verbose == 1){
-    pb <- txtProgressBar(min = 0, max = nrow(df), style = 3)
+    pb <- utils::txtProgressBar(min = 0, max = nrow(df), style = 3)
   }
   for(i in 1:nrow(df)){
     rep <- df$rep[[i]]
     if(verbose > 1)
       cat(paste0("k = ", df$k[[i]], ", rep = ", rep, " (", i, "/", nrow(df), "):\n"))
     df$test_error[[i]] <- c_nmf(A, At, tol, maxit, verbose > 1, L1, threads, w_init[[rep]][1:df$k[[i]], ], matrix(0, 1, 1), matrix(0, 1, 1), abs(.Random.seed[[3 + rep]]), round(1 / test_density), precision == "float")$test_mse
-    if(verbose == 1) setTxtProgressBar(pb, i)
+    if(verbose == 1) utils::setTxtProgressBar(pb, i)
     if(verbose > 1) cat(paste0("test set error: ", sprintf(df$test_error[[i]], fmt = '%#.4e'), "\n\n"))
   }
   if(verbose == 1) close(pb)
   df$rep <- factor(df$rep)
-  class(df) <- c("nmf_cross_validation_data", "data.frame")
+  class(df) <- c("cross_validate_nmf_data", "data.frame")
   df
 }
 
@@ -70,23 +77,24 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
 #' @inheritParams run_nmf
 #' @param w initial matrix for 'w', usually taken from the result of \code{run_nmf}, of dimensions \code{nrow(A) x rank}.
 #' @param link_h matrix giving the linkage weight (usually in the range \code{(0, 1)}) of dimensions \code{rank x ncol(A)}.
-#' 
+#' @param link_w matrix giving the linkage weight of dimensions \code{nrow(A) x rank}.
+#'
 run_linked_nmf <- function(A, w, link_h = NULL, link_w = NULL, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, threads = 0, precision = "float"){
   if(is.null(link_h) & is.null(link_w))
     stop("both link_h and link_w cannot be NULL. Specify at least one linking matrix.")
-
+  
   if(!is.null(link_h) & nrow(link_h) != ncol(w))
     stop("number of rows in 'link_h' must be equal to the nubmer of columns in 'w'")
   
   if(!is.null(link_h) & ncol(link_h) != ncol(A))
     stop("number of columns in 'link_h' must be equal to the number of columns in 'A'")
-
+  
   if(!is.null(link_w) & ncol(link_w) != ncol(w))
     stop("number of columns in 'link_w' must be equal to the nubmer of columns in 'w'")
   
   if(!is.null(link_w) & nrow(link_w) != nrow(A))
     stop("number of rows in 'link_w' must be equal to the number of rows in 'A'")
-
+  
   if(is.null(link_h)) {
     link_h <- matrix(0, 1, 1)
   }
@@ -97,7 +105,7 @@ run_linked_nmf <- function(A, w, link_h = NULL, link_w = NULL, tol = 1e-4, maxit
   
   if(L1 >= 1)
     stop("L1 penalty must be strictly in the range (0, 1]")
-
+  
   if(nrow(w) != nrow(A))
     stop("number of rows in 'w' must be equal to the number of rows in 'A'")
   
@@ -114,24 +122,26 @@ run_linked_nmf <- function(A, w, link_h = NULL, link_w = NULL, tol = 1e-4, maxit
   model
 }
 
-GetBestRank <- function(df){
-  if(!("nmf_cross_validation_data" %in% class(df)))
+GetBestRank <- function(df, ...){
+  if(!("cross_validate_nmf_data" %in% class(df)))
     stop("input data.frame must be a result of 'cross_validate_nmf'")
   
   (df %>% group_by(k) %>% dplyr::summarize(Mean = mean(test_error)) %>% slice(which.min(Mean)))$k
 }
 
-RankPlot <- function(df){
-  if(!("nmf_cross_validation_data" %in% class(df)))
-    stop("input data.frame must be a result of 'cross_validate_nmf'")
-  
+#' @param x the result of \code{cross_validate_nmf}
+#' @rdname cross_validate_nmf
+#' @export
+#' 
+plot.cross_validate_nmf_data <- function(x, ...){
+
   # normalize each replicate to the same minimum
-  for(rep in levels(df$rep)){
-    idx <- which(df$rep == rep)
-    df$test_error[idx] <- df$test_error[idx] / min(df$test_error[idx])
+  for(rep in levels(x$rep)){
+    idx <- which(x$rep == rep)
+    x$test_error[idx] <- x$test_error[idx] / min(x$test_error[idx])
   }
-  best_rank <- GetBestRank(df)
-  ggplot(df, aes(k, test_error, color = factor(rep))) + 
+  best_rank <- min(x)
+  ggplot(x, aes(k, test_error, color = factor(rep))) + 
     geom_point() + 
     geom_line() + 
     theme_classic() + 
@@ -140,9 +150,19 @@ RankPlot <- function(df){
     geom_vline(xintercept = best_rank, linetype = "dashed", color = "red")
 }
 
+.S3method("plot", "cross_validate_nmf_data", plot.cross_validate_nmf_data)
+.S3method("min", "cross_validate_nmf_data", GetBestRank)
+
+#' Summarize contribution of sample groups to NMF factors
+#' 
+#' Calculate the mean weight of samples in discrete and unique groups to each factor
+#' 
 #' @param h matrix giving factors as rows and samples as columns
 #' @param factor_data a factor of the same length as the number of columns in \code{h}
 #' @param reorder sort results by proportion in each group (uses \code{hclust} if >2 groups)
+#' @return \code{data.frame} of mean weights for each sample group within each factor of class \code{nmf_metadata_summary}. Use the \code{plot} method to visualize.
+#' @rdname MetadataSummary
+#'
 MetadataSummary <- function(h, factor_data, reorder = TRUE){
   factor_data <- as.factor(factor_data)
   if(is.null(rownames(h))) rownames(h) <- paste0("factor", 1:nrow(h))
@@ -162,12 +182,13 @@ MetadataSummary <- function(h, factor_data, reorder = TRUE){
   }
   t(m)
   m <- as.data.frame(m)
+  class(m) <- c("nmf_metadata_summary", "data.frame")
+  m
 }
 
-MetadataPlot <- function(h, factor_data, reorder = TRUE){
-  m <- MetadataSummary(h, factor_data, reorder)
-  m <- reshape2::melt(as.matrix(m))
-  colnames(m) <- c("factor", "group", "frac")
+plot.nmf_metadata_summary <- function(x, ...){
+  m <- reshape2::melt(as.matrix(x))
+  colnames(m) <- c("group", "factor", "frac")
   ggplot(m, aes(x = factor(factor, levels = unique(factor)), y = frac, fill = group)) + 
     geom_bar(position = "fill", stat = "identity") +
     theme_classic() +
@@ -176,9 +197,14 @@ MetadataPlot <- function(h, factor_data, reorder = TRUE){
     scale_y_continuous(expand = c(0, 0))
 }
 
-MetadataHeatmap <- function(h, factor_data, reorder = TRUE){
-  m <- MetadataSummary(h, factor_data, reorder)
-  m <- reshape2::melt(m)
+.S3method("plot", "nmf_metadata_summary", plot.nmf_metadata_summary)
+
+#' @export
+#' @rdname MetadataSummary
+#' @param x result of \code{MetadataSummary}
+#' 
+MetadataHeatmap <- function(x){
+  m <- reshape2::melt(as.matrix(x))
   colnames(m) <- c("factor", "group", "frac")
   ggplot(m, aes(x = factor(factor, levels = unique(factor)), y = group, fill = frac)) + 
     geom_tile() +
