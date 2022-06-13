@@ -2,6 +2,19 @@
 
 Singlet is an R toolkit for single-cell data analysis using non-negative matrix factorization.
 
+## Get Started!
+
+```{R}
+library(devtools)
+install_github("zdebruine/singlet")
+library(singlet)
+```
+
+Vignettes:
+* Guided clustering tutorial with `SeuratData::pbmc3k` dataset
+* Integrate `SeuratData::ifnb` dataset (PBMC +/- stimulation)
+* Multi-modal integration with `SeuratData::bmcite`
+
 ## Dimensional Reduction with NMF
 
 Analyze your single-cell assay with NMF:
