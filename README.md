@@ -12,7 +12,7 @@ library(singlet)
 
 Vignettes:
 * Guided clustering tutorial with `SeuratData::pbmc3k` dataset
-* Multi-experiment integration with `SeuratData::ifnb` dataset (PBMC +/- stimulation)
+* Batch integration with `SeuratData::ifnb` dataset (PBMC +/- stimulation)
 * Multi-modal integration with `SeuratData::bmcite`
 
 ## Dimensional Reduction with NMF
