@@ -60,7 +60,7 @@ Why not LNMF? If signals are highly disparate, they will not be aligned. Work is
 
 ## Ongoing Work
 
-Singlet is being actively developed, thanks to funding from the Chan Zuckerberg Biohub:
+Singlet is being actively developed:
 
 * A new single-cell data class that uses 10x less memory than SCE or Seurat (and much faster)
 * Full support for Seurat and SingleCellExperiment classes
