@@ -231,7 +231,7 @@ RunLNMF.Seurat <- function(
 #' @rdname RankPlot
 #' @param reduction the NMF reduction slot name (result of \code{RunNMF} where \code{k} was an array)
 RankPlot.Seurat <- function(object, reduction = "nmf"){
-  RankPlot(x@reductions[[reduction]]@misc$cv_data)
+  RankPlot(object@reductions[[reduction]]@misc$cv_data)
 }
 
 #' Plot NMF cross-validation results
