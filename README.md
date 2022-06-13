@@ -54,9 +54,9 @@ DimPlot(ifnb)
 
 Unlike Seurat anchor-based methods, integration with LNMF preserves unique signals in the reduction and thus allows you to understand both the **shared and unique** signals in your different modalities/experiments.
 
-Unlike LIGER integrative NMF, integration with LNMF perfectly separates unique signal and does not assume that shared and unique signals are of equal rank or correspond linearly and additively to one another.
+Unlike LIGER integrative NMF, integration with LNMF completely "unties" shared and unique signals from one another and does not assume that both shared and unique signals in any given factor can be mapped to a given sample by the same weight (and thus correspond linearly and additively to one another).
 
-Why not LNMF? If the initialization for LNMF (a joint NMF model from `RunNMF`) cannot capture significant overlap between groups, then LNMF will not be able to do so either. Work is ongoing to provide initializations to LNMF that address this. However, if joint NMF cannot detect significant signal overlap, care should be taken in interpreting results and "forcing" too much integration between highly disparate signals.
+Why not LNMF? If signals are highly disparate, they will not be aligned. Work is ongoing to provide initializations to LNMF that can align even the most disparate signals. However, care should be taken to properly interpret results and avoid "forcing" too much integration when signals are radically different.
 
 ## Ongoing Work
 
