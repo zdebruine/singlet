@@ -4,6 +4,16 @@ Singlet is an R toolkit for single-cell data analysis using non-negative matrix 
 
 ## Dimensional Reduction with NMF
 
+NMF can be used to do almost anything that PCA can do. In addition, NMF:
+* imputes missing signal
+* always has an optimal rank
+* uses all the information in your assay (incl. "non-variable" genes)
+* is robust across experiments
+* learns signatures of transcriptional activity
+* is colinear, rather than orthogonal
+
+Singlet directly provides the absolute fastest implementation of NMF. Cross-validation can take a few minutes for datasets with a few ten thousand cells, but is extremely scalable and runs excellently on HPC nodes or average laptops alike.
+
 ## Integration with Linked NMF
 
 ## Ongoing Work
