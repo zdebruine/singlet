@@ -1,0 +1,128 @@
+---
+title: "NMF-based Single-cell Analysis"
+author: "Zach DeBruine"
+date: "6/13/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Set up the Seurat Object
+
+This tutorial introduces guided clustering and basic gene set enrichment analysis using `singlet`. It uses the `SeuratData::pbmc3k` dataset and overlaps with the Seurat introductory tutorial on [guided clustering] (satijalab.org/seurat/articles/pbmc3k_tutorial.html) using the `SeuratData::pbmc3k` dataset.
+
+```{R, message = FALSE, warning = FALSE}
+library(singlet)
+library(Seurat)
+library(SeuratData)
+SeuratData::InstallData("pbmc3k")
+data(pbmc3k)
+pbmc3k
+```
+
+## QC and selecting cells for further analysis
+
+Remove doublets, very low-quality cells, but do not regress out mitochondrial genes. NMF will deal with systematic technical signal or noise, and regression of any form will hurt downstream analysis.
+
+In general, NMF requires far less "data cleaning" than PCA.
+
+```{R}
+pbmc3k[["percent.mt"]] <- PercentageFeatureSet(pbmc3k, pattern = "^MT-")
+
+pbmc3k <- subset(pbmc3k, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 5)
+```
+
+## Normalize Data
+
+Here we apply standard log-normalization, which works very well, but any form of approximate variance stabilizing transformation is suitable for helping NMF find meaningful solutions. Raw counts are not suitable for NMF.
+
+```{R}
+pbmc3k <- NormalizeData(pbmc3k, verbose = FALSE)
+```
+
+## Run NMF
+
+NMF can be run on all features using normalized counts. `RunNMF` will automatically run cross-validation on an array of ranks that you provide, identify the best rank, and learn a model at that rank. 
+
+Cross-validation can be taken some time. It is useful to start with a coarse-grained scan of a wide range of ranks and then focus on a narrow window of ranks with several replicates. `RunNMF` can also be run efficiently on a multi-threaded HPC node.
+
+```{R, message = FALSE, warning = FALSE}
+set.seed(123)
+pbmc3k <- RunNMF(pbmc3k, k = seq(2, 30, 2))
+RankPlot(pbmc3k)
+```
+
+A good model has already been learned at the optimal rank, but we may wish to learn a still higher-quality model:
+
+```{R, message = FALSE, warning = FALSE}
+pbmc3k <- RunNMF(pbmc3k, k = 16, tol = 1e-4, precision = "double")
+```
+
+## Visualization
+
+Plot the representation of various metadata (i.e. Seurat-annotated cell types) in each factor:
+
+```{R}
+MetadataPlot(pbmc3k, "seurat_annotations", reduction = "nmf")
+```
+
+Here we simply do what the Seurat Guided Clustering tutorial does, but for NMF:
+
+```{R}
+VizDimLoadings(pbmc3k, dims = 14, reduction = "nmf")
+```
+
+## Cell Clustering
+
+The `pbmc3k` dataset comes with clusters that have been determined by graph-based clustering on a PCA embedding, followed by expert annotation. 
+
+We will determine clusters by graph-based clustering on an NMF embedding, and then compare them to those PCA-guided clusters.
+
+```{R}
+pbmc3k <- FindNeighbors(pbmc3k, dims = 1:ncol(pbmc3k@reductions$nmf), reduction = "nmf")
+pbmc3k <- FindClusters(pbmc3k, resolution = 0.5)
+```
+
+Compare NMF clusters to Seurat PCA-determined clusterings:
+
+```{R}
+df <- data.frame(
+  "nmf_clusters" = pbmc3k@meta.data$seurat_clusters,
+  "pca_clusters" = pbmc3k@meta.data$seurat_annotations)
+
+df <- df %>% group_by(nmf_clusters) %>% count(pca_clusters)
+
+ggplot(df, aes(nmf_clusters, n, fill = pca_clusters)) + 
+  geom_bar(position = "fill", stat = "identity") + 
+  theme_classic() + 
+  scale_y_continuous(expand = c(0, 0)) + 
+  labs(x = "NMF-guided cluster", 
+       y = "representation in cluster", 
+       fill = "PCA-guided cluster")
+```
+
+Since there is nearly a 1:1 correspondence between PCA- and NMF-guided clusters, we can just transfer the labels based on majority overlap:
+
+```{R}
+levels(pbmc3k@meta.data$seurat_clusters) <- df %>% 
+  slice(which.max(n)) %>% 
+  pull(pca_clusters)
+
+pbmc3k <- RunUMAP(pbmc3k, reduction = "nmf", dims = 1:ncol(pbmc3k@reductions$nmf))
+
+DimPlot(pbmc3k, reduction = "umap", group.by = "seurat_clusters")
+```
+
+Graph-based clustering on NMF and PCA embeddings give very similar results.
+
+## Gene Set Enrichment Analysis
+
+singlet makes GSEA with `fgsea` and `msigdbr` easy. Simply, the weights in the NMF "w" matrix are used as rankings for terms in the enrichment analysis.
+
+```{R}
+pbmc3k <- RunGSEA(pbmc3k, reduction = "nmf", category = "C7", min.size = 10, max.size = 250)
+
+GSEAHeatmap(pbmc3k, reduction = "nmf", max.terms.per.factor = 3)
+```
