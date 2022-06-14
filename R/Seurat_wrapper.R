@@ -333,44 +333,45 @@ GetUniqueFactors <- function(object, split.by, reduction = "lnmf"){
 #' @returns a Seurat object, with GSEA information in the misc slot. BH-adj p-values are on a -log10 scale.
 #' @export
 #' 
-RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", category = "C5", min.size = 25, max.size = 500, collapse = TRUE, dims = NULL, verbose = TRUE, padj.sig = 0.01, ...){
+RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", category = "C5", 
+                    min.size = 10, max.size = 500, collapse = TRUE, dims = NULL, 
+                    verbose = TRUE, padj.sig = 0.01, ...){
   
   if(verbose) cat("fetching gene sets\n")
-  gene_sets = msigdbr(species = "Homo sapiens", category = "C5")
+  gene_sets = msigdbr(species = species, category = category)
   
   if(verbose) cat("filtering pathways\n")
   pathways = split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
-  pathways <- pathways[lapply(pathways, length) > 25]
+  pathways <- pathways[lapply(pathways, length) > min.size]
   
   if(verbose) cat("filtering genes in pathways to those in reduction\n")
   genes_in_pathways <- unique(unlist(pathways))
-  w <- pbmc3k@reductions$nmf@feature.loadings
+  w <- object@reductions[[reduction]]@feature.loadings
   if(!is.null(dims))
     w <- w[,dims]
   if(verbose) cat("filtering genes in reduction to those in pathways\n")
   w <- w[which(rownames(w) %in% genes_in_pathways), ]
   pathways <- lapply(pathways, function(x) x[x %in% rownames(w)])
   v <- lapply(pathways, length)
-  pathways <- pathways[which(v > 25 & v < 500)]
+  pathways <- pathways[which(v > min.size & v < max.size)]
   
   cat("running GSEA on", ncol(w), "factors...\n")
   pb <- utils::txtProgressBar(min = 0, max = ncol(w), style = 3)
   results <- collapsed <- list()
   for(i in 1:ncol(w)){
-    ranks <- w[, i]
+    ranks <- sort(w[, i])
     results[[i]] <- suppressWarnings(fgseaMultilevel(
       pathways, ranks, minSize = min.size, maxSize = max.size, scoreType = "pos", ...))
     
     if(collapse){
       collapsedPathways <- collapsePathways(
         results[[i]][order(pval)][padj < padj.sig], pathways, ranks)
-      collapsed[[i]] <- fgsea_res[pathway %in% collapsedPathways$mainPathways][
-        order(-NES), pathway]
+      collapsed[[i]] <- results[[i]][pathway %in% collapsedPathways$mainPathways]
     }
     utils::setTxtProgressBar(pb, i)
   }
   close(pb)
-  
+
   # filter results to only collapsed pathways
   if(collapse){
     collapsed <- unique(unlist(collapsed))
@@ -383,9 +384,9 @@ RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", categor
   padj <- do.call(cbind, lapply(results, function(x) x$padj))
   es <- do.call(cbind, lapply(results, function(x) x$ES))
   nes <- do.call(cbind, lapply(results, function(x) x$NES))
-  
-  idx <- which(apply(padj, 1, function(x) min(x) < padj.sig))
   rownames(pval) <- rownames(padj) <- rownames(es) <- rownames(nes) <- results[[1]]$pathway
+
+  idx <- which(apply(padj, 1, function(x) min(x) < padj.sig))
   
   if(!is.null(dims)) {
     dims <- paste0(reduction, dims)
@@ -416,7 +417,7 @@ RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", categor
 #' @param max.terms.per.factor show this number of top terms for each factor
 #' @return ggplot2 object
 #' @export
-GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 5){
+GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3){
   df <- object@reductions[[reduction]]@misc$gsea$padj
   
   # find markers for each factor based on the proportion of signal in that factor
@@ -424,7 +425,7 @@ GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 5){
   terms <- c()
   for(i in 1:ncol(df2)){
     terms_i <- df[,i]
-    idx <- terms_i > 2
+    idx <- terms_i > -log10(0.05)
     terms_i <- terms_i[idx]
     terms_j <- df2[idx, i]
     v <- sort(terms_j, decreasing = TRUE)
@@ -442,7 +443,7 @@ GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 5){
   })
   
   # remove terms that are broadly significant
-  v <- which((rowSums(df > 2) > (ncol(df) / 2)))
+  v <- which((rowSums(df > -log10(0.05)) > (ncol(df) / 2)))
   if(length(v) > 0){
     df <- df[-v, ]
   }
@@ -460,4 +461,18 @@ GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 5){
     theme(
       axis.text.y = element_text(size = 6), 
       axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+}
+
+ClusteringToDimReduc <- function(object, group.by = "ident"){
+
+  ifelse(ident == "active.ident", idents <- as.vector(Idents(object)), idents <- as.vector(object@meta.data[[ident]]))
+  ident.names <- unique(idents)
+  if (verbose > 0) pb <- txtProgressBar(char = "=", style = 3, max = length(ident.names), width = 50)
+  m <- list()
+  for (i in 1:length(ident.names)) {
+    m[[i]] <- Matrix::rowMeans(data[, which(idents == ident.names[i])])
+    if (verbose > 0) setTxtProgressBar(pb = pb, value = i)
+  }
+  result <- do.call(cbind, m)
+  colnames(result) <- ident.names
 }

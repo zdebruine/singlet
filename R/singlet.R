@@ -21,7 +21,7 @@
 #' 
 #' See the vignettes to get started.
 #' 
-#' @import ggplot2 Seurat dplyr reshape2 Matrix utils stats methods
+#' @import ggplot2 Seurat dplyr reshape2 Matrix utils stats methods msigdbr fgsea
 #' @useDynLib singlet, .registration = TRUE
 #' @docType package
 #' @name singlet
