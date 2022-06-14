@@ -3,6 +3,7 @@
 \name{RunLNMF.Seurat}
 \alias{RunLNMF.Seurat}
 \alias{RunLNMF}
+\alias{MetadataPlot}
 \alias{MetadataPlot.Seurat}
 \alias{GetSharedFactors}
 \alias{GetUniqueFactors}
@@ -27,6 +28,8 @@
 )
 
 RunLNMF(object, ...)
+
+MetadataPlot(object, ...)
 
 \method{MetadataPlot}{Seurat}(object, split.by, reduction = "lnmf")
 

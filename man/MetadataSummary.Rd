@@ -2,10 +2,13 @@
 % Please edit documentation in R/R_functions.R
 \name{MetadataSummary}
 \alias{MetadataSummary}
+\alias{plot.nmf_metadata_summary}
 \alias{MetadataHeatmap}
 \title{Summarize contribution of sample groups to NMF factors}
 \usage{
 MetadataSummary(h, factor_data, reorder = TRUE)
+
+\method{plot}{nmf_metadata_summary}(x, ...)
 
 MetadataHeatmap(x)
 }
