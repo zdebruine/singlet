@@ -150,7 +150,14 @@ plot.cross_validate_nmf_data <- function(x, ...){
     geom_vline(xintercept = best_rank, linetype = "dashed", color = "red")
 }
 
+#' @export
+#' @rdname cross_validate_nmf
+#'
 .S3method("plot", "cross_validate_nmf_data", plot.cross_validate_nmf_data)
+
+#' @export
+#' @rdname cross_validate_nmf
+#'
 .S3method("min", "cross_validate_nmf_data", GetBestRank)
 
 #' Summarize contribution of sample groups to NMF factors
@@ -162,6 +169,7 @@ plot.cross_validate_nmf_data <- function(x, ...){
 #' @param reorder sort results by proportion in each group (uses \code{hclust} if >2 groups)
 #' @return \code{data.frame} of mean weights for each sample group within each factor of class \code{nmf_metadata_summary}. Use the \code{plot} method to visualize.
 #' @rdname MetadataSummary
+#' @export
 #'
 MetadataSummary <- function(h, factor_data, reorder = TRUE){
   factor_data <- as.factor(factor_data)
@@ -186,6 +194,9 @@ MetadataSummary <- function(h, factor_data, reorder = TRUE){
   m
 }
 
+#' @export
+#' @rdname MetadataSummary
+#'
 plot.nmf_metadata_summary <- function(x, ...){
   m <- reshape2::melt(as.matrix(x))
   colnames(m) <- c("group", "factor", "frac")
@@ -197,6 +208,9 @@ plot.nmf_metadata_summary <- function(x, ...){
     scale_y_continuous(expand = c(0, 0))
 }
 
+#' @export
+#' @rdname MetadataSummary
+#'
 .S3method("plot", "nmf_metadata_summary", plot.nmf_metadata_summary)
 
 #' @export

@@ -263,6 +263,9 @@ RunLNMF <- function(object, ...){
   UseMethod("RunLNMF")
 }
 
+#' @export
+#' @rdname RunLNMF
+#'
 MetadataPlot <- function(object, ...){
   UseMethod("MetadataPlot")
 }
@@ -311,10 +314,150 @@ GetUniqueFactors <- function(object, split.by, reduction = "lnmf"){
   which((colnames(object@reductions[[reduction]]@cell.embeddings) %in% names(which(apply(MetadataSummary(t(object@reductions[[reduction]]@cell.embeddings), object@meta.data[[split.by]]), 1, function(x) min(x) == 0)))))
 }
 
-#' Run Gene Set Enrichment Analysis
+#' Run Gene Set Enrichment Analysis on a Reduction
+#'
+#' Run GSEA to identify gene sets that are enriched within NMF factors. 
+#'
+#' @import msigdbr fgsea
+#' @param object a Seurat object
+#' @param reduction dimensional reduction to use
+#' @param species species for which to load gene sets
+#' @param category msigdbr gene set category (i.e. "H", "C5", etc.)
+#' @param min.size minimum number of terms in a gene set
+#' @param max.size maximum number of terms in a gene set
+#' @param collapse filter pathways to remove highly redundant terms
+#' @param dims factors in the reduction to use, default \code{NULL} for all factors
+#' @param verbose print progress to console
+#' @param padj.size significance cutoff for BH-adjusted p-values (default 0.01)
+#' @param ... additional arguments to \code{fgseaMultilevel}
+#' @returns a Seurat object, with GSEA information in the misc slot. BH-adj p-values are on a -log10 scale.
+#' @export
 #' 
-#' Perform GSEA on feature loadings in a reduction contained within a Seurat object (i.e. NMF factors) using MSIGDBR pathways or manually provided pathways.
-#' 
-RunGSEA.Seurat <- function(object, reduction = "nmf"){
+RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", category = "C5", min.size = 25, max.size = 500, collapse = TRUE, dims = NULL, verbose = TRUE, padj.sig = 0.01, ...){
   
-} 
+  if(verbose) cat("fetching gene sets\n")
+  gene_sets = msigdbr(species = "Homo sapiens", category = "C5")
+  
+  if(verbose) cat("filtering pathways\n")
+  pathways = split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
+  pathways <- pathways[lapply(pathways, length) > 25]
+  
+  if(verbose) cat("filtering genes in pathways to those in reduction\n")
+  genes_in_pathways <- unique(unlist(pathways))
+  w <- pbmc3k@reductions$nmf@feature.loadings
+  if(!is.null(dims))
+    w <- w[,dims]
+  if(verbose) cat("filtering genes in reduction to those in pathways\n")
+  w <- w[which(rownames(w) %in% genes_in_pathways), ]
+  pathways <- lapply(pathways, function(x) x[x %in% rownames(w)])
+  v <- lapply(pathways, length)
+  pathways <- pathways[which(v > 25 & v < 500)]
+  
+  cat("running GSEA on", ncol(w), "factors...\n")
+  pb <- utils::txtProgressBar(min = 0, max = ncol(w), style = 3)
+  results <- collapsed <- list()
+  for(i in 1:ncol(w)){
+    ranks <- w[, i]
+    results[[i]] <- suppressWarnings(fgseaMultilevel(
+      pathways, ranks, minSize = min.size, maxSize = max.size, scoreType = "pos", ...))
+    
+    if(collapse){
+      collapsedPathways <- collapsePathways(
+        results[[i]][order(pval)][padj < padj.sig], pathways, ranks)
+      collapsed[[i]] <- fgsea_res[pathway %in% collapsedPathways$mainPathways][
+        order(-NES), pathway]
+    }
+    utils::setTxtProgressBar(pb, i)
+  }
+  close(pb)
+  
+  # filter results to only collapsed pathways
+  if(collapse){
+    collapsed <- unique(unlist(collapsed))
+    results <- lapply(results, function(x) {
+      x[pathway %in% collapsed, ]
+    })
+  }
+  
+  pval <- do.call(cbind, lapply(results, function(x) x$pval))
+  padj <- do.call(cbind, lapply(results, function(x) x$padj))
+  es <- do.call(cbind, lapply(results, function(x) x$ES))
+  nes <- do.call(cbind, lapply(results, function(x) x$NES))
+  
+  idx <- which(apply(padj, 1, function(x) min(x) < padj.sig))
+  rownames(pval) <- rownames(padj) <- rownames(es) <- rownames(nes) <- results[[1]]$pathway
+  
+  if(!is.null(dims)) {
+    dims <- paste0(reduction, dims)
+  } else {
+    dims <- paste0(reduction, 1:ncol(object@reductions[[reduction]]))
+  }
+  colnames(pval) <- colnames(padj) <- colnames(es) <- colnames(nes) <- dims
+  
+  # reorder with hclust
+  padj <- -log10(padj)
+  pval <- -log10(pval)
+  row_order <- hclust(dist(padj), method = "ward.D2")$order
+  col_order <- hclust(dist(t(padj)), method = "ward.D2")$order
+  pval <- pval[row_order, col_order]
+  padj <- padj[row_order, col_order]
+  es <- es[row_order, col_order]
+  nes <- nes[row_order, col_order]
+  object@reductions[[reduction]]@misc$gsea <- list("pval" = pval, "padj" = padj, "es" = es, "nes" = nes)
+  object
+}
+
+#' Plot GSEA results on a heatmap
+#' 
+#' Plot top GSEA terms for each NMF factor on a heatmap
+#' 
+#' @param object Seurat object
+#' @param reduction a dimensional reduction for which GSEA analysis has been performed
+#' @param max.terms.per.factor show this number of top terms for each factor
+#' @return ggplot2 object
+#' @export
+GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 5){
+  df <- object@reductions[[reduction]]@misc$gsea$padj
+  
+  # find markers for each factor based on the proportion of signal in that factor
+  df2 <- as.matrix(Diagonal(x = 1 / rowSums(df)) %*% df)
+  terms <- c()
+  for(i in 1:ncol(df2)){
+    terms_i <- df[,i]
+    idx <- terms_i > 2
+    terms_i <- terms_i[idx]
+    terms_j <- df2[idx, i]
+    v <- sort(terms_j, decreasing = TRUE)
+    if(length(v) > max.terms.per.factor){
+      terms <- c(terms, names(v)[1:max.terms.per.factor])
+    } else {
+      terms <- c(terms, names(v))
+    }
+  }
+  terms <- unique(terms)
+  df <- df[terms, ]
+  
+  rownames(df) <- sapply(rownames(df), function(x) {
+    ifelse(nchar(x) > 48, paste0(substr(x, 1, 45), "..."), x)
+  })
+  
+  # remove terms that are broadly significant
+  v <- which((rowSums(df > 2) > (ncol(df) / 2)))
+  if(length(v) > 0){
+    df <- df[-v, ]
+  }
+  df <- reshape2::melt(df)
+  ggplot(df, aes(Var2, Var1, fill = value)) + 
+    geom_tile() + 
+    scale_fill_viridis_c(option = "B") +
+    theme_classic() + 
+    scale_x_discrete(expand = c(0, 0)) + 
+    scale_y_discrete(expand = c(0, 0)) + 
+    labs(
+      x = "NMF factor", 
+      y = "GO Term", 
+      fill = "BH-adj p-value\n(-log10)") + 
+    theme(
+      axis.text.y = element_text(size = 6), 
+      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+}
