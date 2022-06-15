@@ -1,13 +1,14 @@
-# singlet v.0.0.99
+# SeuratSauce v.0.0.99
 
-Singlet is an R toolkit for single-cell data analysis using non-negative matrix factorization.
+The Sauce is the Boss!  SeuratSauce (**S**eurat **A**ugmented with **U**nique **C**omputational **E**nhancements) brings fast Non-negative Matrix Factorization, new integration methods, and more to every Seurat user.
+
+Now you can run NMF with Seurat. Why still use PCA?
 
 ## Get Started!
 
 ```{R}
-library(devtools)
-install_github("zdebruine/singlet")
-library(singlet)
+install.packages("SeuratSauce")
+library(SeuratSauce)
 ```
 
 Vignettes:
@@ -20,17 +21,14 @@ Vignettes:
 Analyze your single-cell assay with NMF:
 
 ```{R}
-devtools::install_github("zdebruine/singlet")
-library(singlet)
-library(Seurat)
+library(SeuratSauce)
 library(SeuratData)
 data(pbmc3k)
 pbmc3k <- pbmc3k %>% 
-  NormalizeData() %>% 
+  LogNormalize() %>% 
   RunNMF(k = 2:30, n_replicates = 3) %>% 
   RunUMAP()
-RankPlot(pbmc3k)
-DimPlot(pbmc3k)
+cowplot::plot_grid(RankPlot(pbmc3k), DimPlot(pbmc3k), labels = "auto", ncol = 3)
 ```
 
 ![NMF workflow](https://github.com/zdebruine/singlet/blob/main/readme_figures/Picture1.png)
@@ -50,14 +48,13 @@ Singlet directly provides the **absolute fastest implementation of NMF**. Cross-
 Learn an integrated model of information across modalities or experiments and explore **shared and unique** signals in each of your groups.
 
 ```{R}
-library(singlet)
-library(Seurat)
+library(SeuratSauce)
 library(SeuratData)
 data(ifnb)
 ifnb <- ifnb %>% 
-  NormalizeData() %>% 
-  RunNMF(k = 30, split.by = "stim") %>% 
-  RunLNMF(split.by = "stim")
+  SeuratSauce::NormalizeData() %>% 
+  SeuratSauce::RunNMF(k = 30, split.by = "stim") %>% 
+  SeuratSauce::RunLNMF(split.by = "stim")
 MetadataPlot(ifnb, split.by = "stim")
 ifnb <- RunUMAP(ifnb, reduction = "lnmf", dims = GetSharedFactors(ifnb))
 DimPlot(ifnb)
