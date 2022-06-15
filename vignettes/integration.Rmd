@@ -1,0 +1,73 @@
+---
+title: "Integrating Seurat objects using Linked NMF"
+author: "Zach DeBruine"
+date: "6/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Interferon-stimulated and control PBMC
+
+```{R}
+library(Seurat)
+library(SeuratData)
+library(dplyr)
+library(Matrix)
+library(ggplot2)
+InstallData("ifnb")
+data("ifnb")
+ifnb <- NormalizeData(ifnb)
+set.seed(123)
+# ifnb <- RunNMF(ifnb, split.by = "stim", k = seq(2, 40, 2))
+# RankPlot.Seurat(ifnb) 
+# best rank determined to be k = 30
+ifnb <- RunNMF(ifnb, split.by = "stim", k = 30)
+ifnb <- RunLNMF(ifnb, split.by = "stim", reduction.use = "nmf", link.cutoff = 0.5, balance.maxit = 1000, link.balance.tol = 1e-4)
+FactorPlot.Seurat(ifnb, "stim", "lnmf")
+shared_dims <- GetSharedFactors(ifnb, split.by = "stim", reduction = "lnmf")
+ifnb <- FindNeighbors(ifnb, reduction = "lnmf", dims = shared_dims)
+ifnb <- FindClusters(ifnb, resolution = 0.55)
+ifnb <- RunUMAP(ifnb, dims = shared_dims, reduction = "lnmf")
+DimPlot(ifnb, group.by = c("stim", "ident", "seurat_annotations"), ncol = 3)
+```
+
+## Systematic comparitive analysis of human PBMC
+
+```{R}
+library(Seurat)
+library(SeuratData)
+library(dplyr)
+library(Matrix)
+library(ggplot2)
+InstallData("pbmcsca")
+data("pbmcsca")
+pbmcsca <- NormalizeData(pbmcsca)
+set.seed(123)
+# ifnb <- RunNMF(pbmcsca, split.by = "Method", k = 2:40)
+# RankPlot.Seurat(ifnb)
+# best rank determined to be k = 32
+pbmcsca <- RunNMF(pbmcsca, split.by = "Method", k = 32)
+pbmcsca <- RunLNMF(pbmcsca, split.by = "Method", reduction.use = "nmf", link.cutoff = 0.5, link.balance.tol = 1e-4)
+shared_dims <- GetSharedFactors(ifnb, reduction = "lnmf")
+ifnb <- FindNeighbors(ifnb, reduction = "lnmf", dims = shared_dims)
+ifnb <- FindClusters(ifnb, resolution = 0.55)
+ifnb <- RunUMAP(ifnb, dims = shared_dims, reduction = "lnmf")
+DimPlot(ifnb, group.by = c("stim", "ident", "seurat_annotations"), ncol = 3)
+
+# Please update your `liger` version to 0.5.0 or above before following this tutorial
+pbmcsca <- NormalizeData(pbmcsca)
+pbmcsca <- FindVariableFeatures(pbmcsca)
+pbmcsca <- ScaleData(pbmcsca, split.by = "Method", do.center = FALSE)
+pbmcsca <- RunOptimizeALS(pbmcsca, k = 20, lambda = 5, split.by = "Method")
+pbmcsca <- RunQuantileNorm(pbmcsca, split.by = "Method")
+# You can optionally perform Louvain clustering (`FindNeighbors` and `FindClusters`) after
+# `RunQuantileNorm` according to your needs
+pbmcsca <- FindNeighbors(pbmcsca, reduction = "iNMF", dims = 1:20)
+pbmcsca <- FindClusters(pbmcsca, resolution = 0.3)
+# Dimensional reduction and plotting
+pbmcsca <- RunUMAP(pbmcsca, dims = 1:ncol(pbmcsca[["iNMF"]]), reduction = "iNMF")
+DimPlot(pbmcsca, group.by = c("Method", "ident", "CellType"), ncol = 3)
+```
