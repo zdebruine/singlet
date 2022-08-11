@@ -1,14 +1,14 @@
-# SeuratSauce v.0.0.99
+# singlet v.0.0.99
 
-The Sauce is the Boss!  SeuratSauce (**S**eurat **A**ugmented with **U**nique **C**omputational **E**nhancements) brings fast Non-negative Matrix Factorization, new integration methods, and more to every Seurat user.
+Singlet brings fast Non-negative Matrix Factorization, new integration methods, and more to every Seurat user.
 
 Now you can run NMF with Seurat. Why still use PCA?
 
 ## Get Started!
 
 ```{R}
-install.packages("SeuratSauce")
-library(SeuratSauce)
+install.packages("singlet")
+library(singlet)
 ```
 
 Vignettes:
@@ -21,7 +21,7 @@ Vignettes:
 Analyze your single-cell assay with NMF:
 
 ```{R}
-library(SeuratSauce)
+library(singlet)
 library(SeuratData)
 data(pbmc3k)
 pbmc3k <- pbmc3k %>% 
@@ -48,13 +48,13 @@ Singlet directly provides the **absolute fastest implementation of NMF**. Cross-
 Learn an integrated model of information across modalities or experiments and explore **shared and unique** signals in each of your groups.
 
 ```{R}
-library(SeuratSauce)
+library(singlet)
 library(SeuratData)
 data(ifnb)
 ifnb <- ifnb %>% 
-  SeuratSauce::NormalizeData() %>% 
-  SeuratSauce::RunNMF(k = 30, split.by = "stim") %>% 
-  SeuratSauce::RunLNMF(split.by = "stim")
+  singlet::NormalizeData() %>% 
+  singlet::RunNMF(k = 30, split.by = "stim") %>% 
+  singlet::RunLNMF(split.by = "stim")
 MetadataPlot(ifnb, split.by = "stim")
 ifnb <- RunUMAP(ifnb, reduction = "lnmf", dims = GetSharedFactors(ifnb))
 DimPlot(ifnb)
