@@ -21,12 +21,15 @@
 #' 
 #' See the vignettes to get started.
 #' 
-#' @import ggplot2 Seurat dplyr reshape2 Matrix utils stats methods msigdbr fgsea
+#' @import ggplot2 Seurat dplyr Matrix msigdbr fgsea
 #' @useDynLib singlet, .registration = TRUE
 #' @docType package
 #' @name singlet
 #' @author Zach DeBruine
 #' @aliases singlet-package
+#' @importFrom methods as new
+#' @importFrom stats dist hclust
+#' @importFrom utils data
 #' @md
 #'
 NULL

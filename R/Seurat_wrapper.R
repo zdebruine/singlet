@@ -16,10 +16,12 @@
 #' @param threads number of threads to use (0 = let OpenMP use all available threads)
 #' @param split.by Attribute in \code{@metadata} for splitting, if applicable. Data will be weighted such that each group contributes equally to the NMF model.
 #' @param precision \code{"double"} or \code{"float"} for numerical precision. \code{"float"} may be faster, but numerical instability may result in more iterations to achieve desired tolerances.
+#' @param ... not implemented
 #' @details Use \code{set.seed()} to guarantee reproducibility!
 #' @export
 #' @aliases RunNMF
 #' @seealso \code{\link{RunLNMF}}, \code{\link{RankPlot}}, \code{\link{MetadataSummary}}
+#' @rdname RunNMF
 #' @return Returns a Seurat object with the NMF model stored in the reductions slot
 #' 
 RunNMF.Seurat <- function(
@@ -36,7 +38,7 @@ RunNMF.Seurat <- function(
   L1 = 0.01,
   threads = 0,
   split.by = NULL,
-  precision = "float"){
+  precision = "double", ...){
   
   if(is.null(assay))
     assay <- names(object@assays)[[1]]
@@ -52,7 +54,7 @@ RunNMF.Seurat <- function(
   
   if(!is.null(split.by)){
     split.by <- as.integer(as.numeric(as.factor(object@meta.data[[split.by]]))) - 1
-    if(any(is.na(split.by)))
+    if(any(sapply(split.by, is.na)))
       stop("'split.by' cannot contain NA values")
     A <- weight_by_split(A, split.by, length(unique(split.by)))
   }
@@ -123,10 +125,10 @@ RunLNMF.Seurat <- function(
   maxit = 100,
   L1 = 0.01,
   threads = 0,
-  precision = "float",
+  precision = "double",
   link.balance.tol = 1e-5,
   balance.maxit = 100,
-  link.balance.rate = 0.1){
+  link.balance.rate = 0.1, ...){
   
   link_w <- NULL
   w <- object@reductions[[reduction.use]]@feature.loadings
@@ -168,7 +170,7 @@ RunLNMF.Seurat <- function(
   }
   
   lnmf_model <- run_linked_nmf(A, w, link_h, link_w, tol, maxit, verbose, L1, threads, precision)
-  if(link.balance.tol != 1 & link.balance.tol != 0 & !is.na(link.balance.tol)){
+  if(link.balance.tol != 1 & link.balance.tol != 0){
     lnmf_model$w <- t(lnmf_model$w)
     if(verbose > 0)
       cat("balancing...\n")
@@ -272,23 +274,37 @@ MetadataPlot <- function(object, ...){
 
 #' @export
 #' @rdname RunNMF
+#' @name RunNMF
 #'
 .S3method("RunNMF", "Seurat", RunNMF.Seurat)
 
+#' Run LNMF on a Seurat object
+#' 
+#' S3 method for Seurat that runs the \code{singlet::RunLNMF} function.
+#'
+#' @method RunLNMF Seurat
 #' @export
 #' @rdname RunLNMF
+#' @name RunLNMF
 #'
 .S3method("RunLNMF", "Seurat", RunLNMF.Seurat)
 
+#' Plot NMF cross-validation results given a Seurat object
+#' 
+#' S3 method for Seurat that runs the \code{singlet::RunNMF} function.
+#'
+#' @method RankPlot Seurat
 #' @export
 #' @rdname RankPlot
+#' @name RankPlot
 #'
 .S3method("RankPlot", "Seurat", RankPlot.Seurat)
 
 #' @export
 #' @rdname RunLNMF
+#' @name MetadataPlot
 #'
-MetadataPlot.Seurat <- function(object, split.by, reduction = "lnmf"){
+MetadataPlot.Seurat <- function(object, split.by, reduction = "lnmf", ...){
   if(!(reduction %in% names(object@reductions)))
     stop("this Seurat object does not contain the requested reductions slot")
   plot(MetadataSummary(t(object@reductions[[reduction]]@cell.embeddings), object@meta.data[[split.by]]))
@@ -325,17 +341,15 @@ GetUniqueFactors <- function(object, split.by, reduction = "lnmf"){
 #' @param category msigdbr gene set category (i.e. "H", "C5", etc.)
 #' @param min.size minimum number of terms in a gene set
 #' @param max.size maximum number of terms in a gene set
-#' @param collapse filter pathways to remove highly redundant terms
 #' @param dims factors in the reduction to use, default \code{NULL} for all factors
 #' @param verbose print progress to console
-#' @param padj.size significance cutoff for BH-adjusted p-values (default 0.01)
-#' @param ... additional arguments to \code{fgseaMultilevel}
+#' @param padj.sig significance cutoff for BH-adjusted p-values (default 0.01)
 #' @returns a Seurat object, with GSEA information in the misc slot. BH-adj p-values are on a -log10 scale.
 #' @export
 #' 
 RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", category = "C5", 
-                    min.size = 10, max.size = 500, collapse = TRUE, dims = NULL, 
-                    verbose = TRUE, padj.sig = 0.01, ...){
+                    min.size = 10, max.size = 500, dims = NULL, 
+                    verbose = TRUE, padj.sig = 0.01){
   
   if(verbose) cat("fetching gene sets\n")
   gene_sets = msigdbr(species = species, category = category)
@@ -357,29 +371,16 @@ RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", categor
   
   cat("running GSEA on", ncol(w), "factors...\n")
   pb <- utils::txtProgressBar(min = 0, max = ncol(w), style = 3)
-  results <- collapsed <- list()
+  results <- list()
   for(i in 1:ncol(w)){
     ranks <- sort(w[, i])
     results[[i]] <- suppressWarnings(fgseaMultilevel(
-      pathways, ranks, minSize = min.size, maxSize = max.size, scoreType = "pos", ...))
+      pathways, ranks, minSize = min.size, maxSize = max.size, scoreType = "pos"))
     
-    if(collapse){
-      collapsedPathways <- collapsePathways(
-        results[[i]][order(pval)][padj < padj.sig], pathways, ranks)
-      collapsed[[i]] <- results[[i]][pathway %in% collapsedPathways$mainPathways]
-    }
     utils::setTxtProgressBar(pb, i)
   }
   close(pb)
 
-  # filter results to only collapsed pathways
-  if(collapse){
-    collapsed <- unique(unlist(collapsed))
-    results <- lapply(results, function(x) {
-      x[pathway %in% collapsed, ]
-    })
-  }
-  
   pval <- do.call(cbind, lapply(results, function(x) x$pval))
   padj <- do.call(cbind, lapply(results, function(x) x$padj))
   es <- do.call(cbind, lapply(results, function(x) x$ES))
@@ -463,8 +464,7 @@ GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3){
       axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 }
 
-ClusteringToDimReduc <- function(object, group.by = "ident"){
-
+ClusteringToDimReduc <- function(object, group.by = "ident", verbose = 0){
   ifelse(ident == "active.ident", idents <- as.vector(Idents(object)), idents <- as.vector(object@meta.data[[ident]]))
   ident.names <- unique(idents)
   if (verbose > 0) pb <- txtProgressBar(char = "=", style = 3, max = length(ident.names), width = 50)

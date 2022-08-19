@@ -10,14 +10,15 @@
 #' @param threads number of threads for parallelization across CPUs, 0 = use all available threads
 #' @param precision \code{"float"} or \code{"double"}. High tolerance models may not be achievable with \code{"float"} precision.
 #' @rdname run_nmf
+#' @importFrom stats runif
 #' @export
 #' 
 run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, threads = 0, precision = "float"){
   if(L1 >= 1)
     stop("L1 penalty must be strictly in the range (0, 1]")
   
-  A <- as(A, "dgCMatrix")
-  
+  A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
+
   w_init <- matrix(stats::runif(nrow(A) * rank), rank, nrow(A))
   model <- c_nmf(A, t(A), tol, maxit, verbose, L1, threads, w_init, matrix(), matrix(), 1, 0, precision == "float")
   sort_index <- order(model$d, decreasing = TRUE)
@@ -39,6 +40,8 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
 #' @rdname cross_validate_nmf
 #' @param ... additional arguments (not implemented)
 #' @export
+#' @importFrom utils txtProgressBar setTxtProgressBar
+#' @importFrom stats runif
 #' 
 cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 100, verbose = 1, L1 = 0.01, threads = 0, test_density = 0.05, precision = "float"){
   if(L1 >= 1)
@@ -47,7 +50,7 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
   if(test_density > 0.2 | test_density < 0.01)
     stop("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb")
   
-  A <- as(A, "dgCMatrix")
+  A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
   At <- Matrix::t(A)
   
   df <- expand.grid("k" = ranks, "rep" = 1:n_replicates)
@@ -111,7 +114,7 @@ run_linked_nmf <- function(A, w, link_h = NULL, link_w = NULL, tol = 1e-4, maxit
   
   link_h <- as.matrix(link_h)
   link_w <- as.matrix(link_w)
-  A <- as(A, "dgCMatrix")
+  A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
   w <- t(w)
   
   model <- c_nmf(A, t(A), tol, maxit, verbose, L1, threads, w, link_h, link_w, 1, 0, precision == "float")
@@ -140,7 +143,7 @@ plot.cross_validate_nmf_data <- function(x, ...){
     idx <- which(x$rep == rep)
     x$test_error[idx] <- x$test_error[idx] / min(x$test_error[idx])
   }
-  best_rank <- min(x)
+  best_rank <- GetBestRank(x)
   ggplot(x, aes(k, test_error, color = factor(rep))) + 
     geom_point() + 
     geom_line() + 
@@ -149,16 +152,6 @@ plot.cross_validate_nmf_data <- function(x, ...){
     theme(aspect.ratio = 1, plot.caption = element_text(hjust = 0.5)) + 
     geom_vline(xintercept = best_rank, linetype = "dashed", color = "red")
 }
-
-#' @export
-#' @rdname cross_validate_nmf
-#'
-.S3method("plot", "cross_validate_nmf_data", plot.cross_validate_nmf_data)
-
-#' @export
-#' @rdname cross_validate_nmf
-#'
-.S3method("min", "cross_validate_nmf_data", GetBestRank)
 
 #' Summarize contribution of sample groups to NMF factors
 #' 
@@ -196,6 +189,8 @@ MetadataSummary <- function(h, factor_data, reorder = TRUE){
 
 #' @export
 #' @rdname MetadataSummary
+#' @importFrom reshape2 melt
+#' @param ... not implemented
 #'
 plot.nmf_metadata_summary <- function(x, ...){
   m <- reshape2::melt(as.matrix(x))
@@ -210,13 +205,15 @@ plot.nmf_metadata_summary <- function(x, ...){
 
 #' @export
 #' @rdname MetadataSummary
+#' @name MetadataSummary
 #'
 .S3method("plot", "nmf_metadata_summary", plot.nmf_metadata_summary)
 
 #' @export
 #' @rdname MetadataSummary
 #' @param x result of \code{MetadataSummary}
-#' 
+#' @importFrom reshape2 melt
+#'
 MetadataHeatmap <- function(x){
   m <- reshape2::melt(as.matrix(x))
   colnames(m) <- c("factor", "group", "frac")
