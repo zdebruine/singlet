@@ -21,17 +21,18 @@
   maxit = 100,
   L1 = 0.01,
   threads = 0,
-  precision = "float",
+  precision = "double",
   link.balance.tol = 1e-05,
   balance.maxit = 100,
-  link.balance.rate = 0.1
+  link.balance.rate = 0.1,
+  ...
 )
 
 RunLNMF(object, ...)
 
 MetadataPlot(object, ...)
 
-\method{MetadataPlot}{Seurat}(object, split.by, reduction = "lnmf")
+\method{MetadataPlot}{Seurat}(object, split.by, reduction = "lnmf", ...)
 
 GetSharedFactors(object, split.by, reduction = "lnmf")
 
@@ -68,6 +69,8 @@ GetUniqueFactors(object, split.by, reduction = "lnmf")
 
 \item{link.balance.rate}{proportion of difference between current factor weight and equal representation of factors in a sample group to target in a single iteration (default 0.1).}
 
+\item{...}{not implemented}
+
 \item{reduction}{reduction to use for metadata analysis}
 
 \item{link.balance}{after initial linking step, weight all shared factors such that each dataset is represented as equally as possible in each factor.}
@@ -77,6 +80,8 @@ Returns a Seurat object with the NMF model stored in the reductions slot
 }
 \description{
 Run a Linked Non-negative Matrix Factorization to separate shared and unique signals for integration or signature extraction.
+
+S3 method for Seurat that runs the \code{singlet::RunLNMF} function.
 }
 \details{
 Use \code{set.seed()} to guarantee reproducibility!

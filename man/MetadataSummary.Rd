@@ -20,6 +20,8 @@ MetadataHeatmap(x)
 \item{reorder}{sort results by proportion in each group (uses \code{hclust} if >2 groups)}
 
 \item{x}{result of \code{MetadataSummary}}
+
+\item{...}{not implemented}
 }
 \value{
 \code{data.frame} of mean weights for each sample group within each factor of class \code{nmf_metadata_summary}. Use the \code{plot} method to visualize.

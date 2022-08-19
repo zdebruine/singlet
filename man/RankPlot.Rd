@@ -19,4 +19,6 @@ A ggplot2 object
 }
 \description{
 Given a NMF reduction at multiple ranks, plot rank vs. test set reconstruction error to determine the optimal rank.
+
+S3 method for Seurat that runs the \code{singlet::RunNMF} function.
 }

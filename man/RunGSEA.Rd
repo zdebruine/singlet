@@ -9,13 +9,11 @@ RunGSEA(
   reduction = "nmf",
   species = "Homo sapiens",
   category = "C5",
-  min.size = 25,
+  min.size = 10,
   max.size = 500,
-  collapse = TRUE,
   dims = NULL,
   verbose = TRUE,
-  padj.sig = 0.01,
-  ...
+  padj.sig = 0.01
 )
 }
 \arguments{
@@ -31,15 +29,11 @@ RunGSEA(
 
 \item{max.size}{maximum number of terms in a gene set}
 
-\item{collapse}{filter pathways to remove highly redundant terms}
-
 \item{dims}{factors in the reduction to use, default \code{NULL} for all factors}
 
 \item{verbose}{print progress to console}
 
-\item{...}{additional arguments to \code{fgseaMultilevel}}
-
-\item{padj.size}{significance cutoff for BH-adjusted p-values (default 0.01)}
+\item{padj.sig}{significance cutoff for BH-adjusted p-values (default 0.01)}
 }
 \value{
 a Seurat object, with GSEA information in the misc slot. BH-adj p-values are on a -log10 scale.

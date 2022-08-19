@@ -4,7 +4,7 @@
 \alias{GSEAHeatmap}
 \title{Plot GSEA results on a heatmap}
 \usage{
-GSEAHeatmap(object, reduction = "nmf", max.terms.per.factor = 5)
+GSEAHeatmap(object, reduction = "nmf", max.terms.per.factor = 3)
 }
 \arguments{
 \item{object}{Seurat object}
