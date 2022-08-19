@@ -1,6 +1,6 @@
 # singlet v.0.0.99
 
-**singlet is not currently usable and is being actively developed**.  This repo is a dumping ground for ideas and existing work on the project.
+**singlet is being actively developed (including documentation) and there are still bugs in the LNMF function**.
 
 Singlet brings fast Non-negative Matrix Factorization, new integration methods, and more to every Seurat user.
 
