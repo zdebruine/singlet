@@ -22,7 +22,7 @@
   L1 = 0.01,
   threads = 0,
   precision = "double",
-  link.balance.tol = 1e-05,
+  link.balance.tol = 0,
   balance.maxit = 100,
   link.balance.rate = 0.1,
   ...
