@@ -80,6 +80,13 @@ plot_grid(plot_grid(
  ), get_legend(p_jnmf_umap), ncol = 2, rel_widths = c(1, 0.2))
 ```
 
+Because unique and shared features are now completely separated, we can run GSEA on these features to better understand whether they are technical "batch effects" or biological differences:
+
+```
+ifnb <- RunGSEA(ifnb, reduction = "lnmf", dims = GetUniqueFactors(ifnb, split.by = "stim"))
+GSEAHeatmap(ifnb, reduction = "lnmf")
+```
+
 ![Integration with NMF](https://github.com/zdebruine/singlet/blob/main/readme_figures/Picture2.png)
 
 Unlike Seurat anchor-based methods, integration with LNMF preserves unique signals in the reduction and thus allows you to understand both the **shared and unique** signals in your different modalities/experiments.
