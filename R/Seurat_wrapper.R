@@ -126,7 +126,7 @@ RunLNMF.Seurat <- function(
   L1 = 0.01,
   threads = 0,
   precision = "double",
-  link.balance.tol = 1e-5,
+  link.balance.tol = 0,
   balance.maxit = 100,
   link.balance.rate = 0.1, ...){
   
@@ -150,15 +150,17 @@ RunLNMF.Seurat <- function(
   At <- t(A)
   
   # unlink factors from samples in a given group if the group representation falls below (1 - link.cutoff) / n_groups
+  # matrix of groups by factors, giving mean weight of each sample in that group in that factor
   levels <- unique(split.by)
-  m <- matrix(0, length(split.by), length(levels))
-  for(j in 1:nrow(m)){
-    for(i in 1:length(levels)){
-      m[j, i] <- mean(h[which(split.by == levels[[i]]), j])
+  m <- matrix(0, ncol(h), length(levels))
+  for(factor in 1:nrow(m)){
+    for(level in 1:length(levels)){
+      m[factor, level] <- mean(h[which(split.by == levels[[level]]), factor])
     }
   }
   m <- t(apply(m, 1, function(x) x / sum(x))) * length(levels) < link.cutoff
-  
+
+  # construct linking matrix  
   link_h <- matrix(1, ncol(h), nrow(h))
   for(factor in 1:nrow(m)){
     for(j in 1:ncol(m)){
@@ -169,7 +171,13 @@ RunLNMF.Seurat <- function(
     }
   }
   
+  # need to do a similar step for link_w for multi-modal integration
+  link_w <- matrix(1, nrow(w), ncol(w))
+  
   lnmf_model <- run_linked_nmf(A, w, link_h, link_w, tol, maxit, verbose, L1, threads, precision)
+  
+  # balancing step.
+  # not sure if this is a good idea.
   if(link.balance.tol != 1 & link.balance.tol != 0){
     lnmf_model$w <- t(lnmf_model$w)
     if(verbose > 0)
@@ -318,7 +326,8 @@ MetadataPlot.Seurat <- function(object, split.by, reduction = "lnmf", ...){
 GetSharedFactors <- function(object, split.by, reduction = "lnmf"){
   if(!(reduction %in% names(object@reductions)))
     stop("this Seurat object does not contain the requested reductions slot")
-  which(!(colnames(object@reductions[[reduction]]@cell.embeddings) %in% names(which(apply(MetadataSummary(t(object@reductions[[reduction]]@cell.embeddings), object@meta.data[[split.by]]), 1, function(x) min(x) == 0)))))
+  # which(rowSums(object@reductions[[reduction]]@misc$link_matrix == 0) == 0)
+  which(!(colnames(object@reductions[[reduction]]@cell.embeddings) %in% names(which(apply(MetadataSummary(t(object@reductions[[reduction]]@cell.embeddings), object@meta.data[[split.by]]), 2, function(x) min(x) == 0)))))
 }
 
 #' @export
@@ -327,7 +336,8 @@ GetSharedFactors <- function(object, split.by, reduction = "lnmf"){
 GetUniqueFactors <- function(object, split.by, reduction = "lnmf"){
   if(!(reduction %in% names(object@reductions)))
     stop("this Seurat object does not contain the requested reductions slot")
-  which((colnames(object@reductions[[reduction]]@cell.embeddings) %in% names(which(apply(MetadataSummary(t(object@reductions[[reduction]]@cell.embeddings), object@meta.data[[split.by]]), 1, function(x) min(x) == 0)))))
+  # which(rowSums(object@reductions[[reduction]]@misc$link_matrix == 0) > 0)
+  which((colnames(object@reductions[[reduction]]@cell.embeddings) %in% names(which(apply(MetadataSummary(t(object@reductions[[reduction]]@cell.embeddings), object@meta.data[[split.by]]), 2, function(x) min(x) == 0)))))
 }
 
 #' Run Gene Set Enrichment Analysis on a Reduction
