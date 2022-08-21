@@ -22,13 +22,16 @@ Analyze your single-cell assay with NMF:
 
 ```{R}
 library(singlet)
+library(Seurat)
 library(SeuratData)
+library(dplyr)
+library(cowplot)
 data(pbmc3k)
-pbmc3k <- pbmc3k %>% 
-  LogNormalize() %>% 
-  RunNMF(k = 2:30, n_replicates = 3) %>% 
-  RunUMAP()
-cowplot::plot_grid(RankPlot(pbmc3k), DimPlot(pbmc3k), labels = "auto", ncol = 3)
+pbmc3k <- NormalizeData(pbmc3k)
+set.seed(123)
+pbmc3k <- RunNMF(pbmc3k, k = seq(2, 20, 2), n_replicates = 1)
+pbmc3k <- RunUMAP(pbmc3k, reduction = "nmf", dims = 1:ncol(pbmc3k@reductions$nmf))
+plot_grid(RankPlot(pbmc3k) + NoLegend(), DimPlot(pbmc3k) + NoLegend(), labels = "auto", ncol = 2)
 ```
 
 ![NMF workflow](https://github.com/zdebruine/singlet/blob/main/readme_figures/Picture1.png)
@@ -39,7 +42,7 @@ NMF can do almost anything that PCA can do, but also:
 * uses all the information in your assay (incl. "non-variable" genes)
 * is robust across experiments
 * learns signatures of transcriptional activity
-* is colinear (interpretable), rather than orthogonal (not interpretable)
+* is colinear and non-negative (interpretable), rather than orthogonal and signed (not interpretable)
 
 Singlet internally provides the **fastest implementation of NMF**. Cross-validation can take a few minutes for datasets with a few ten thousand cells, but is extremely scalable and runs excellently on HPC nodes and average laptops alike.
 
@@ -51,13 +54,30 @@ Learn an integrated model of information across modalities or sample batches and
 library(singlet)
 library(SeuratData)
 data(ifnb)
-ifnb <- ifnb %>% 
-  singlet::NormalizeData() %>% 
-  singlet::RunNMF(k = 30, split.by = "stim") %>% 
-  singlet::RunLNMF(split.by = "stim")
-MetadataPlot(ifnb, split.by = "stim")
-ifnb <- RunUMAP(ifnb, reduction = "lnmf", dims = GetSharedFactors(ifnb))
-DimPlot(ifnb)
+ifnb <- NormalizeData(ifnb)
+ifnb <- RunNMF(ifnb, k = 30, split.by = "stim")
+ifnb <- RunLNMF(ifnb, split.by = "stim")
+jnmf_plot <- MetadataPlot(ifnb, split.by = "stim", reduction = "nmf")
+lnmf_plot <- MetadataPlot(ifnb, split.by = "stim", reduction = "lnmf")
+ifnb <- RunUMAP(ifnb, reduction = "nmf", dims = 1:ncol(ifnb@reductions$nmf), reduction.name = "jnmf_all")
+ifnb <- RunUMAP(ifnb, reduction = "lnmf", dims = 1:ncol(ifnb@reductions$lnmf), reduction.name = "lnmf_all")
+ifnb <- RunUMAP(ifnb, reduction = "lnmf", dims = GetSharedFactors(ifnb, split.by = "stim"), reduction.name = "lnmf_shared")
+selected_factors <-  which(rowSums(ifnb@reductions$lnmf@misc$link_matrix == 0) == 0)
+ifnb <- RunUMAP(ifnb, reduction = "nmf", dims = selected_factors, reduction.name = "jnmf_shared")
+plot_grid(jnmf_plot + ggtitle("joint NMF factor/batch weights") + theme(legend.position = "none"), lnmf_plot + ggtitle("linked NMF factor/batch weights") + theme(legend.position = "none"), get_legend(jnmf_plot), rel_widths = c(1, 1, 0.4), ncol = 3)
+
+p_jnmf_umap <- DimPlot(ifnb, reduction = "jnmf_all", group.by = "stim")
+p_jnmf_shared_umap <- DimPlot(ifnb, reduction = "jnmf_shared", group.by = "stim")
+p_lnmf_all_umap <- DimPlot(ifnb, reduction = "lnmf_all", group.by = "stim")
+p_lnmf_shared_umap <- DimPlot(ifnb, reduction = "lnmf_shared", group.by = "stim")
+
+plot_grid(plot_grid(
+  p_jnmf_umap + ggtitle("joint NMF") + theme(legend.position = "none") + theme(legend.position = "none"), 
+  p_jnmf_shared_umap + ggtitle("joint NMF, selected factors") + theme(legend.position = "none"), 
+  p_lnmf_all_umap + ggtitle("linked NMF, all factors") + theme(legend.position = "none"), 
+  p_lnmf_shared_umap + ggtitle("linked NMF, shared factors") + theme(legend.position = "none"), 
+  nrow = 2, ncol = 2
+ ), get_legend(p_jnmf_umap), ncol = 2, rel_widths = c(1, 0.2))
 ```
 
 ![Integration with NMF](https://github.com/zdebruine/singlet/blob/main/readme_figures/Picture2.png)
