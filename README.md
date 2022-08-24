@@ -1,6 +1,6 @@
 # singlet v.0.0.99
 
-**singlet is being actively developed (including documentation) and there are still bugs in the LNMF function**.
+**singlet is being actively developed (including documentation) and there are still plenty of known bugs, including in the LNMF function**.
 
 Singlet brings fast Non-negative Matrix Factorization, new integration methods, and more to every Seurat user.
 
@@ -105,3 +105,4 @@ Singlet is being actively developed:
 * Regularization and weighting to enable discovery of robust transcriptional signatures with NMF
 * Spatially-aware dimensional reduction
 * Graph-regularization for more aligned joint NMF models to initialize LNMF
+* Integrative transfer learning with linked Non-negative Least Squares projections
