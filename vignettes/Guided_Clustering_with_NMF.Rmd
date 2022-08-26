@@ -58,9 +58,9 @@ NMF can be run on all features using normalized counts. `RunNMF` will automatica
 
 Cross-validation can take some time. For large datasets, it is useful to start with a coarse-grained scan of a wide range of ranks and then focus on a narrow window of ranks with several replicates. Remember that the optimal number of NMF factors in your analysis may be significantly greater than the number of PCA components that might be used.  This is a great step to run on a High Performance Computing node.
 
-```{R, message = FALSE, warning = FALSE, eval = FALSE}
+```{R, message = FALSE, warning = FALSE}
 set.seed(123)
-pbmc3k <- singlet::RunNMF(pbmc3k, k = 5:20, n_replicates = 2, verbose = 1)
+pbmc3k <- singlet::RunNMF(pbmc3k, k = 5:20, n_replicates = 2, verbose = FALSE)
 RankPlot(pbmc3k)
 ```
 
@@ -117,7 +117,7 @@ We will determine clusters by graph-based clustering on an NMF embedding, and th
 ```{R, message = FALSE, warning = FALSE}
 pbmc3k <- FindNeighbors(pbmc3k, dims = 1:ncol(pbmc3k@reductions$nmf), reduction = "nmf") %>%
   FindClusters(resolution = 0.5) %>%
-  RunUMAP(reduction = "nmf", dims = 1:ncol(pbmc3k@reductions$nmf))
+  RunUMAP(reduction = "nmf", dims = 1:ncol(pbmc3k@reductions$nmf), verbose = FALSE)
 ```
 
 Because NMF factors are additive signals, we can also visualize their representation on UMAP coordinates:
@@ -125,7 +125,6 @@ Because NMF factors are additive signals, we can also visualize their representa
 ```{R, fig.width =7, fig.height = 8}
 FeaturePlot(pbmc3k, features = paste0("NMF_", 1:6))
 ```
-
 
 Compare the composition of NMF clusters to Seurat PCA-determined clusterings:
 
