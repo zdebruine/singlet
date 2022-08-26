@@ -1,22 +1,24 @@
 # singlet v.0.0.99
 
-**singlet is being actively developed (including documentation) and there are still plenty of known bugs, including in the LNMF function**.
+See the [pkgdown website](https://zdebruine.github.io/singlet/)!
 
-Singlet brings fast Non-negative Matrix Factorization, new integration methods, and more to every Seurat user.
+**Note: `singlet` is being actively developed and there are still known bugs in the LNMF function**.
 
-## Get Started!
+Singlet brings fast Non-negative Matrix Factorization (NMF), new NMF-based integration methods, and more to every Seurat user.
+
+## Install
 
 ```{R}
-install.packages("singlet")
-library(singlet)
+devtools::install_github("zdebruine/singlet")
 ```
 
-Planned vignettes:
-* Guided clustering tutorial with `SeuratData::pbmc3k` dataset
-* Batch integration with `SeuratData::ifnb` dataset (PBMC +/- stimulation)
-* Multi-modal integration with `SeuratData::bmcite`
+## Vignettes
 
-## Dimensional Reduction with NMF
+* [Guided clustering tutorial with `SeuratData::pbmc3k` dataset](https://zdebruine.github.io/singlet/articles/Guided_Clustering_with_NMF.html)
+* [Batch integration with `SeuratData::ifnb` dataset (PBMC +/- stimulation)](https://zdebruine.github.io/singlet/articles/Batch_Integration_with_Singlet.html)
+* Coming soon: Multi-modal integration with `SeuratData::bmcite`
+
+## Dimension Reduction with NMF
 
 Analyze your single-cell assay with NMF:
 
