@@ -13,6 +13,7 @@
 #' @param tol tolerance of the fit (correlation distance of the model across consecutive iterations)
 #' @param maxit maximum number of fitting iterations
 #' @param L1 L1/LASSO penalty to increase sparsity of the model
+#' @param L2 L2/Ridge penalty to increase angles between factors and sparsity of the model
 #' @param threads number of threads to use (0 = let OpenMP use all available threads)
 #' @param split.by Attribute in \code{@metadata} for splitting, if applicable. Data will be weighted such that each group contributes equally to the NMF model.
 #' @param precision \code{"double"} or \code{"float"} for numerical precision. \code{"float"} may be faster, but numerical instability may result in more iterations to achieve desired tolerances.
@@ -36,6 +37,7 @@ RunNMF.Seurat <- function(
   tol = 1e-4,
   maxit = 100,
   L1 = 0.01,
+  L2 = 0,
   threads = 0,
   split.by = NULL,
   precision = "double", ...){
@@ -63,14 +65,14 @@ RunNMF.Seurat <- function(
   
   cv_data <- data.frame()
   if(length(k) > 1){
-    cv_data <- cross_validate_nmf(A, k, n_replicates, tol, maxit, verbose, L1, threads, test.set.density, precision)
+    cv_data <- cross_validate_nmf(A, k, n_replicates, tol, maxit, verbose, L1, L2, threads, test.set.density, precision)
     best_rank <- GetBestRank(cv_data)
     if(verbose >= 1)
       cat("best rank: ", best_rank, "\n")
     cat("\nfitting final model:\n")
     k <- best_rank
   }
-  nmf_model <- run_nmf(A, k, tol, maxit, verbose > 1, L1, threads, precision)
+  nmf_model <- run_nmf(A, k, tol, maxit, verbose > 1, L1, L2, threads, precision)
   rownames(nmf_model$h) <- colnames(nmf_model$w) <- paste0(reduction.key, 1:k)
   rownames(nmf_model$w) <- rnames
   colnames(nmf_model$h) <- cnames
@@ -104,6 +106,7 @@ RunNMF.Seurat <- function(
 #' @param tol tolerance of the fit (correlation distance of the model across consecutive iterations)
 #' @param maxit maximum number of fitting iterations
 #' @param L1 L1/LASSO penalty to increase sparsity of the model
+#' @param L2 L2/Ridge penalty to increase angles between factors and sparsity of the model
 #' @param threads number of threads to use (0 = let OpenMP use all available threads)
 #' @param reduction reduction to use for metadata analysis
 #' @seealso \code{\link{RunNMF}}, \code{\link{RankPlot}}, \code{\link{MetadataSummary}}
@@ -124,6 +127,7 @@ RunLNMF.Seurat <- function(
   tol = 1e-4,
   maxit = 100,
   L1 = 0.01,
+  L2 = 0,
   threads = 0,
   precision = "double",
   link.balance.tol = 0,
@@ -174,7 +178,7 @@ RunLNMF.Seurat <- function(
   # need to do a similar step for link_w for multi-modal integration
   link_w <- matrix(1, nrow(w), ncol(w))
   
-  lnmf_model <- run_linked_nmf(A, w, link_h, link_w, tol, maxit, verbose, L1, threads, precision)
+  lnmf_model <- run_linked_nmf(A, w, link_h, link_w, tol, maxit, verbose, L1, L2, threads, precision)
   
   # balancing step.
   # not sure if this is a good idea.
@@ -210,7 +214,7 @@ RunLNMF.Seurat <- function(
         }
       }
       # run linked nmf
-      lnmf_model <- c_nmf(A, At, tol, 1L, FALSE, L1, threads, lnmf_model$w, link_h, 1, 0, precision == "float")
+      lnmf_model <- c_nmf(A, At, tol, 1L, FALSE, L1, L2, threads, lnmf_model$w, link_h, 1, 0, precision == "float")
       m <- MetadataSummary(lnmf_model$h, split.by, FALSE)
       v <- as.vector(abs(1 / length(levels) - m))
       curr.balance.tol <- mean(v[v != 0 & v != 1])

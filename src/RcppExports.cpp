@@ -25,8 +25,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // c_nmf
-Rcpp::List c_nmf(const Rcpp::S4& A_, const Rcpp::S4& At_, const double tol_, const uint16_t maxit, const bool verbose, const double L1_, const uint16_t threads, Rcpp::NumericMatrix w_, Rcpp::NumericMatrix link_h_, Rcpp::NumericMatrix link_w_, const uint32_t seed, const uint32_t inv_density, const bool float_precision);
-RcppExport SEXP _singlet_c_nmf(SEXP A_SEXP, SEXP At_SEXP, SEXP tol_SEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1_SEXP, SEXP threadsSEXP, SEXP w_SEXP, SEXP link_h_SEXP, SEXP link_w_SEXP, SEXP seedSEXP, SEXP inv_densitySEXP, SEXP float_precisionSEXP) {
+Rcpp::List c_nmf(const Rcpp::S4& A_, const Rcpp::S4& At_, const double tol_, const uint16_t maxit, const bool verbose, const double L1_, const double L2_, const uint16_t threads, Rcpp::NumericMatrix w_, Rcpp::NumericMatrix link_h_, Rcpp::NumericMatrix link_w_, const uint32_t seed, const uint32_t inv_density, const bool float_precision);
+RcppExport SEXP _singlet_c_nmf(SEXP A_SEXP, SEXP At_SEXP, SEXP tol_SEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1_SEXP, SEXP L2_SEXP, SEXP threadsSEXP, SEXP w_SEXP, SEXP link_h_SEXP, SEXP link_w_SEXP, SEXP seedSEXP, SEXP inv_densitySEXP, SEXP float_precisionSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -36,6 +36,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const uint16_t >::type maxit(maxitSEXP);
     Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
     Rcpp::traits::input_parameter< const double >::type L1_(L1_SEXP);
+    Rcpp::traits::input_parameter< const double >::type L2_(L2_SEXP);
     Rcpp::traits::input_parameter< const uint16_t >::type threads(threadsSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type w_(w_SEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type link_h_(link_h_SEXP);
@@ -43,14 +44,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const uint32_t >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< const uint32_t >::type inv_density(inv_densitySEXP);
     Rcpp::traits::input_parameter< const bool >::type float_precision(float_precisionSEXP);
-    rcpp_result_gen = Rcpp::wrap(c_nmf(A_, At_, tol_, maxit, verbose, L1_, threads, w_, link_h_, link_w_, seed, inv_density, float_precision));
+    rcpp_result_gen = Rcpp::wrap(c_nmf(A_, At_, tol_, maxit, verbose, L1_, L2_, threads, w_, link_h_, link_w_, seed, inv_density, float_precision));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_singlet_weight_by_split", (DL_FUNC) &_singlet_weight_by_split, 3},
-    {"_singlet_c_nmf", (DL_FUNC) &_singlet_c_nmf, 13},
+    {"_singlet_c_nmf", (DL_FUNC) &_singlet_c_nmf, 14},
     {NULL, NULL, 0}
 };
 

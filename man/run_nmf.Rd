@@ -11,6 +11,7 @@ run_nmf(
   maxit = 100,
   verbose = TRUE,
   L1 = 0.01,
+  L2 = 0,
   threads = 0,
   precision = "float"
 )
@@ -27,6 +28,8 @@ run_nmf(
 \item{verbose}{verbosity level}
 
 \item{L1}{L1/LASSO penalty to increase sparsity of model}
+
+\item{L2}{L2/Ridge penalty to increase angles between factors and sparsity of the model}
 
 \item{threads}{number of threads for parallelization across CPUs, 0 = use all available threads}
 

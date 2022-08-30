@@ -17,6 +17,7 @@
   tol = 1e-04,
   maxit = 100,
   L1 = 0.01,
+  L2 = 0,
   threads = 0,
   split.by = NULL,
   precision = "double",
@@ -47,6 +48,8 @@ RunNMF(object, ...)
 \item{maxit}{maximum number of fitting iterations}
 
 \item{L1}{L1/LASSO penalty to increase sparsity of the model}
+
+\item{L2}{L2/Ridge penalty to increase angles between factors and sparsity of the model}
 
 \item{threads}{number of threads to use (0 = let OpenMP use all available threads)}
 
