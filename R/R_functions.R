@@ -1,6 +1,7 @@
 #' @title Run Non-negative Matrix Factorization
 #'
-#' @description Run NMF on a sparse matrix
+#' @description Run NMF on a sparse matrix with automatic rank determination by cross-validation
+#' 
 #' @param A sparse matrix (ideally variance-stabilized) of data for genes x cells (rows x columns)
 #' @param rank factorization rank
 #' @param tol tolerance of the fit (1e-5 for publication quality, 1e-3 for cross-validation)
