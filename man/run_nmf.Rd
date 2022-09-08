@@ -12,8 +12,7 @@ run_nmf(
   verbose = TRUE,
   L1 = 0.01,
   L2 = 0,
-  threads = 0,
-  precision = "float"
+  threads = 0
 )
 }
 \arguments{
@@ -29,12 +28,10 @@ run_nmf(
 
 \item{L1}{L1/LASSO penalty to increase sparsity of model}
 
-\item{L2}{L2/Ridge penalty to increase angles between factors and sparsity of the model}
+\item{L2}{L2/Ridge penalty to increase angles between factors}
 
 \item{threads}{number of threads for parallelization across CPUs, 0 = use all available threads}
-
-\item{precision}{\code{"float"} or \code{"double"}. High tolerance models may not be achievable with \code{"float"} precision.}
 }
 \description{
-Run NMF on a sparse matrix
+Run NMF on a sparse matrix with automatic rank determination by cross-validation
 }

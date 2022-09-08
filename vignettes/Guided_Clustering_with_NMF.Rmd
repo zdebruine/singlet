@@ -19,71 +19,56 @@ This vignette complements the [Seurat Guided Clustering](https://satijalab.org/s
 
 This vignette introduces guided clustering and basic gene set enrichment analysis using `singlet` and `Seurat`. It uses the `SeuratData::pbmc3k` dataset and overlaps with the Seurat introductory tutorial on [guided clustering] (satijalab.org/seurat/articles/pbmc3k_tutorial.html) using the `SeuratData::pbmc3k` dataset.
 
-```{R, message = FALSE, warning = FALSE}
+```{R, message = FALSE, warning = FALSE, get-started}
 library(singlet)
 library(Seurat)
-library(SeuratData)
 library(dplyr)
 library(ggplot2)
-SeuratData::InstallData("pbmc3k")
-data(pbmc3k)
-pbmc3k
-```
-
-## QC and selecting cells for further analysis
-
-Remove doublets, very low-quality cells, but do not regress out mitochondrial genes. NMF will deal with systematic technical signal or noise, and regression of any form will hurt downstream analysis.
-
-In general, NMF requires far less "data cleaning" than PCA.
-
-```{R}
-pbmc3k[["percent.mt"]] <- PercentageFeatureSet(pbmc3k, pattern = "^MT-")
-
-pbmc3k <- subset(pbmc3k, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 5)
-```
-
-## Normalize Data
-
-Here we apply standard log-normalization, which works very well, but any form of approximate variance stabilizing transformation is suitable for helping NMF find meaningful solutions. Raw counts are not suitable for NMF.
-
-Do not use `Seurat::SCTransform` with NMF.  Adding the residuals of negative binomial fits to your count data is not a good idea for additive decompositions. NMF will smooth out noise and impute missing signal without any help (as opposed to PCA which fits to missing signal, and therefore benefits from SCTransform).
-
-```{R}
-pbmc3k <- NormalizeData(pbmc3k, verbose = FALSE)
+pbmc3k <- singlet::get_pbmc3k_data()
 ```
 
 ## Run NMF
 
-NMF can be run on all features using normalized counts. `RunNMF` will automatically run cross-validation on an array of ranks that you provide, identify the best rank, and learn a model at that rank. 
+NMF can be run on all features using normalized counts. Here we apply standard log-normalization, which works very well, but any form of approximate variance stabilizing transformation is suitable for helping NMF find meaningful solutions. Raw counts are not suitable for NMF because the model pays too much attention to features with very high counts.
+
+`RunNMF` will automatically run cross-validation on an array of ranks that you provide, identify the best rank, and learn a model at that rank. 
 
 Cross-validation can take some time. For large datasets, it is useful to start with a coarse-grained scan of a wide range of ranks and then focus on a narrow window of ranks with several replicates. Remember that the optimal number of NMF factors in your analysis may be significantly greater than the number of PCA components that might be used.  This is a great step to run on a High Performance Computing node.
 
-```{R, message = FALSE, warning = FALSE}
+First off, basic quality control:
+
+```{R, message = FALSE, warning = FALSE, results = 'hide', quality-control}
+pbmc3k[["percent.mt"]] <- PercentageFeatureSet(pbmc3k, pattern = "^MT-")
+pbmc3k <- subset(pbmc3k, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 5)
+```
+
+Now run NMF cross-validation and learn the model at the best rank:
+
+```{R, cross-validation}
 set.seed(123)
-pbmc3k <- singlet::RunNMF(pbmc3k, k = 5:20, n_replicates = 2, verbose = FALSE)
+pbmc3k <- pbmc3k %>% NormalizeData() %>%
+  singlet::RunNMF(k = 5:25, reps = 3, verbose = FALSE)
+```
+
+Plot the cross-validation results:
+
+```{R}
 RankPlot(pbmc3k)
 ```
 
 Remember to set the seed, as above, to guarantee reproducibility of your NMF model.
 
-A good model has already been learned at the optimal rank, but we may wish to learn a still higher-quality model:
-
-```{R, message = FALSE, warning = FALSE}
-set.seed(123)
-pbmc3k <- RunNMF(pbmc3k, k = 15, tol = 1e-6, verbose = FALSE)
-```
-
 ## Visualization
 
 Plot the representation of various metadata (i.e. Seurat-annotated cell types) in each factor:
 
-```{R, fig.width = 5, fig.height = 3}
-MetadataPlot(pbmc3k, "seurat_annotations", reduction = "nmf")
+```{R, fig.width = 5, fig.height = 3, plot-metadata}
+MetadataPlot(pbmc3k, "cell_type", reduction = "nmf")
 ```
 
 Here we simply do what the Seurat Guided Clustering tutorial does, but for NMF:
 
-```{R, fig.width = 5, fig.height = 5}
+```{R, fig.width = 5, fig.height = 5, viz-dim-loadings}
 VizDimLoadings(pbmc3k, dims = 1:2, reduction = "nmf")
 ```
 
@@ -91,20 +76,20 @@ VizDimLoadings(pbmc3k, dims = 1:2, reduction = "nmf")
 
 `singlet` makes GSEA with `fgsea` and `msigdbr` easy. Simply, the weights in the NMF "w" matrix are used as rankings for terms in the enrichment analysis.
 
-```{R, message = FALSE, warning = FALSE, eval = FALSE}
+```{R, message = FALSE, warning = FALSE, gsea}
 pbmc3k <- RunGSEA(pbmc3k, reduction = "nmf", category = "C7")
 ```
 
 <details>
   <summary>See how GSEA results are stored in the NMF model:</summary>
-    ```{r, echo=FALSE, eval=TRUE}
+    ```{r, echo=FALSE, eval=TRUE, gsea-data-structure}
     str(pbmc3k@reductions$nmf)
     ```
 </details> 
 
 `singlet` provides a helper function for quick exploration of GSEA results:
 
-```{R, fig.width = 5, fig.height = 7, eval = FALSE}
+```{R, fig.width = 5, fig.height = 7, gsea-heatmap}
 GSEAHeatmap(pbmc3k, reduction = "nmf", max.terms.per.factor = 2)
 ```
 
@@ -114,7 +99,7 @@ The `pbmc3k` dataset in SeuratData ships with clusters that have been determined
 
 We will determine clusters by graph-based clustering on an NMF embedding, and then compare them to those PCA-guided clusters.
 
-```{R, message = FALSE, warning = FALSE}
+```{R, message = FALSE, warning = FALSE, cluster-cells}
 pbmc3k <- FindNeighbors(pbmc3k, dims = 1:ncol(pbmc3k@reductions$nmf), reduction = "nmf") %>%
   FindClusters(resolution = 0.5) %>%
   RunUMAP(reduction = "nmf", dims = 1:ncol(pbmc3k@reductions$nmf), verbose = FALSE)
@@ -122,16 +107,16 @@ pbmc3k <- FindNeighbors(pbmc3k, dims = 1:ncol(pbmc3k@reductions$nmf), reduction 
 
 Because NMF factors are additive signals, we can also visualize their representation on UMAP coordinates:
 
-```{R, fig.width =7, fig.height = 8}
+```{R, fig.width =7, fig.height = 8, feature-plot}
 FeaturePlot(pbmc3k, features = paste0("NMF_", 1:6))
 ```
 
 Compare the composition of NMF clusters to Seurat PCA-determined clusterings:
 
-```{R, fig.width = 5, fig.height = 3}
+```{R, fig.width = 5, fig.height = 3, map-cluster-ids}
 df <- data.frame(
   "nmf_clusters" = pbmc3k@meta.data$seurat_clusters,
-  "pca_clusters" = pbmc3k@meta.data$seurat_annotations)
+  "pca_clusters" = pbmc3k@meta.data$cell_type)
 
 df <- df[!is.na(df$pca_clusters), ]
 
@@ -152,7 +137,7 @@ ggplot(df, aes(nmf_clusters, pca_clusters, size = freq, color = n)) +
 
 Since there is significant correspondence between PCA- and NMF-guided clusters, we can just transfer the labels based on majority overlap:
 
-```{R, fig.width = 5, fig.height = 5}
+```{R, fig.width = 5, fig.height = 5, dim-plot}
 cluster_names <- df %>% 
   slice(which.max(n)) %>% 
   pull(pca_clusters)

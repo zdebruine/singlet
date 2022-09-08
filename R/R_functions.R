@@ -1,21 +1,20 @@
 #' @title Run Non-negative Matrix Factorization
 #'
 #' @description Run NMF on a sparse matrix with automatic rank determination by cross-validation
-#' 
+#'
 #' @param A sparse matrix (ideally variance-stabilized) of data for genes x cells (rows x columns)
 #' @param rank factorization rank
 #' @param tol tolerance of the fit (1e-5 for publication quality, 1e-3 for cross-validation)
 #' @param maxit maximum number of iterations
 #' @param verbose verbosity level
 #' @param L1 L1/LASSO penalty to increase sparsity of model
-#' @param L2 L2/Ridge penalty to increase angles between factors and sparsity of the model
+#' @param L2 L2/Ridge penalty to increase angles between factors
 #' @param threads number of threads for parallelization across CPUs, 0 = use all available threads
-#' @param precision \code{"float"} or \code{"double"}. High tolerance models may not be achievable with \code{"float"} precision.
 #' @rdname run_nmf
 #' @importFrom stats runif
 #' @export
 #'
-run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0, precision = "float") {
+run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0) {
   if (L1 >= 1) {
     stop("L1 penalty must be strictly in the range (0, 1]")
   }
@@ -23,7 +22,7 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
   A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
 
   w_init <- matrix(stats::runif(nrow(A) * rank), rank, nrow(A))
-  model <- c_nmf(A, t(A), tol, maxit, verbose, L1, L2, threads, w_init, matrix(), matrix(), 1, 0, precision == "float")
+  model <- c_nmf(A, t(A), tol, maxit, verbose, L1, L2, threads, w_init, matrix(), matrix(), 1, 0)
   sort_index <- order(model$d, decreasing = TRUE)
   model$d <- model$d[sort_index]
   model$w <- t(model$w)[, sort_index]
@@ -46,7 +45,7 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
 #' @importFrom utils txtProgressBar setTxtProgressBar
 #' @importFrom stats runif
 #'
-cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0, test_density = 0.05, precision = "float") {
+cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0, test_density = 0.05) {
   if (L1 >= 1) {
     stop("L1 penalty must be strictly in the range (0, 1]")
   }
@@ -69,7 +68,7 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
     if (verbose > 1) {
       cat(paste0("k = ", df$k[[i]], ", rep = ", rep, " (", i, "/", nrow(df), "):\n"))
     }
-    df$test_error[[i]] <- c_nmf(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], matrix(0, 1, 1), matrix(0, 1, 1), abs(.Random.seed[[3 + rep]]), round(1 / test_density), precision == "float")$test_mse
+    df$test_error[[i]] <- c_nmf(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], matrix(0, 1, 1), matrix(0, 1, 1), abs(.Random.seed[[3 + rep]]), round(1 / test_density))$test_mse
     if (verbose == 1) utils::setTxtProgressBar(pb, i)
     if (verbose > 1) cat(paste0("test set error: ", sprintf(df$test_error[[i]], fmt = "%#.4e"), "\n\n"))
   }
@@ -88,7 +87,7 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
 #' @param link_h matrix giving the linkage weight (usually in the range \code{(0, 1)}) of dimensions \code{rank x ncol(A)}.
 #' @param link_w matrix giving the linkage weight of dimensions \code{nrow(A) x rank}.
 #'
-run_linked_nmf <- function(A, w, link_h = NULL, link_w = NULL, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0, precision = "float") {
+run_linked_nmf <- function(A, w, link_h = NULL, link_w = NULL, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0) {
   if (is.null(link_h) & is.null(link_w)) {
     stop("both link_h and link_w cannot be NULL. Specify at least one linking matrix.")
   }
@@ -130,7 +129,7 @@ run_linked_nmf <- function(A, w, link_h = NULL, link_w = NULL, tol = 1e-4, maxit
   A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
   w <- t(w)
 
-  model <- c_nmf(A, t(A), tol, maxit, verbose, L1, L2, threads, w, link_h, link_w, 1, 0, precision == "float")
+  model <- c_nmf(A, t(A), tol, maxit, verbose, L1, L2, threads, w, link_h, link_w, 1, 0)
   sort_index <- order(model$d, decreasing = TRUE)
   model$d <- model$d[sort_index]
   model$w <- t(model$w)[, sort_index]
@@ -240,3 +239,34 @@ MetadataHeatmap <- function(x) {
     scale_x_discrete(expand = c(0, 0)) +
     scale_fill_gradient2(low = "white", high = "red")
 }
+
+#' Load the pbmc3k dataset
+#'
+#' 2,700 peripheral blood mononuclear cells (PBMC) from 10x genomics taken from the "SeuratData" package
+#'
+#' @description
+#' This dataset is adapted directly from the Satija lab "pbmc3k" dataset used in their popular tutorial on guided clustering. It is provided in this package for convenience since "SeuratData" is not available on CRAN.
+#'
+#' For more information, please see their documentation.
+#'
+#' @returns Seurat object with \code{$cell_type} info in the \code{meta.data} slot.
+#'
+#' @export
+#'
+get_pbmc3k_data <- function() {
+  data(pbmc3k)
+  pbmc3k
+  A <- CreateSeuratObject(counts = new("dgCMatrix", i = pbmc3k$i, p = pbmc3k$p, Dim = pbmc3k$Dim, Dimnames = pbmc3k$Dimnames, x = as.numeric(inverse.rle(pbmc3k$x))))
+  A@meta.data$cell_type <- pbmc3k$cell_type
+  A
+}
+
+#' Compressed form of pbmc3k dataset
+#'
+#' @description See \code{\link{get_pbmc3k_data}}
+#'
+#' @md
+#' @docType data
+#' @usage data(pbmc3k)
+#' @format compressed version of the \code{dgCMatrix}, use \code{\link{get_pbmc3k_data}} to use this dataset.
+"pbmc3k"

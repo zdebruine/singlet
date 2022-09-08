@@ -12,15 +12,14 @@
   reduction.key = "NMF_",
   verbose = 2,
   k = seq(2, 40, 2),
-  n_replicates = 1,
+  reps = 1,
   test.set.density = 0.05,
-  tol = 1e-04,
+  tol = 1e-05,
   maxit = 100,
   L1 = 0.01,
   L2 = 0,
   threads = 0,
   split.by = NULL,
-  precision = "double",
   ...
 )
 
@@ -39,23 +38,21 @@ RunNMF(object, ...)
 
 \item{k}{vector of ranks at which to fit, witholding a test set}
 
-\item{n_replicates}{number of replicates for cross-validation}
+\item{reps}{number of replicates for cross-validation}
 
 \item{test.set.density}{approximate density of the test set (default 0.05)}
 
-\item{tol}{tolerance of the fit (correlation distance of the model across consecutive iterations)}
+\item{tol}{tolerance of the fit (correlation distance of the model across consecutive iterations). Cross-validation fits are 10x coarser than this tolerance.}
 
 \item{maxit}{maximum number of fitting iterations}
 
 \item{L1}{L1/LASSO penalty to increase sparsity of the model}
 
-\item{L2}{L2/Ridge penalty to increase angles between factors and sparsity of the model}
+\item{L2}{L2/Ridge-like penalty to increase angles between factors}
 
 \item{threads}{number of threads to use (0 = let OpenMP use all available threads)}
 
-\item{split.by}{Attribute in \code{@metadata} for splitting, if applicable. Data will be weighted such that each group contributes equally to the NMF model.}
-
-\item{precision}{\code{"double"} or \code{"float"} for numerical precision. \code{"float"} may be faster, but numerical instability may result in more iterations to achieve desired tolerances.}
+\item{split.by}{column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.}
 
 \item{...}{not implemented}
 }

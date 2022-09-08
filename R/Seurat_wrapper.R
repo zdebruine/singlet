@@ -8,15 +8,14 @@
 #' @param reduction.key Key for resulting DimReduc
 #' @param verbose Level of console output (0/FALSE, 1/TRUE, 2)
 #' @param k vector of ranks at which to fit, witholding a test set
-#' @param n_replicates number of replicates for cross-validation
+#' @param reps number of replicates for cross-validation
 #' @param test.set.density approximate density of the test set (default 0.05)
-#' @param tol tolerance of the fit (correlation distance of the model across consecutive iterations)
+#' @param tol tolerance of the fit (correlation distance of the model across consecutive iterations). Cross-validation fits are 10x coarser than this tolerance.
 #' @param maxit maximum number of fitting iterations
 #' @param L1 L1/LASSO penalty to increase sparsity of the model
-#' @param L2 L2/Ridge penalty to increase angles between factors and sparsity of the model
+#' @param L2 L2/Ridge-like penalty to increase angles between factors
 #' @param threads number of threads to use (0 = let OpenMP use all available threads)
-#' @param split.by Attribute in \code{@metadata} for splitting, if applicable. Data will be weighted such that each group contributes equally to the NMF model.
-#' @param precision \code{"double"} or \code{"float"} for numerical precision. \code{"float"} may be faster, but numerical instability may result in more iterations to achieve desired tolerances.
+#' @param split.by column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.
 #' @param ... not implemented
 #' @details Use \code{set.seed()} to guarantee reproducibility!
 #' @export
@@ -32,15 +31,14 @@ RunNMF.Seurat <- function(
   reduction.key = "NMF_", 
   verbose = 2, 
   k = seq(2, 40, 2),
-  n_replicates = 1,
+  reps = 1,
   test.set.density = 0.05,
-  tol = 1e-4,
+  tol = 1e-5,
   maxit = 100,
   L1 = 0.01,
   L2 = 0,
   threads = 0,
-  split.by = NULL,
-  precision = "double", ...){
+  split.by = NULL, ...){
   
   if(is.null(assay))
     assay <- names(object@assays)[[1]]
@@ -65,14 +63,14 @@ RunNMF.Seurat <- function(
   
   cv_data <- data.frame()
   if(length(k) > 1){
-    cv_data <- cross_validate_nmf(A, k, n_replicates, tol, maxit, verbose, L1, L2, threads, test.set.density, precision)
+    cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, L1, L2, threads, test.set.density)
     best_rank <- GetBestRank(cv_data)
     if(verbose >= 1)
       cat("best rank: ", best_rank, "\n")
     cat("\nfitting final model:\n")
     k <- best_rank
   }
-  nmf_model <- run_nmf(A, k, tol, maxit, verbose > 1, L1, L2, threads, precision)
+  nmf_model <- run_nmf(A, k, tol, maxit, verbose > 1, L1, L2, threads)
   rownames(nmf_model$h) <- colnames(nmf_model$w) <- paste0(reduction.key, 1:k)
   rownames(nmf_model$w) <- rnames
   colnames(nmf_model$h) <- cnames
@@ -93,7 +91,7 @@ RunNMF.Seurat <- function(
 #' @description Run a Linked Non-negative Matrix Factorization to separate shared and unique signals for integration or signature extraction.
 #' 
 #' @inheritParams RunNMF.Seurat
-#' @param split.by attribute in \code{@metadata} for splitting. Data will be weighted such that each group contributes equally to the LNMF model.
+#' @param split.by column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.
 #' @param link.cutoff if the relative contribution of samples in any given group to a factor falls below \code{link.cutoff}, unlink it from the factor. \code{link.cutoff = 1} means a factor must contribute exactly equally before being unlinked.
 #' @param link.balance after initial linking step, weight all shared factors such that each dataset is represented as equally as possible in each factor.
 #' @param link.balance.tol relative change in factor representation within sample groups between balancing iterations at which to call convergence.
@@ -103,10 +101,10 @@ RunNMF.Seurat <- function(
 #' @param reduction.name name to store resulting DimReduc object as
 #' @param reduction.key key for resulting DimReduc
 #' @param verbose print fitting progress to console
-#' @param tol tolerance of the fit (correlation distance of the model across consecutive iterations)
+#' @param tol tolerance of the fit (correlation distance of the model across consecutive iterations). 
 #' @param maxit maximum number of fitting iterations
 #' @param L1 L1/LASSO penalty to increase sparsity of the model
-#' @param L2 L2/Ridge penalty to increase angles between factors and sparsity of the model
+#' @param L2 L2/Ridge-like penalty to increase angles between factors
 #' @param threads number of threads to use (0 = let OpenMP use all available threads)
 #' @param reduction reduction to use for metadata analysis
 #' @seealso \code{\link{RunNMF}}, \code{\link{RankPlot}}, \code{\link{MetadataSummary}}
@@ -124,12 +122,11 @@ RunLNMF.Seurat <- function(
   reduction.key = "LNMF_",
   verbose = TRUE,
   link.cutoff = 0.5,
-  tol = 1e-4,
+  tol = 1e-5,
   maxit = 100,
   L1 = 0.01,
   L2 = 0,
   threads = 0,
-  precision = "double",
   link.balance.tol = 0,
   balance.maxit = 100,
   link.balance.rate = 0.1, ...){
@@ -178,7 +175,7 @@ RunLNMF.Seurat <- function(
   # need to do a similar step for link_w for multi-modal integration
   link_w <- matrix(1, nrow(w), ncol(w))
   
-  lnmf_model <- run_linked_nmf(A, w, link_h, link_w, tol, maxit, verbose, L1, L2, threads, precision)
+  lnmf_model <- run_linked_nmf(A, w, link_h, link_w, tol, maxit, verbose, L1, L2, threads)
   
   # balancing step.
   # not sure if this is a good idea.
@@ -214,7 +211,7 @@ RunLNMF.Seurat <- function(
         }
       }
       # run linked nmf
-      lnmf_model <- c_nmf(A, At, tol, 1L, FALSE, L1, L2, threads, lnmf_model$w, link_h, 1, 0, precision == "float")
+      lnmf_model <- c_nmf(A, At, tol, 1L, FALSE, L1, L2, threads, lnmf_model$w, link_h, 1, 0)
       m <- MetadataSummary(lnmf_model$h, split.by, FALSE)
       v <- as.vector(abs(1 / length(levels) - m))
       curr.balance.tol <- mean(v[v != 0 & v != 1])

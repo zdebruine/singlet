@@ -15,8 +15,7 @@ cross_validate_nmf(
   L1 = 0.01,
   L2 = 0,
   threads = 0,
-  test_density = 0.05,
-  precision = "float"
+  test_density = 0.05
 )
 
 \method{plot}{cross_validate_nmf_data}(x, ...)
@@ -36,13 +35,11 @@ cross_validate_nmf(
 
 \item{L1}{L1/LASSO penalty to increase sparsity of model}
 
-\item{L2}{L2/Ridge penalty to increase angles between factors and sparsity of the model}
+\item{L2}{L2/Ridge penalty to increase angles between factors}
 
 \item{threads}{number of threads for parallelization across CPUs, 0 = use all available threads}
 
 \item{test_density}{fraction of values to include in the test set}
-
-\item{precision}{\code{"float"} or \code{"double"}. High tolerance models may not be achievable with \code{"float"} precision.}
 
 \item{x}{the result of \code{cross_validate_nmf}}
 

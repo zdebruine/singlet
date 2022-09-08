@@ -17,12 +17,11 @@
   reduction.key = "LNMF_",
   verbose = TRUE,
   link.cutoff = 0.5,
-  tol = 1e-04,
+  tol = 1e-05,
   maxit = 100,
   L1 = 0.01,
   L2 = 0,
   threads = 0,
-  precision = "double",
   link.balance.tol = 0,
   balance.maxit = 100,
   link.balance.rate = 0.1,
@@ -42,7 +41,7 @@ GetUniqueFactors(object, split.by, reduction = "lnmf")
 \arguments{
 \item{object}{A Seurat object}
 
-\item{split.by}{attribute in \code{@metadata} for splitting. Data will be weighted such that each group contributes equally to the LNMF model.}
+\item{split.by}{column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.}
 
 \item{reduction.use}{NMF reduction to use for initializing the linked factorization.}
 
@@ -54,17 +53,15 @@ GetUniqueFactors(object, split.by, reduction = "lnmf")
 
 \item{link.cutoff}{if the relative contribution of samples in any given group to a factor falls below \code{link.cutoff}, unlink it from the factor. \code{link.cutoff = 1} means a factor must contribute exactly equally before being unlinked.}
 
-\item{tol}{tolerance of the fit (correlation distance of the model across consecutive iterations)}
+\item{tol}{tolerance of the fit (correlation distance of the model across consecutive iterations).}
 
 \item{maxit}{maximum number of fitting iterations}
 
 \item{L1}{L1/LASSO penalty to increase sparsity of the model}
 
-\item{L2}{L2/Ridge penalty to increase angles between factors and sparsity of the model}
+\item{L2}{L2/Ridge-like penalty to increase angles between factors}
 
 \item{threads}{number of threads to use (0 = let OpenMP use all available threads)}
-
-\item{precision}{\code{"double"} or \code{"float"} for numerical precision. \code{"float"} may be faster, but numerical instability may result in more iterations to achieve desired tolerances.}
 
 \item{link.balance.tol}{relative change in factor representation within sample groups between balancing iterations at which to call convergence.}
 
