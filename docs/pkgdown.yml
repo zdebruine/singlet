@@ -1,8 +1,0 @@
-pandoc: 2.17.1.1
-pkgdown: 2.0.6
-pkgdown_sha: ~
-articles:
-  Batch_Integration_with_Linked_NMF: Batch_Integration_with_Linked_NMF.html
-  Guided_Clustering_with_NMF: Guided_Clustering_with_NMF.html
-last_built: 2022-09-08T18:34Z
-
