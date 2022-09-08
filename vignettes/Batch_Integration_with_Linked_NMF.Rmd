@@ -37,9 +37,8 @@ Note the use of `split.by = "stim"`, where we are indicating that the "stim" fie
 set.seed(123)
 ifnb <- RunNMF(
   ifnb, 
-  split.by = "stim", 
-  k = seq(15, 30, 2), 
-  reps = 2, 
+  split.by = "stim",
+  k = seq(15, 35, 2), 
   verbose = FALSE)
 ```
 

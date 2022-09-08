@@ -42,11 +42,11 @@ pbmc3k[["percent.mt"]] <- PercentageFeatureSet(pbmc3k, pattern = "^MT-")
 pbmc3k <- subset(pbmc3k, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 5)
 ```
 
-Now run NMF cross-validation and learn the model at the best rank:
+Now run NMF cross-validation and learn the model at the (automatically determined) best rank:
 
-```{R, cross-validation}
+```{R, results = 'hide', message = FALSE, warning = FALSE, cross-validation}
 set.seed(123)
-pbmc3k <- pbmc3k %>% NormalizeData() %>%
+pbmc3k <- NormalizeData(pbmc3k) %>%
   singlet::RunNMF(k = 5:25, reps = 3, verbose = FALSE)
 ```
 
@@ -76,32 +76,36 @@ VizDimLoadings(pbmc3k, dims = 1:2, reduction = "nmf")
 
 `singlet` makes GSEA with `fgsea` and `msigdbr` easy. Simply, the weights in the NMF "w" matrix are used as rankings for terms in the enrichment analysis.
 
-```{R, message = FALSE, warning = FALSE, gsea}
-pbmc3k <- RunGSEA(pbmc3k, reduction = "nmf", category = "C7")
+```{R, message = FALSE, warning = FALSE, results = 'hide', gsea}
+pbmc3k <- RunGSEA(pbmc3k, category = "C7", verbose = FALSE)
 ```
 
 <details>
+
   <summary>See how GSEA results are stored in the NMF model:</summary>
-    ```{r, echo=FALSE, eval=TRUE, gsea-data-structure}
-    str(pbmc3k@reductions$nmf)
-    ```
-</details> 
+
+```{R, echo = FALSE, gsea-data-structure}
+str(pbmc3k@reductions$nmf)
+```
+
+</details>
+
 
 `singlet` provides a helper function for quick exploration of GSEA results:
 
-```{R, fig.width = 5, fig.height = 7, gsea-heatmap}
-GSEAHeatmap(pbmc3k, reduction = "nmf", max.terms.per.factor = 2)
+```{R, fig.width = 7, fig.height = 7, gsea-heatmap}
+GSEAHeatmap(pbmc3k, reduction = "nmf", max.terms.per.factor = 3)
 ```
 
 ## Cell Clustering
 
-The `pbmc3k` dataset in SeuratData ships with clusters that have been determined by graph-based clustering on a PCA embedding, followed by expert annotation based on cluster marker genes.
+The `pbmc3k` dataset ships with clusters that have been determined by graph-based clustering on a PCA embedding, followed by annotation based on cluster marker genes.
 
-We will determine clusters by graph-based clustering on an NMF embedding, and then compare them to those PCA-guided clusters.
+We will determine clusters by graph-based clustering on an NMF embedding, and then compare them to the PCA-guided clustering.
 
-```{R, message = FALSE, warning = FALSE, cluster-cells}
+```{R, message = FALSE, warning = FALSE, results = 'hide', cluster-cells}
 pbmc3k <- FindNeighbors(pbmc3k, dims = 1:ncol(pbmc3k@reductions$nmf), reduction = "nmf") %>%
-  FindClusters(resolution = 0.5) %>%
+  FindClusters(resolution = 0.5, verbose = FALSE) %>%
   RunUMAP(reduction = "nmf", dims = 1:ncol(pbmc3k@reductions$nmf), verbose = FALSE)
 ```
 
@@ -111,7 +115,7 @@ Because NMF factors are additive signals, we can also visualize their representa
 FeaturePlot(pbmc3k, features = paste0("NMF_", 1:6))
 ```
 
-Compare the composition of NMF clusters to Seurat PCA-determined clusterings:
+Compare the composition of NMF clusters to Seurat PCA-guided clustering:
 
 ```{R, fig.width = 5, fig.height = 3, map-cluster-ids}
 df <- data.frame(
@@ -144,7 +148,11 @@ cluster_names <- df %>%
 
 levels(pbmc3k@meta.data$seurat_clusters) <- make.unique(as.vector(cluster_names))
 
-DimPlot(pbmc3k, reduction = "umap", label = TRUE, group.by = "seurat_clusters", pt.size = 0.5) + NoLegend()
+DimPlot(pbmc3k, 
+        reduction = "umap", 
+        label = TRUE, 
+        group.by = "seurat_clusters", 
+        pt.size = 0.5) + NoLegend()
 ```
 
 Compared to the PCA clustering (see the Seurat vignette), the NMF clustering more completely resolves NK cells and better resolves CD8 T-cells from Memory CD4 T-cells, but does not identify a small cluster of Dendritic Cells annotated in the Seurat vignette.
