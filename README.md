@@ -36,8 +36,6 @@ plot_grid(
      ncol = 2)
 ```
 
-![NMF workflow](https://github.com/zdebruine/singlet/blob/main/readme_figures/Picture1.png)
-
 NMF can do almost anything that PCA can do, but also imputes missing signal, always has an optimal rank (for variance-stabilized data), uses all the information in your assay (incl. "non-variable" genes), is robust across experiments, learns signatures of transcriptional activity, and is colinear and non-negative (interpretable) rather than orthogonal and signed (not interpretable)
 
 Singlet internally provides the **fastest implementation of NMF**. Cross-validation can take a few minutes for datasets with a few ten thousand cells, but is extremely scalable and runs excellently on HPC nodes and average laptops alike.
