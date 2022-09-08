@@ -1,18 +1,17 @@
 Package: singlet
 Type: Package
-Title: singlet
+Title: Non-negative Matrix Factorization for single-cell analysis
 Version: 0.0.99
-Date: 2021-27-12
+Date: 2022-09-08
 Authors@R: person("Zach", "DeBruine", 
     email = "debruinz@gvsu.edu", 
     role = c("aut", "cre"), 
     comment = c(ORCID = "0000-0003-2234-4827"))
-Description: Fast single-cell data analysis with non-negative matrix factorization.
+Description: Fast NMF with automatic rank-determination for dimension reduction of single-cell data using Seurat.
 License: GPL (>= 2)
 Imports:
     Rcpp, 
     Matrix,
-    RcppEigen,
     methods,
     stats,
     ggplot2,
@@ -24,19 +23,17 @@ Imports:
     fgsea,
     msigdbr
 LinkingTo: 
-    Rcpp, 
-    RcppEigen
+    Rcpp
 VignetteBuilder: knitr
 RoxygenNote: 7.2.1
 Suggests: 
     rmarkdown, 
-    SeuratData,
     devtools,
     cowplot,
     viridis,
-    SeuratData,
     testthat (>= 3.0.0) 
 Config/testthat/edition: 3
 URL: https://github.com/zdebruine/singlet
+LazyData: true
 BugReports: https://github.com/zdebruine/singlet/issues
 Encoding: UTF-8
