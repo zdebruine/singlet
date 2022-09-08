@@ -4,7 +4,7 @@
     <loc>/404.html</loc>
   </url>
   <url>
-    <loc>/articles/Batch_Integration_with_Singlet.html</loc>
+    <loc>/articles/Batch_Integration_with_Linked_NMF.html</loc>
   </url>
   <url>
     <loc>/articles/Guided_Clustering_with_NMF.html</loc>
@@ -28,16 +28,10 @@
     <loc>/reference/RankPlot.html</loc>
   </url>
   <url>
-    <loc>/reference/RunGSEA.Seurat.html</loc>
-  </url>
-  <url>
     <loc>/reference/RunGSEA.html</loc>
   </url>
   <url>
     <loc>/reference/RunLNMF.html</loc>
-  </url>
-  <url>
-    <loc>/reference/RunNMF.Seurat.html</loc>
   </url>
   <url>
     <loc>/reference/RunNMF.html</loc>
@@ -46,7 +40,13 @@
     <loc>/reference/cross_validate_nmf.html</loc>
   </url>
   <url>
+    <loc>/reference/get_pbmc3k_data.html</loc>
+  </url>
+  <url>
     <loc>/reference/index.html</loc>
+  </url>
+  <url>
+    <loc>/reference/pbmc3k.html</loc>
   </url>
   <url>
     <loc>/reference/run_linked_nmf.html</loc>

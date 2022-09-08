@@ -24,7 +24,7 @@
 <li class="nav-item dropdown">
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/Batch_Integration_with_Singlet.html">Batch Integration with Singlet</a>
+    <a class="dropdown-item" href="../articles/Batch_Integration_with_Linked_NMF.html">Batch Integration with Linked NMF</a>
     <a class="dropdown-item" href="../articles/Guided_Clustering_with_NMF.html">Guided Clustering with NMF</a>
   </div>
 </li>
@@ -63,9 +63,9 @@
 <span>  maxit <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  L1 <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>  L2 <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  threads <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  test_density <span class="op">=</span> <span class="fl">0.05</span>,</span>
-<span>  precision <span class="op">=</span> <span class="st">"float"</span></span>
+<span>  test_density <span class="op">=</span> <span class="fl">0.05</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for cross_validate_nmf_data</span></span>
@@ -102,16 +102,16 @@
 <dd><p>L1/LASSO penalty to increase sparsity of model</p></dd>
 
 
+<dt>L2</dt>
+<dd><p>L2/Ridge penalty to increase angles between factors</p></dd>
+
+
 <dt>threads</dt>
 <dd><p>number of threads for parallelization across CPUs, 0 = use all available threads</p></dd>
 
 
 <dt>test_density</dt>
 <dd><p>fraction of values to include in the test set</p></dd>
-
-
-<dt>precision</dt>
-<dd><p><code>"float"</code> or <code>"double"</code>. High tolerance models may not be achievable with <code>"float"</code> precision.</p></dd>
 
 
 <dt>x</dt>

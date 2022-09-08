@@ -41,7 +41,7 @@
 <li class="active nav-item dropdown">
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
-    <a class="dropdown-item" href="../articles/Batch_Integration_with_Singlet.html">Batch Integration with Singlet</a>
+    <a class="dropdown-item" href="../articles/Batch_Integration_with_Linked_NMF.html">Batch Integration with Linked NMF</a>
     <a class="dropdown-item" href="../articles/Guided_Clustering_with_NMF.html">Guided Clustering with NMF</a>
   </div>
 </li>
@@ -73,7 +73,7 @@
                         <h4 data-toc-skip class="author">Zach
 DeBruine</h4>
             
-            <h4 data-toc-skip class="date">2022-08-26</h4>
+            <h4 data-toc-skip class="date">2022-09-08</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/zdebruine/singlet/blob/HEAD/vignettes/Guided_Clustering_with_NMF.Rmd" class="external-link"><code>vignettes/Guided_Clustering_with_NMF.Rmd</code></a></small>
       <div class="d-none name"><code>Guided_Clustering_with_NMF.Rmd</code></div>
@@ -96,85 +96,58 @@ the Seurat introductory tutorial on [guided clustering]
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/zdebruine/singlet" class="external-link">singlet</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://satijalab.org/seurat" class="external-link">Seurat</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://www.satijalab.org/seurat" class="external-link">SeuratData</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
-<span><span class="fu">SeuratData</span><span class="fu">::</span><span class="fu"><a href="https://satijalab.org/seurat/reference/InstallData.html" class="external-link">InstallData</a></span><span class="op">(</span><span class="st">"pbmc3k"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">pbmc3k</span><span class="op">)</span></span>
-<span><span class="va">pbmc3k</span></span></code></pre></div>
-<pre><code><span><span class="co">## An object of class Seurat </span></span>
-<span><span class="co">## 13714 features across 2700 samples within 1 assay </span></span>
-<span><span class="co">## Active assay: RNA (13714 features, 0 variable features)</span></span></code></pre>
-</div>
-<div class="section level2">
-<h2 id="qc-and-selecting-cells-for-further-analysis">QC and selecting cells for further analysis<a class="anchor" aria-label="anchor" href="#qc-and-selecting-cells-for-further-analysis"></a>
-</h2>
-<p>Remove doublets, very low-quality cells, but do not regress out
-mitochondrial genes. NMF will deal with systematic technical signal or
-noise, and regression of any form will hurt downstream analysis.</p>
-<p>In general, NMF requires far less “data cleaning” than PCA.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pbmc3k</span><span class="op">[[</span><span class="st">"percent.mt"</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://satijalab.org/seurat/reference/PercentageFeatureSet.html" class="external-link">PercentageFeatureSet</a></span><span class="op">(</span><span class="va">pbmc3k</span>, pattern <span class="op">=</span> <span class="st">"^MT-"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">pbmc3k</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">pbmc3k</span>, subset <span class="op">=</span> <span class="va">nFeature_RNA</span> <span class="op">&gt;</span> <span class="fl">200</span> <span class="op">&amp;</span> <span class="va">nFeature_RNA</span> <span class="op">&lt;</span> <span class="fl">2500</span> <span class="op">&amp;</span> <span class="va">percent.mt</span> <span class="op">&lt;</span> <span class="fl">5</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="normalize-data">Normalize Data<a class="anchor" aria-label="anchor" href="#normalize-data"></a>
-</h2>
-<p>Here we apply standard log-normalization, which works very well, but
-any form of approximate variance stabilizing transformation is suitable
-for helping NMF find meaningful solutions. Raw counts are not suitable
-for NMF.</p>
-<p>Do not use <code><a href="https://satijalab.org/seurat/reference/SCTransform.html" class="external-link">Seurat::SCTransform</a></code> with NMF. Adding the
-residuals of negative binomial fits to your count data is not a good
-idea for additive decompositions. NMF will smooth out noise and impute
-missing signal without any help (as opposed to PCA which fits to missing
-signal, and therefore benefits from SCTransform).</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pbmc3k</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://satijalab.org/seurat/reference/NormalizeData.html" class="external-link">NormalizeData</a></span><span class="op">(</span><span class="va">pbmc3k</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">pbmc3k</span> <span class="op">&lt;-</span> <span class="fu">singlet</span><span class="fu">::</span><span class="fu"><a href="../reference/get_pbmc3k_data.html">get_pbmc3k_data</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="run-nmf">Run NMF<a class="anchor" aria-label="anchor" href="#run-nmf"></a>
 </h2>
-<p>NMF can be run on all features using normalized counts.
-<code>RunNMF</code> will automatically run cross-validation on an array
-of ranks that you provide, identify the best rank, and learn a model at
-that rank.</p>
+<p>NMF can be run on all features using normalized counts. Here we apply
+standard log-normalization, which works very well, but any form of
+approximate variance stabilizing transformation is suitable for helping
+NMF find meaningful solutions. Raw counts are not suitable for NMF
+because the model pays too much attention to features with very high
+counts.</p>
+<p><code>RunNMF</code> will automatically run cross-validation on an
+array of ranks that you provide, identify the best rank, and learn a
+model at that rank.</p>
 <p>Cross-validation can take some time. For large datasets, it is useful
 to start with a coarse-grained scan of a wide range of ranks and then
 focus on a narrow window of ranks with several replicates. Remember that
 the optimal number of NMF factors in your analysis may be significantly
 greater than the number of PCA components that might be used. This is a
 great step to run on a High Performance Computing node.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<p>First off, basic quality control:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pbmc3k</span><span class="op">[[</span><span class="st">"percent.mt"</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://satijalab.org/seurat/reference/PercentageFeatureSet.html" class="external-link">PercentageFeatureSet</a></span><span class="op">(</span><span class="va">pbmc3k</span>, pattern <span class="op">=</span> <span class="st">"^MT-"</span><span class="op">)</span></span>
+<span><span class="va">pbmc3k</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">pbmc3k</span>, subset <span class="op">=</span> <span class="va">nFeature_RNA</span> <span class="op">&gt;</span> <span class="fl">200</span> <span class="op">&amp;</span> <span class="va">nFeature_RNA</span> <span class="op">&lt;</span> <span class="fl">2500</span> <span class="op">&amp;</span> <span class="va">percent.mt</span> <span class="op">&lt;</span> <span class="fl">5</span><span class="op">)</span></span></code></pre></div>
+<p>Now run NMF cross-validation and learn the model at the
+(automatically determined) best rank:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
-<span><span class="va">pbmc3k</span> <span class="op">&lt;-</span> <span class="fu">singlet</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/singlet/man/RunNMF.html" class="external-link">RunNMF</a></span><span class="op">(</span><span class="va">pbmc3k</span>, k <span class="op">=</span> <span class="fl">5</span><span class="op">:</span><span class="fl">20</span>, n_replicates <span class="op">=</span> <span class="fl">2</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## fitting final model:</span></span></code></pre>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<span><span class="va">pbmc3k</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://satijalab.org/seurat/reference/NormalizeData.html" class="external-link">NormalizeData</a></span><span class="op">(</span><span class="va">pbmc3k</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu">singlet</span><span class="fu">::</span><span class="fu"><a href="../reference/RunNMF.html">RunNMF</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">5</span><span class="op">:</span><span class="fl">25</span>, reps <span class="op">=</span> <span class="fl">3</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<p>Plot the cross-validation results:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/RankPlot.html">RankPlot</a></span><span class="op">(</span><span class="va">pbmc3k</span><span class="op">)</span></span></code></pre></div>
-<p><img src="Guided_Clustering_with_NMF_files/figure-html/unnamed-chunk-4-1.png" width="700"></p>
+<p><img src="Guided_Clustering_with_NMF_files/figure-html/unnamed-chunk-1-1.png" width="700"></p>
 <p>Remember to set the seed, as above, to guarantee reproducibility of
 your NMF model.</p>
-<p>A good model has already been learned at the optimal rank, but we may
-wish to learn a still higher-quality model:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
-<span><span class="va">pbmc3k</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/singlet/man/RunNMF.html" class="external-link">RunNMF</a></span><span class="op">(</span><span class="va">pbmc3k</span>, k <span class="op">=</span> <span class="fl">15</span>, tol <span class="op">=</span> <span class="fl">1e-6</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="visualization">Visualization<a class="anchor" aria-label="anchor" href="#visualization"></a>
 </h2>
 <p>Plot the representation of various metadata (i.e. Seurat-annotated
 cell types) in each factor:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/RunLNMF.html">MetadataPlot</a></span><span class="op">(</span><span class="va">pbmc3k</span>, <span class="st">"seurat_annotations"</span>, reduction <span class="op">=</span> <span class="st">"nmf"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="Guided_Clustering_with_NMF_files/figure-html/unnamed-chunk-6-1.png" width="480"></p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/RunLNMF.html">MetadataPlot</a></span><span class="op">(</span><span class="va">pbmc3k</span>, <span class="st">"cell_type"</span>, reduction <span class="op">=</span> <span class="st">"nmf"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="Guided_Clustering_with_NMF_files/figure-html/plot-metadata-1.png" width="480"></p>
 <p>Here we simply do what the Seurat Guided Clustering tutorial does,
 but for NMF:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://satijalab.org/seurat/reference/VizDimLoadings.html" class="external-link">VizDimLoadings</a></span><span class="op">(</span><span class="va">pbmc3k</span>, dims <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span>, reduction <span class="op">=</span> <span class="st">"nmf"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="Guided_Clustering_with_NMF_files/figure-html/unnamed-chunk-7-1.png" width="480"></p>
+<p><img src="Guided_Clustering_with_NMF_files/figure-html/viz-dim-loadings-1.png" width="480"></p>
 </div>
 <div class="section level2">
 <h2 id="gene-set-enrichment-analysis">Gene Set Enrichment Analysis<a class="anchor" aria-label="anchor" href="#gene-set-enrichment-analysis"></a>
@@ -182,73 +155,86 @@ but for NMF:</p>
 <p><code>singlet</code> makes GSEA with <code>fgsea</code> and
 <code>msigdbr</code> easy. Simply, the weights in the NMF “w” matrix are
 used as rankings for terms in the enrichment analysis.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pbmc3k</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/RunGSEA.html">RunGSEA</a></span><span class="op">(</span><span class="va">pbmc3k</span>, reduction <span class="op">=</span> <span class="st">"nmf"</span>, category <span class="op">=</span> <span class="st">"C7"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pbmc3k</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/RunGSEA.html">RunGSEA</a></span><span class="op">(</span><span class="va">pbmc3k</span>, category <span class="op">=</span> <span class="st">"C7"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <details><summary>
 See how GSEA results are stored in the NMF model:
-</summary><pre><code>  ## Formal class 'DimReduc' [package "SeuratObject"] with 9 slots
-  ##   ..@ cell.embeddings           : num [1:2638, 1:15] 0.000524 0 0.000452 0 0 ...
-  ##   .. ..- attr(*, "dimnames")=List of 2
-  ##   .. .. ..$ : chr [1:2638] "AAACATACAACCAC" "AAACATTGAGCTAC" "AAACATTGATCAGC" "AAACCGTGCTTCCG" ...
-  ##   .. .. ..$ : chr [1:15] "NMF_1" "NMF_2" "NMF_3" "NMF_4" ...
-  ##   ..@ feature.loadings          : num [1:13714, 1:15] 0 0 0 0 0 ...
-  ##   .. ..- attr(*, "dimnames")=List of 2
-  ##   .. .. ..$ : chr [1:13714] "AL627309.1" "AP006222.2" "RP11-206L10.2" "RP11-206L10.9" ...
-  ##   .. .. ..$ : chr [1:15] "NMF_1" "NMF_2" "NMF_3" "NMF_4" ...
-  ##   ..@ feature.loadings.projected: num[0 , 0 ] 
-  ##   ..@ assay.used                : chr "RNA"
-  ##   ..@ global                    : logi(0) 
-  ##   ..@ stdev                     : num [1:15] 571835 418629 375066 329047 326267 ...
-  ##   ..@ key                       : chr "NMF_"
-  ##   ..@ jackstraw                 :Formal class 'JackStrawData' [package "SeuratObject"] with 4 slots
-  ##   .. .. ..@ empirical.p.values     : num[0 , 0 ] 
-  ##   .. .. ..@ fake.reduction.scores  : num[0 , 0 ] 
-  ##   .. .. ..@ empirical.p.values.full: num[0 , 0 ] 
-  ##   .. .. ..@ overall.p.values       : num[0 , 0 ] 
-  ##   ..@ misc                      :List of 1
-  ##   .. ..$ cv_data:'data.frame':   0 obs. of  0 variables
-  ```
-&lt;/details&gt; 
-
-`singlet` provides a helper function for quick exploration of GSEA results:
-
-
-```r
-GSEAHeatmap(pbmc3k, reduction = "nmf", max.terms.per.factor = 2)</code></pre>
-</details>
+</summary><pre><code><span><span class="co">## Formal class 'DimReduc' [package "SeuratObject"] with 9 slots</span></span>
+<span><span class="co">##   ..@ cell.embeddings           : num [1:2638, 1:15] 0.000469 0 0.000652 0 0 ...</span></span>
+<span><span class="co">##   .. ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">##   .. .. ..$ : chr [1:2638] "AAACATACAACCAC" "AAACATTGAGCTAC" "AAACATTGATCAGC" "AAACCGTGCTTCCG" ...</span></span>
+<span><span class="co">##   .. .. ..$ : chr [1:15] "NMF_1" "NMF_2" "NMF_3" "NMF_4" ...</span></span>
+<span><span class="co">##   ..@ feature.loadings          : num [1:13714, 1:15] 0 0 0 0 0 ...</span></span>
+<span><span class="co">##   .. ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">##   .. .. ..$ : chr [1:13714] "AL627309.1" "AP006222.2" "RP11-206L10.2" "RP11-206L10.9" ...</span></span>
+<span><span class="co">##   .. .. ..$ : chr [1:15] "NMF_1" "NMF_2" "NMF_3" "NMF_4" ...</span></span>
+<span><span class="co">##   ..@ feature.loadings.projected: num[0 , 0 ] </span></span>
+<span><span class="co">##   ..@ assay.used                : chr "RNA"</span></span>
+<span><span class="co">##   ..@ global                    : logi(0) </span></span>
+<span><span class="co">##   ..@ stdev                     : num [1:15] 599930 377208 375598 340554 318461 ...</span></span>
+<span><span class="co">##   ..@ key                       : chr "NMF_"</span></span>
+<span><span class="co">##   ..@ jackstraw                 :Formal class 'JackStrawData' [package "SeuratObject"] with 4 slots</span></span>
+<span><span class="co">##   .. .. ..@ empirical.p.values     : num[0 , 0 ] </span></span>
+<span><span class="co">##   .. .. ..@ fake.reduction.scores  : num[0 , 0 ] </span></span>
+<span><span class="co">##   .. .. ..@ empirical.p.values.full: num[0 , 0 ] </span></span>
+<span><span class="co">##   .. .. ..@ overall.p.values       : num[0 , 0 ] </span></span>
+<span><span class="co">##   ..@ misc                      :List of 2</span></span>
+<span><span class="co">##   .. ..$ cv_data:Classes 'cross_validate_nmf_data' and 'data.frame': 63 obs. of  3 variables:</span></span>
+<span><span class="co">##   .. .. ..$ k         : int [1:63] 5 6 7 8 9 10 11 12 13 14 ...</span></span>
+<span><span class="co">##   .. .. ..$ rep       : Factor w/ 3 levels "1","2","3": 1 1 1 1 1 1 1 1 1 1 ...</span></span>
+<span><span class="co">##   .. .. ..$ test_error: num [1:63] 0.132 0.131 0.131 0.131 0.131 ...</span></span>
+<span><span class="co">##   .. .. ..- attr(*, "out.attrs")=List of 2</span></span>
+<span><span class="co">##   .. .. .. ..$ dim     : Named int [1:2] 21 3</span></span>
+<span><span class="co">##   .. .. .. .. ..- attr(*, "names")= chr [1:2] "k" "rep"</span></span>
+<span><span class="co">##   .. .. .. ..$ dimnames:List of 2</span></span>
+<span><span class="co">##   .. .. .. .. ..$ k  : chr [1:21] "k= 5" "k= 6" "k= 7" "k= 8" ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ rep: chr [1:3] "rep=1" "rep=2" "rep=3"</span></span>
+<span><span class="co">##   .. ..$ gsea   :List of 4</span></span>
+<span><span class="co">##   .. .. ..$ pval: num [1:5084, 1:15] 1.46 1.65 1.84 1.79 1.54 ...</span></span>
+<span><span class="co">##   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE28737_BCL6_HET_VS_BCL6_KO_MARGINAL_ZONE_BCELL_UP" "GSE9509_LPS_VS_LPS_AND_IL10_STIM_IL10_KO_MACROPHAGE_10MIN_UP" "GSE18791_CTRL_VS_NEWCASTLE_VIRUS_DC_18H_DN" "GSE40274_CTRL_VS_FOXP3_AND_SATB1_TRANSDUCED_ACTIVATED_CD4_TCELL_UP" ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf14" "nmf9" "nmf10" "nmf13" ...</span></span>
+<span><span class="co">##   .. .. ..$ padj: num [1:5084, 1:15] 0.721 0.863 1.022 0.981 0.78 ...</span></span>
+<span><span class="co">##   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE28737_BCL6_HET_VS_BCL6_KO_MARGINAL_ZONE_BCELL_UP" "GSE9509_LPS_VS_LPS_AND_IL10_STIM_IL10_KO_MACROPHAGE_10MIN_UP" "GSE18791_CTRL_VS_NEWCASTLE_VIRUS_DC_18H_DN" "GSE40274_CTRL_VS_FOXP3_AND_SATB1_TRANSDUCED_ACTIVATED_CD4_TCELL_UP" ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf14" "nmf9" "nmf10" "nmf13" ...</span></span>
+<span><span class="co">##   .. .. ..$ es  : num [1:5084, 1:15] 0.775 0.774 0.779 0.775 0.917 ...</span></span>
+<span><span class="co">##   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE28737_BCL6_HET_VS_BCL6_KO_MARGINAL_ZONE_BCELL_UP" "GSE9509_LPS_VS_LPS_AND_IL10_STIM_IL10_KO_MACROPHAGE_10MIN_UP" "GSE18791_CTRL_VS_NEWCASTLE_VIRUS_DC_18H_DN" "GSE40274_CTRL_VS_FOXP3_AND_SATB1_TRANSDUCED_ACTIVATED_CD4_TCELL_UP" ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf14" "nmf9" "nmf10" "nmf13" ...</span></span>
+<span><span class="co">##   .. .. ..$ nes : num [1:5084, 1:15] 1.09 1.09 1.1 1.09 1.21 ...</span></span>
+<span><span class="co">##   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE28737_BCL6_HET_VS_BCL6_KO_MARGINAL_ZONE_BCELL_UP" "GSE9509_LPS_VS_LPS_AND_IL10_STIM_IL10_KO_MACROPHAGE_10MIN_UP" "GSE18791_CTRL_VS_NEWCASTLE_VIRUS_DC_18H_DN" "GSE40274_CTRL_VS_FOXP3_AND_SATB1_TRANSDUCED_ACTIVATED_CD4_TCELL_UP" ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf14" "nmf9" "nmf10" "nmf13" ...</span></span></code></pre>
+</details><p><code>singlet</code> provides a helper function for quick exploration
+of GSEA results:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/GSEAHeatmap.html">GSEAHeatmap</a></span><span class="op">(</span><span class="va">pbmc3k</span>, reduction <span class="op">=</span> <span class="st">"nmf"</span>, max.terms.per.factor <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
+<p><img src="Guided_Clustering_with_NMF_files/figure-html/gsea-heatmap-1.png" width="672"></p>
 </div>
 <div class="section level2">
 <h2 id="cell-clustering">Cell Clustering<a class="anchor" aria-label="anchor" href="#cell-clustering"></a>
 </h2>
-<p>The <code>pbmc3k</code> dataset in SeuratData ships with clusters
-that have been determined by graph-based clustering on a PCA embedding,
-followed by expert annotation based on cluster marker genes.</p>
+<p>The <code>pbmc3k</code> dataset ships with clusters that have been
+determined by graph-based clustering on a PCA embedding, followed by
+annotation based on cluster marker genes.</p>
 <p>We will determine clusters by graph-based clustering on an NMF
-embedding, and then compare them to those PCA-guided clusters.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+embedding, and then compare them to the PCA-guided clustering.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pbmc3k</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://satijalab.org/seurat/reference/FindNeighbors.html" class="external-link">FindNeighbors</a></span><span class="op">(</span><span class="va">pbmc3k</span>, dims <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">pbmc3k</span><span class="op">@</span><span class="va">reductions</span><span class="op">$</span><span class="va">nmf</span><span class="op">)</span>, reduction <span class="op">=</span> <span class="st">"nmf"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://satijalab.org/seurat/reference/FindClusters.html" class="external-link">FindClusters</a></span><span class="op">(</span>resolution <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://satijalab.org/seurat/reference/FindClusters.html" class="external-link">FindClusters</a></span><span class="op">(</span>resolution <span class="op">=</span> <span class="fl">0.5</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://satijalab.org/seurat/reference/RunUMAP.html" class="external-link">RunUMAP</a></span><span class="op">(</span>reduction <span class="op">=</span> <span class="st">"nmf"</span>, dims <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">pbmc3k</span><span class="op">@</span><span class="va">reductions</span><span class="op">$</span><span class="va">nmf</span><span class="op">)</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Modularity Optimizer version 1.3.0 by Ludo Waltman and Nees Jan van Eck</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## Number of nodes: 2638</span></span>
-<span><span class="co">## Number of edges: 90649</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## Running Louvain algorithm...</span></span>
-<span><span class="co">## Maximum modularity in 10 random starts: 0.8894</span></span>
-<span><span class="co">## Number of communities: 8</span></span>
-<span><span class="co">## Elapsed time: 0 seconds</span></span></code></pre>
 <p>Because NMF factors are additive signals, we can also visualize their
 representation on UMAP coordinates:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://satijalab.org/seurat/reference/FeaturePlot.html" class="external-link">FeaturePlot</a></span><span class="op">(</span><span class="va">pbmc3k</span>, features <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"NMF_"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="Guided_Clustering_with_NMF_files/figure-html/unnamed-chunk-12-1.png" width="672"></p>
-<p>Compare the composition of NMF clusters to Seurat PCA-determined
-clusterings:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<p><img src="Guided_Clustering_with_NMF_files/figure-html/feature-plot-1.png" width="672"></p>
+<p>Compare the composition of NMF clusters to Seurat PCA-guided
+clustering:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  <span class="st">"nmf_clusters"</span> <span class="op">=</span> <span class="va">pbmc3k</span><span class="op">@</span><span class="va">meta.data</span><span class="op">$</span><span class="va">seurat_clusters</span>,</span>
-<span>  <span class="st">"pca_clusters"</span> <span class="op">=</span> <span class="va">pbmc3k</span><span class="op">@</span><span class="va">meta.data</span><span class="op">$</span><span class="va">seurat_annotations</span><span class="op">)</span></span>
+<span>  <span class="st">"pca_clusters"</span> <span class="op">=</span> <span class="va">pbmc3k</span><span class="op">@</span><span class="va">meta.data</span><span class="op">$</span><span class="va">cell_type</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">df</span> <span class="op">&lt;-</span> <span class="va">df</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">df</span><span class="op">$</span><span class="va">pca_clusters</span><span class="op">)</span>, <span class="op">]</span></span>
 <span></span>
@@ -265,18 +251,22 @@ clusterings:</p>
 <span>       size <span class="op">=</span> <span class="st">"proportion\nof cluster"</span>, </span>
 <span>       color <span class="op">=</span> <span class="st">"cells in\nNMF cluster"</span><span class="op">)</span> <span class="op">+</span> </span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_viridis.html" class="external-link">scale_color_viridis_c</a></span><span class="op">(</span>option <span class="op">=</span> <span class="st">"D"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="Guided_Clustering_with_NMF_files/figure-html/unnamed-chunk-13-1.png" width="480"></p>
+<p><img src="Guided_Clustering_with_NMF_files/figure-html/map-cluster-ids-1.png" width="480"></p>
 <p>Since there is significant correspondence between PCA- and NMF-guided
 clusters, we can just transfer the labels based on majority overlap:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cluster_names</span> <span class="op">&lt;-</span> <span class="va">df</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">slice</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">pca_clusters</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels</a></span><span class="op">(</span><span class="va">pbmc3k</span><span class="op">@</span><span class="va">meta.data</span><span class="op">$</span><span class="va">seurat_clusters</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/make.unique.html" class="external-link">make.unique</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">cluster_names</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://satijalab.org/seurat/reference/DimPlot.html" class="external-link">DimPlot</a></span><span class="op">(</span><span class="va">pbmc3k</span>, reduction <span class="op">=</span> <span class="st">"umap"</span>, label <span class="op">=</span> <span class="cn">TRUE</span>, group.by <span class="op">=</span> <span class="st">"seurat_clusters"</span>, pt.size <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://satijalab.org/seurat/reference/SeuratTheme.html" class="external-link">NoLegend</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="Guided_Clustering_with_NMF_files/figure-html/unnamed-chunk-14-1.png" width="480"></p>
+<span><span class="fu"><a href="https://satijalab.org/seurat/reference/DimPlot.html" class="external-link">DimPlot</a></span><span class="op">(</span><span class="va">pbmc3k</span>, </span>
+<span>        reduction <span class="op">=</span> <span class="st">"umap"</span>, </span>
+<span>        label <span class="op">=</span> <span class="cn">TRUE</span>, </span>
+<span>        group.by <span class="op">=</span> <span class="st">"seurat_clusters"</span>, </span>
+<span>        pt.size <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://satijalab.org/seurat/reference/SeuratTheme.html" class="external-link">NoLegend</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><img src="Guided_Clustering_with_NMF_files/figure-html/dim-plot-1.png" width="480"></p>
 <p>Compared to the PCA clustering (see the Seurat vignette), the NMF
 clustering more completely resolves NK cells and better resolves CD8
 T-cells from Memory CD4 T-cells, but does not identify a small cluster
