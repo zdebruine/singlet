@@ -7,12 +7,12 @@
 \usage{
 \method{RunNMF}{Seurat}(
   object,
+  k = NULL,
   assay = NULL,
   reduction.name = "nmf",
   reduction.key = "NMF_",
   verbose = 2,
-  k = seq(2, 40, 2),
-  reps = 1,
+  reps = 3,
   test.set.density = 0.05,
   tol = 1e-05,
   maxit = 100,
@@ -28,6 +28,8 @@ RunNMF(object, ...)
 \arguments{
 \item{object}{A Seurat object}
 
+\item{k}{vector of ranks at which to fit, witholding a test set. Leave \code{NULL} for entirely automatic rank determination.}
+
 \item{assay}{Assay to use, defaults to the default assay of the first object}
 
 \item{reduction.name}{Name to store resulting DimReduc object as}
@@ -35,8 +37,6 @@ RunNMF(object, ...)
 \item{reduction.key}{Key for resulting DimReduc}
 
 \item{verbose}{Level of console output (0/FALSE, 1/TRUE, 2)}
-
-\item{k}{vector of ranks at which to fit, witholding a test set}
 
 \item{reps}{number of replicates for cross-validation}
 
