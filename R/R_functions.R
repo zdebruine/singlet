@@ -78,6 +78,103 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
   df
 }
 
+#' Automatic Rank Determination NMF
+#'
+#' ARD NMF quickly finds the optimal rank for an NMF model using an exponentially variable learning rate and basic coordinate descent.
+#'
+#' @inheritParams cross_validate_nmf
+#' @param verbose no output (0/FALSE), rank-level output (1/TRUE) and step size info (2) and individual model fitting updates (3)
+#' @import dplyr
+#' @export
+#'
+ard_nmf <- function(A, n_replicates = 3, tol = 1e-5, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0, test_density = 0.05) {
+  stopifnot("L1 penalty must be strictly in the range (0, 1]" = L1 < 1)
+  stopifnot("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb" = test_density < 0.2 & test_density > 0.01)
+  A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
+  test_seed <- abs(.Random.seed[[3]])
+  At <- Matrix::t(A)
+  df <- data.frame("k" = integer(), "rep" = integer(), "test_error" = double())
+  curr_rank <- 2
+  for (curr_rep in 1:n_replicates) {
+    if (verbose >= 1 && n_replicates > 1) cat("\nREPLICATE ", curr_rep, "/", n_replicates, "\n")
+    step_size <- 1
+    if (nrow(df) == 0) {
+      # start at k = 2
+      curr_rank <- 2
+    } else {
+      # start at the current best rank
+      curr_rank <- GetBestRank(df)
+    }
+    while (step_size >= 1 && curr_rank < ncol(A)) {
+      # as long as we are at a rank less than the rank of the matrix and step size is 1 or greater, continue trying to find the best rank
+      if (verbose > 0) cat("k =", curr_rank, ", rep =", curr_rep, "\n")
+      # compute the test set reconstruction error at curr_rank
+      set.seed(test_seed)
+      err <- c_nmf(A, At, tol * 10, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * curr_rank), curr_rank, nrow(A)), matrix(0, 1, 1), matrix(0, 1, 1), test_seed + curr_rep, round(1 / test_density))$test_mse
+      df <- rbind(df, data.frame("k" = as.integer(curr_rank), "rep" = as.integer(curr_rep), "test_error" = err))
+      if (verbose > 1) cat("   test_error =", sprintf(err, fmt = "%#.4e"), "\n")
+      # now decide what the next rank will be
+      df_rep <- subset(df, rep == curr_rep)
+      df_rep <- df_rep[order(df_rep$k), ]
+      best_rank <- GetBestRank(df_rep)
+      best_rank_pos <- which(df_rep$k == best_rank)
+      if(best_rank_pos == length(df_rep$k)){
+        # best rank is the largest rank fit so far
+        step_size <- step_size * 2
+        curr_rank <- best_rank + step_size
+      } else {
+        if(best_rank_pos == 1){
+          if(best_rank == 1) break
+          if(step_size < best_rank) {
+            curr_rank <- best_rank - step_size
+            step_size <- step_size * 2
+          } else {
+            curr_rank <- floor(best_rank / 2)
+          }
+        } else {
+          next_lower_rank <- df_rep$k[[best_rank_pos - 1]]
+          next_higher_rank <- df_rep$k[[best_rank_pos + 1]]
+          diff_lower <- best_rank - next_lower_rank
+          diff_higher <- next_higher_rank - best_rank
+          if(diff_lower == 1 && diff_higher == 1){
+            break
+          } else if(diff_lower >= diff_higher){
+            curr_rank <- best_rank - floor(diff_lower / 2)
+          } else if(diff_higher > diff_lower){
+            curr_rank <- best_rank + floor(diff_higher / 2)
+          }
+        }
+      }
+      if (verbose > 1) cat("   best rank in replicate =", best_rank, "\n")
+    }
+  }
+  df <- arrange(df, rep, k)
+  df$rep <- factor(df$rep)
+  class(df) <- c("cross_validate_nmf_data", "data.frame")
+
+  best_rank <- GetBestRank(df)
+
+  # learn final nmf model
+  if (verbose > 1) cat("\nUnmasking test set")
+  if (verbose > 0) cat("\nFitting final model at k =", best_rank)
+  set.seed(test_seed)
+  model <- c_nmf(A, At, tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * best_rank), best_rank, nrow(A)), matrix(0, 1, 1), matrix(0, 1, 1), test_seed, 0)
+  model$cv_data <- df
+  sort_index <- order(model$d, decreasing = TRUE)
+  model$d <- model$d[sort_index]
+  model$w <- t(model$w)[, sort_index]
+  model$h <- model$h[sort_index, ]
+  model
+}
+
+GetBestRank <- function(df){
+  if(nrow(df) == 0) return(2)
+  else if(nrow(df) == 1) return(df$k[[1]])
+  else if(length(unique(df$rep)) == 1) return(df$k[[which.min(df$test_error)]])
+  # get the lowest rank for each replicate, take the mean and floor it
+  else return(floor(mean((group_by(df, rep) %>% slice(which.min(test_error)))$k)))
+}
+
 #' Run Linked Non-negative Matrix Factorization
 #'
 #' @description Run LNMF, initialized from any NMF model, where factors may be "linked" to certain samples.
@@ -137,14 +234,6 @@ run_linked_nmf <- function(A, w, link_h = NULL, link_w = NULL, tol = 1e-4, maxit
   model
 }
 
-GetBestRank <- function(df, ...) {
-  if (!("cross_validate_nmf_data" %in% class(df))) {
-    stop("input data.frame must be a result of 'cross_validate_nmf'")
-  }
-
-  (df %>% group_by(k) %>% dplyr::summarize(Mean = mean(test_error)) %>% slice(which.min(Mean)))$k
-}
-
 #' @param x the result of \code{cross_validate_nmf}
 #' @rdname cross_validate_nmf
 #' @export
@@ -163,7 +252,8 @@ plot.cross_validate_nmf_data <- function(x, ...) {
     theme_classic() +
     labs(x = "factorization rank", y = "relative test set error", color = "replicate", caption = paste0("(best rank is k = ", best_rank, ")")) +
     theme(aspect.ratio = 1, plot.caption = element_text(hjust = 0.5)) +
-    geom_vline(xintercept = best_rank, linetype = "dashed", color = "red")
+    geom_vline(xintercept = best_rank, linetype = "dashed", color = "red") + 
+    scale_y_continuous(trans = "log10")
 }
 
 #' Summarize contribution of sample groups to NMF factors

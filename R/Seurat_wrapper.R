@@ -7,7 +7,7 @@
 #' @param reduction.name Name to store resulting DimReduc object as
 #' @param reduction.key Key for resulting DimReduc
 #' @param verbose Level of console output (0/FALSE, 1/TRUE, 2)
-#' @param k vector of ranks at which to fit, witholding a test set
+#' @param k vector of ranks at which to fit, witholding a test set. Leave \code{NULL} for entirely automatic rank determination.
 #' @param reps number of replicates for cross-validation
 #' @param test.set.density approximate density of the test set (default 0.05)
 #' @param tol tolerance of the fit (correlation distance of the model across consecutive iterations). Cross-validation fits are 10x coarser than this tolerance.
@@ -26,12 +26,12 @@
 #' 
 RunNMF.Seurat <- function(
   object, 
+  k = NULL,
   assay = NULL, 
   reduction.name = "nmf", 
   reduction.key = "NMF_", 
   verbose = 2, 
-  k = seq(2, 40, 2),
-  reps = 1,
+  reps = 3,
   test.set.density = 0.05,
   tol = 1e-5,
   maxit = 100,
@@ -61,17 +61,30 @@ RunNMF.Seurat <- function(
   At <- Matrix::t(A)
   seed.use <- abs(.Random.seed[[3]])
   
-  cv_data <- data.frame()
-  if(length(k) > 1){
-    cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, L1, L2, threads, test.set.density)
-    best_rank <- GetBestRank(cv_data)
-    if(verbose >= 1)
-      cat("best rank: ", best_rank, "\n")
-    cat("\nfitting final model:\n")
-    k <- best_rank
+  if(is.null(k) || is.na(k) || k == "" || k == "auto" || k <= 0){
+    # run automatic rank determination cross-validation
+    nmf_model <- ard_nmf(A, reps, tol, maxit, verbose, L1, L2, threads, test.set.density)
+    cv_data <- nmf_model$cv_data
+  } else if(length(k) == 1){
+    nmf_model <- run_nmf(A, k, tol, maxit, verbose, L1, L2, threads)
+    cv_data <- data.frame("k" = integer(), "rep" = integer(), "test_error" = double())
+    class(cv_data) <- c("nmf_cross_validate_data", "data.frame")
+  } else if(is.integer(k) && length(k) > 1){
+    # run cross-validation at specified ranks
+    cv_data <- data.frame()
+    if(length(k) > 1){
+      cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, L1, L2, threads, test.set.density)
+      best_rank <- GetBestRank(cv_data)
+      if(verbose >= 1)
+        cat("best rank: ", best_rank, "\n")
+      cat("\nfitting final model:\n")
+      k <- best_rank
+    }
+    nmf_model <- run_nmf(A, k, tol, maxit, verbose > 1, L1, L2, threads)
+  } else {
+    stop("value for 'k' was invalid")
   }
-  nmf_model <- run_nmf(A, k, tol, maxit, verbose > 1, L1, L2, threads)
-  rownames(nmf_model$h) <- colnames(nmf_model$w) <- paste0(reduction.key, 1:k)
+  rownames(nmf_model$h) <- colnames(nmf_model$w) <- paste0(reduction.key, 1:nrow(nmf_model$h))
   rownames(nmf_model$w) <- rnames
   colnames(nmf_model$h) <- cnames
   object@reductions[[reduction.name]] <- new("DimReduc", 
@@ -82,7 +95,6 @@ RunNMF.Seurat <- function(
                                              key = reduction.key, 
                                              misc = list("cv_data" = cv_data))
   
-  # get model with minimum reconstruction error
   object
 }
 
