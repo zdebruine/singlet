@@ -58,12 +58,12 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="co"># S3 method for Seurat</span></span>
 <span><span class="fu">RunNMF</span><span class="op">(</span></span>
 <span>  <span class="va">object</span>,</span>
+<span>  k <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  assay <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  reduction.name <span class="op">=</span> <span class="st">"nmf"</span>,</span>
 <span>  reduction.key <span class="op">=</span> <span class="st">"NMF_"</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>  k <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">40</span>, <span class="fl">2</span><span class="op">)</span>,</span>
-<span>  reps <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  reps <span class="op">=</span> <span class="fl">3</span>,</span>
 <span>  test.set.density <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  tol <span class="op">=</span> <span class="fl">1e-05</span>,</span>
 <span>  maxit <span class="op">=</span> <span class="fl">100</span>,</span>
@@ -83,6 +83,10 @@
 <dd><p>A Seurat object</p></dd>
 
 
+<dt>k</dt>
+<dd><p>vector of ranks at which to fit, witholding a test set. Leave <code>NULL</code> for entirely automatic rank determination.</p></dd>
+
+
 <dt>assay</dt>
 <dd><p>Assay to use, defaults to the default assay of the first object</p></dd>
 
@@ -97,10 +101,6 @@
 
 <dt>verbose</dt>
 <dd><p>Level of console output (0/FALSE, 1/TRUE, 2)</p></dd>
-
-
-<dt>k</dt>
-<dd><p>vector of ranks at which to fit, witholding a test set</p></dd>
 
 
 <dt>reps</dt>

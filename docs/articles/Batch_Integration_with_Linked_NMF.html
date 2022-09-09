@@ -73,7 +73,7 @@
                         <h4 data-toc-skip class="author">Zach
 DeBruine</h4>
             
-            <h4 data-toc-skip class="date">2022-09-08</h4>
+            <h4 data-toc-skip class="date">2022-09-09</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/zdebruine/singlet/blob/HEAD/vignettes/Batch_Integration_with_Linked_NMF.Rmd" class="external-link"><code>vignettes/Batch_Integration_with_Linked_NMF.Rmd</code></a></small>
       <div class="d-none name"><code>Batch_Integration_with_Linked_NMF.Rmd</code></div>
@@ -106,16 +106,16 @@ will weight samples from both groups equally in the NMF objective,
 regardless of whether the groups are of equal size.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
-<span><span class="va">ifnb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/RunNMF.html">RunNMF</a></span><span class="op">(</span></span>
-<span>  <span class="va">ifnb</span>, </span>
-<span>  split.by <span class="op">=</span> <span class="st">"stim"</span>,</span>
-<span>  k <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">15</span>, <span class="fl">35</span>, <span class="fl">2</span><span class="op">)</span>, </span>
-<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">ifnb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/RunNMF.html">RunNMF</a></span><span class="op">(</span><span class="va">ifnb</span>, split.by <span class="op">=</span> <span class="st">"stim"</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/RankPlot.html">RankPlot</a></span><span class="op">(</span><span class="va">ifnb</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/RankPlot.html">RankPlot</a></span><span class="op">(</span><span class="va">ifnb</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_y_continuous</a></span><span class="op">(</span>limits <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1.1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Scale for 'y' is already present. Adding another scale for 'y', which will</span></span>
+<span><span class="co">## replace the existing scale.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Removed 1 rows containing missing values (geom_point).</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Removed 1 row(s) containing missing values (geom_path).</span></span></code></pre>
 <p><img src="Batch_Integration_with_Linked_NMF_files/figure-html/unnamed-chunk-1-1.png" width="384"></p>
 <p>Visualize contribution of groups to both factors:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/RunLNMF.html">MetadataPlot</a></span><span class="op">(</span><span class="va">ifnb</span>, split.by <span class="op">=</span> <span class="st">"stim"</span>, reduction <span class="op">=</span> <span class="st">"nmf"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Batch_Integration_with_Linked_NMF_files/figure-html/plot-metadata-1.png" width="576"></p>
 <p>Some factors are almost exclusively explaining signal from one
@@ -129,7 +129,7 @@ only weakly represented. LNMF is initialized with the joint NMF model
 that we trained before, we just specify a cutoff for the minimum
 fractional representation of any sample group in any given factor at
 which it will be uncoupled from the factor.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ifnb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/RunLNMF.html">RunLNMF</a></span><span class="op">(</span></span>
 <span>  <span class="va">ifnb</span>, </span>
 <span>  split.by <span class="op">=</span> <span class="st">"stim"</span>, </span>
@@ -138,13 +138,13 @@ which it will be uncoupled from the factor.</p>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p>LNMF creates a new reduction in the Seurat object, <code>lnmf</code>.
 Now examine how each group is represented in NMF factors:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/RunLNMF.html">MetadataPlot</a></span><span class="op">(</span><span class="va">ifnb</span>, split.by <span class="op">=</span> <span class="st">"stim"</span>, reduction <span class="op">=</span> <span class="st">"lnmf"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Batch_Integration_with_Linked_NMF_files/figure-html/plot-lnmf-metadata-1.png" width="576"></p>
 <p>We can visualize these models on UMAP coordinates using the joint
 model, the entire linked NMF model, and the linked NMF model using only
 shared factors:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ifnb</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://satijalab.org/seurat/reference/RunUMAP.html" class="external-link">RunUMAP</a></span><span class="op">(</span><span class="va">ifnb</span>, </span>
 <span>                reduction <span class="op">=</span> <span class="st">"nmf"</span>, </span>
 <span>                dims <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">ifnb</span><span class="op">@</span><span class="va">reductions</span><span class="op">$</span><span class="va">nmf</span><span class="op">)</span>, </span>
@@ -164,7 +164,7 @@ shared factors:</p>
 <h2 id="visualize">Visualize<a class="anchor" aria-label="anchor" href="#visualize"></a>
 </h2>
 <p>Plot the results:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://wilkelab.org/cowplot/reference/plot_grid.html" class="external-link">plot_grid</a></span><span class="op">(</span></span>
 <span>  <span class="va">p_jnmf_umap</span> <span class="op">+</span> </span>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="st">"joint NMF"</span><span class="op">)</span> <span class="op">+</span> </span>

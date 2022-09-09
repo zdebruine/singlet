@@ -73,7 +73,7 @@
                         <h4 data-toc-skip class="author">Zach
 DeBruine</h4>
             
-            <h4 data-toc-skip class="date">2022-09-08</h4>
+            <h4 data-toc-skip class="date">2022-09-09</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/zdebruine/singlet/blob/HEAD/vignettes/Guided_Clustering_with_NMF.Rmd" class="external-link"><code>vignettes/Guided_Clustering_with_NMF.Rmd</code></a></small>
       <div class="d-none name"><code>Guided_Clustering_with_NMF.Rmd</code></div>
@@ -127,7 +127,7 @@ great step to run on a High Performance Computing node.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
 <span><span class="va">pbmc3k</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://satijalab.org/seurat/reference/NormalizeData.html" class="external-link">NormalizeData</a></span><span class="op">(</span><span class="va">pbmc3k</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu">singlet</span><span class="fu">::</span><span class="fu"><a href="../reference/RunNMF.html">RunNMF</a></span><span class="op">(</span>k <span class="op">=</span> <span class="fl">5</span><span class="op">:</span><span class="fl">25</span>, reps <span class="op">=</span> <span class="fl">3</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu">singlet</span><span class="fu">::</span><span class="fu"><a href="../reference/RunNMF.html">RunNMF</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>Plot the cross-validation results:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/RankPlot.html">RankPlot</a></span><span class="op">(</span><span class="va">pbmc3k</span><span class="op">)</span></span></code></pre></div>
@@ -160,7 +160,7 @@ used as rankings for terms in the enrichment analysis.</p>
 <details><summary>
 See how GSEA results are stored in the NMF model:
 </summary><pre><code><span><span class="co">## Formal class 'DimReduc' [package "SeuratObject"] with 9 slots</span></span>
-<span><span class="co">##   ..@ cell.embeddings           : num [1:2638, 1:15] 0.000469 0 0.000652 0 0 ...</span></span>
+<span><span class="co">##   ..@ cell.embeddings           : num [1:2638, 1:15] 0.000484 0 0.000691 0 0 ...</span></span>
 <span><span class="co">##   .. ..- attr(*, "dimnames")=List of 2</span></span>
 <span><span class="co">##   .. .. ..$ : chr [1:2638] "AAACATACAACCAC" "AAACATTGAGCTAC" "AAACATTGATCAGC" "AAACCGTGCTTCCG" ...</span></span>
 <span><span class="co">##   .. .. ..$ : chr [1:15] "NMF_1" "NMF_2" "NMF_3" "NMF_4" ...</span></span>
@@ -171,7 +171,7 @@ See how GSEA results are stored in the NMF model:
 <span><span class="co">##   ..@ feature.loadings.projected: num[0 , 0 ] </span></span>
 <span><span class="co">##   ..@ assay.used                : chr "RNA"</span></span>
 <span><span class="co">##   ..@ global                    : logi(0) </span></span>
-<span><span class="co">##   ..@ stdev                     : num [1:15] 599930 377208 375598 340554 318461 ...</span></span>
+<span><span class="co">##   ..@ stdev                     : num [1:15] 541314 413514 361714 342022 307180 ...</span></span>
 <span><span class="co">##   ..@ key                       : chr "NMF_"</span></span>
 <span><span class="co">##   ..@ jackstraw                 :Formal class 'JackStrawData' [package "SeuratObject"] with 4 slots</span></span>
 <span><span class="co">##   .. .. ..@ empirical.p.values     : num[0 , 0 ] </span></span>
@@ -179,33 +179,27 @@ See how GSEA results are stored in the NMF model:
 <span><span class="co">##   .. .. ..@ empirical.p.values.full: num[0 , 0 ] </span></span>
 <span><span class="co">##   .. .. ..@ overall.p.values       : num[0 , 0 ] </span></span>
 <span><span class="co">##   ..@ misc                      :List of 2</span></span>
-<span><span class="co">##   .. ..$ cv_data:Classes 'cross_validate_nmf_data' and 'data.frame': 63 obs. of  3 variables:</span></span>
-<span><span class="co">##   .. .. ..$ k         : int [1:63] 5 6 7 8 9 10 11 12 13 14 ...</span></span>
+<span><span class="co">##   .. ..$ cv_data:Classes 'cross_validate_nmf_data' and 'data.frame': 22 obs. of  3 variables:</span></span>
+<span><span class="co">##   .. .. ..$ k         : int [1:22] 2 4 8 10 12 13 14 15 16 24 ...</span></span>
 <span><span class="co">##   .. .. ..$ rep       : Factor w/ 3 levels "1","2","3": 1 1 1 1 1 1 1 1 1 1 ...</span></span>
-<span><span class="co">##   .. .. ..$ test_error: num [1:63] 0.132 0.131 0.131 0.131 0.131 ...</span></span>
-<span><span class="co">##   .. .. ..- attr(*, "out.attrs")=List of 2</span></span>
-<span><span class="co">##   .. .. .. ..$ dim     : Named int [1:2] 21 3</span></span>
-<span><span class="co">##   .. .. .. .. ..- attr(*, "names")= chr [1:2] "k" "rep"</span></span>
-<span><span class="co">##   .. .. .. ..$ dimnames:List of 2</span></span>
-<span><span class="co">##   .. .. .. .. ..$ k  : chr [1:21] "k= 5" "k= 6" "k= 7" "k= 8" ...</span></span>
-<span><span class="co">##   .. .. .. .. ..$ rep: chr [1:3] "rep=1" "rep=2" "rep=3"</span></span>
+<span><span class="co">##   .. .. ..$ test_error: num [1:22] 0.136 0.133 0.131 0.131 0.131 ...</span></span>
 <span><span class="co">##   .. ..$ gsea   :List of 4</span></span>
-<span><span class="co">##   .. .. ..$ pval: num [1:5084, 1:15] 1.46 1.65 1.84 1.79 1.54 ...</span></span>
+<span><span class="co">##   .. .. ..$ pval: num [1:5084, 1:15] 0.00921 0.35403 0.42873 0.0013 0.05104 ...</span></span>
 <span><span class="co">##   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE28737_BCL6_HET_VS_BCL6_KO_MARGINAL_ZONE_BCELL_UP" "GSE9509_LPS_VS_LPS_AND_IL10_STIM_IL10_KO_MACROPHAGE_10MIN_UP" "GSE18791_CTRL_VS_NEWCASTLE_VIRUS_DC_18H_DN" "GSE40274_CTRL_VS_FOXP3_AND_SATB1_TRANSDUCED_ACTIVATED_CD4_TCELL_UP" ...</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf14" "nmf9" "nmf10" "nmf13" ...</span></span>
-<span><span class="co">##   .. .. ..$ padj: num [1:5084, 1:15] 0.721 0.863 1.022 0.981 0.78 ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE41867_NAIVE_VS_DAY8_LCMV_CLONE13_EFFECTOR_CD8_TCELL_DN" "GSE27786_CD4_TCELL_VS_NKTCELL_DN" "GSE27786_LSK_VS_NKTCELL_UP" "GSE14769_UNSTIM_VS_240MIN_LPS_BMDM_DN" ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf2" "nmf1" "nmf7" "nmf4" ...</span></span>
+<span><span class="co">##   .. .. ..$ padj: num [1:5084, 1:15] 0 0.00652 0.04927 0 0 ...</span></span>
 <span><span class="co">##   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE28737_BCL6_HET_VS_BCL6_KO_MARGINAL_ZONE_BCELL_UP" "GSE9509_LPS_VS_LPS_AND_IL10_STIM_IL10_KO_MACROPHAGE_10MIN_UP" "GSE18791_CTRL_VS_NEWCASTLE_VIRUS_DC_18H_DN" "GSE40274_CTRL_VS_FOXP3_AND_SATB1_TRANSDUCED_ACTIVATED_CD4_TCELL_UP" ...</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf14" "nmf9" "nmf10" "nmf13" ...</span></span>
-<span><span class="co">##   .. .. ..$ es  : num [1:5084, 1:15] 0.775 0.774 0.779 0.775 0.917 ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE41867_NAIVE_VS_DAY8_LCMV_CLONE13_EFFECTOR_CD8_TCELL_DN" "GSE27786_CD4_TCELL_VS_NKTCELL_DN" "GSE27786_LSK_VS_NKTCELL_UP" "GSE14769_UNSTIM_VS_240MIN_LPS_BMDM_DN" ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf2" "nmf1" "nmf7" "nmf4" ...</span></span>
+<span><span class="co">##   .. .. ..$ es  : num [1:5084, 1:15] 0.626 0.691 0.698 0.602 0.648 ...</span></span>
 <span><span class="co">##   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE28737_BCL6_HET_VS_BCL6_KO_MARGINAL_ZONE_BCELL_UP" "GSE9509_LPS_VS_LPS_AND_IL10_STIM_IL10_KO_MACROPHAGE_10MIN_UP" "GSE18791_CTRL_VS_NEWCASTLE_VIRUS_DC_18H_DN" "GSE40274_CTRL_VS_FOXP3_AND_SATB1_TRANSDUCED_ACTIVATED_CD4_TCELL_UP" ...</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf14" "nmf9" "nmf10" "nmf13" ...</span></span>
-<span><span class="co">##   .. .. ..$ nes : num [1:5084, 1:15] 1.09 1.09 1.1 1.09 1.21 ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE41867_NAIVE_VS_DAY8_LCMV_CLONE13_EFFECTOR_CD8_TCELL_DN" "GSE27786_CD4_TCELL_VS_NKTCELL_DN" "GSE27786_LSK_VS_NKTCELL_UP" "GSE14769_UNSTIM_VS_240MIN_LPS_BMDM_DN" ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf2" "nmf1" "nmf7" "nmf4" ...</span></span>
+<span><span class="co">##   .. .. ..$ nes : num [1:5084, 1:15] 0.908 1.007 1.015 0.878 0.939 ...</span></span>
 <span><span class="co">##   .. .. .. ..- attr(*, "dimnames")=List of 2</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE28737_BCL6_HET_VS_BCL6_KO_MARGINAL_ZONE_BCELL_UP" "GSE9509_LPS_VS_LPS_AND_IL10_STIM_IL10_KO_MACROPHAGE_10MIN_UP" "GSE18791_CTRL_VS_NEWCASTLE_VIRUS_DC_18H_DN" "GSE40274_CTRL_VS_FOXP3_AND_SATB1_TRANSDUCED_ACTIVATED_CD4_TCELL_UP" ...</span></span>
-<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf14" "nmf9" "nmf10" "nmf13" ...</span></span></code></pre>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:5084] "GSE41867_NAIVE_VS_DAY8_LCMV_CLONE13_EFFECTOR_CD8_TCELL_DN" "GSE27786_CD4_TCELL_VS_NKTCELL_DN" "GSE27786_LSK_VS_NKTCELL_UP" "GSE14769_UNSTIM_VS_240MIN_LPS_BMDM_DN" ...</span></span>
+<span><span class="co">##   .. .. .. .. ..$ : chr [1:15] "nmf2" "nmf1" "nmf7" "nmf4" ...</span></span></code></pre>
 </details><p><code>singlet</code> provides a helper function for quick exploration
 of GSEA results:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
