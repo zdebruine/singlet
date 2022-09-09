@@ -35,15 +35,11 @@ Note the use of `split.by = "stim"`, where we are indicating that the "stim" fie
 
 ```{R, message = FALSE, warning = FALSE, results = 'hide', run-nmf}
 set.seed(123)
-ifnb <- RunNMF(
-  ifnb, 
-  split.by = "stim",
-  k = seq(15, 35, 2), 
-  verbose = FALSE)
+ifnb <- RunNMF(ifnb, split.by = "stim")
 ```
 
 ```{R, fig.width = 4, fig.height = 4}
-RankPlot(ifnb)
+RankPlot(ifnb) + scale_y_continuous(limits = c(1, 1.1))
 ```
 
 Visualize contribution of groups to both factors:

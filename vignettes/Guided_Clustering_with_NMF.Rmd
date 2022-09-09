@@ -47,7 +47,7 @@ Now run NMF cross-validation and learn the model at the (automatically determine
 ```{R, results = 'hide', message = FALSE, warning = FALSE, cross-validation}
 set.seed(123)
 pbmc3k <- NormalizeData(pbmc3k) %>%
-  singlet::RunNMF(k = 5:25, reps = 3, verbose = FALSE)
+  singlet::RunNMF()
 ```
 
 Plot the cross-validation results:
