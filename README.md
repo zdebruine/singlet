@@ -27,8 +27,8 @@ set.seed(123)
 
 pbmc3k <- singlet::get_pbmc3k_data()
 pbmc3k <- NormalizeData(pbmc3k) %>%
-  RunNMF() %>%
-  RunUMAP(reduction = "nmf", dims = 1:ncol(pbmc3k@reductions$nmf))
+  RunNMF()
+pbmc3k <- RunUMAP(pbmc3k, reduction = "nmf", dims = 1:ncol(pbmc3k@reductions$nmf))
 
 plot_grid(
      RankPlot(pbmc3k) + NoLegend(), 
