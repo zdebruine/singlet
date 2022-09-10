@@ -13,7 +13,8 @@ ard_nmf(
   L1 = 0.01,
   L2 = 0,
   threads = 0,
-  test_density = 0.05
+  test_density = 0.05,
+  learning_rate = 1
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ ard_nmf(
 \item{threads}{number of threads for parallelization across CPUs, 0 = use all available threads}
 
 \item{test_density}{fraction of values to include in the test set}
+
+\item{learning_rate}{exponent on step size for automatic rank determination}
 }
 \description{
 ARD NMF quickly finds the optimal rank for an NMF model using an exponentially variable learning rate and basic coordinate descent.

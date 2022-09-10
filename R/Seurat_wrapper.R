@@ -16,6 +16,7 @@
 #' @param L2 L2/Ridge-like penalty to increase angles between factors
 #' @param threads number of threads to use (0 = let OpenMP use all available threads)
 #' @param split.by column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.
+#' @param learning.rate exponent on step size for automatic rank determination
 #' @param ... not implemented
 #' @details Use \code{set.seed()} to guarantee reproducibility!
 #' @export
@@ -33,6 +34,7 @@ RunNMF.Seurat <- function(
   verbose = 2, 
   reps = 3,
   test.set.density = 0.05,
+  learning.rate = 0.8,
   tol = 1e-5,
   maxit = 100,
   L1 = 0.01,
@@ -63,7 +65,7 @@ RunNMF.Seurat <- function(
   
   if(is.null(k) || is.na(k) || k == "" || k == "auto" || k <= 0){
     # run automatic rank determination cross-validation
-    nmf_model <- ard_nmf(A, reps, tol, maxit, verbose, L1, L2, threads, test.set.density)
+    nmf_model <- ard_nmf(A, reps, tol, maxit, verbose, L1, L2, threads, test.set.density, learning.rate)
     cv_data <- nmf_model$cv_data
   } else if(length(k) == 1){
     nmf_model <- run_nmf(A, k, tol, maxit, verbose, L1, L2, threads)

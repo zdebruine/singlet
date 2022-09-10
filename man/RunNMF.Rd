@@ -14,6 +14,7 @@
   verbose = 2,
   reps = 3,
   test.set.density = 0.05,
+  learning.rate = 1,
   tol = 1e-05,
   maxit = 100,
   L1 = 0.01,
@@ -41,6 +42,8 @@ RunNMF(object, ...)
 \item{reps}{number of replicates for cross-validation}
 
 \item{test.set.density}{approximate density of the test set (default 0.05)}
+
+\item{learning.rate}{exponent on step size for automatic rank determination}
 
 \item{tol}{tolerance of the fit (correlation distance of the model across consecutive iterations). Cross-validation fits are 10x coarser than this tolerance.}
 
