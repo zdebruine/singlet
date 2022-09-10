@@ -7,7 +7,7 @@
 #' @param reduction.name Name to store resulting DimReduc object as
 #' @param reduction.key Key for resulting DimReduc
 #' @param verbose Level of console output (0/FALSE, 1/TRUE, 2)
-#' @param k vector of ranks at which to fit, witholding a test set. Leave \code{NULL} for entirely automatic rank determination.
+#' @param k an initial rank at which to start automatic cross-validation, or a vector of ranks at which to fit.
 #' @param reps number of replicates for cross-validation
 #' @param test.set.density approximate density of the test set (default 0.05)
 #' @param tol tolerance of the fit (correlation distance of the model across consecutive iterations). Cross-validation fits are 10x coarser than this tolerance.
@@ -27,7 +27,7 @@
 #' 
 RunNMF.Seurat <- function(
   object, 
-  k = NULL,
+  k = 10,
   assay = NULL, 
   reduction.name = "nmf", 
   reduction.key = "NMF_", 
@@ -41,7 +41,11 @@ RunNMF.Seurat <- function(
   L2 = 0,
   threads = 0,
   split.by = NULL, ...){
-  
+
+    if(length(k) <= 1){
+      stopifnot("k must be an integer or vector of integers" = !is.na(k) || !is.null(k))
+    }
+
   if(is.null(assay))
     assay <- names(object@assays)[[1]]
   
@@ -63,26 +67,19 @@ RunNMF.Seurat <- function(
   At <- Matrix::t(A)
   seed.use <- abs(.Random.seed[[3]])
   
-  if(is.null(k) || is.na(k) || k == "" || k == "auto" || k <= 0){
-    # run automatic rank determination cross-validation
-    nmf_model <- ard_nmf(A, reps, tol, maxit, verbose, L1, L2, threads, test.set.density, learning.rate)
-    cv_data <- nmf_model$cv_data
-  } else if(length(k) == 1){
-    nmf_model <- run_nmf(A, k, tol, maxit, verbose, L1, L2, threads)
-    cv_data <- data.frame("k" = integer(), "rep" = integer(), "test_error" = double())
-    class(cv_data) <- c("nmf_cross_validate_data", "data.frame")
-  } else if(is.integer(k) && length(k) > 1){
+  if(length(k) > 1){
     # run cross-validation at specified ranks
     cv_data <- data.frame()
-    if(length(k) > 1){
-      cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, L1, L2, threads, test.set.density)
-      best_rank <- GetBestRank(cv_data)
-      if(verbose >= 1)
-        cat("best rank: ", best_rank, "\n")
-      cat("\nfitting final model:\n")
-      k <- best_rank
-    }
-    nmf_model <- run_nmf(A, k, tol, maxit, verbose > 1, L1, L2, threads)
+    cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, L1, L2, threads, test.set.density)
+    best_rank <- GetBestRank(cv_data)
+    if(verbose >= 1)
+      cat("best rank: ", best_rank, "\n")
+    cat("\nfitting final model:\n")
+    nmf_model <- run_nmf(A, best_rank, tol, maxit, verbose > 1, L1, L2, threads)
+  } else if(length(k) == 1){
+    # run automatic rank determination cross-validation
+    nmf_model <- ard_nmf(A, k, reps, tol, maxit, verbose, L1, L2, threads, test.set.density, learning.rate)
+    cv_data <- nmf_model$cv_data
   } else {
     stop("value for 'k' was invalid")
   }

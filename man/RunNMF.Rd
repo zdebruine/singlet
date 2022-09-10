@@ -7,14 +7,14 @@
 \usage{
 \method{RunNMF}{Seurat}(
   object,
-  k = NULL,
+  k = 10,
   assay = NULL,
   reduction.name = "nmf",
   reduction.key = "NMF_",
   verbose = 2,
   reps = 3,
   test.set.density = 0.05,
-  learning.rate = 1,
+  learning.rate = 0.8,
   tol = 1e-05,
   maxit = 100,
   L1 = 0.01,
@@ -29,7 +29,7 @@ RunNMF(object, ...)
 \arguments{
 \item{object}{A Seurat object}
 
-\item{k}{vector of ranks at which to fit, witholding a test set. Leave \code{NULL} for entirely automatic rank determination.}
+\item{k}{an initial rank at which to start automatic cross-validation, or a vector of ranks at which to fit.}
 
 \item{assay}{Assay to use, defaults to the default assay of the first object}
 

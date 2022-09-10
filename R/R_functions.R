@@ -88,20 +88,20 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
 #' @import dplyr
 #' @export
 #'
-ard_nmf <- function(A, n_replicates = 3, tol = 1e-5, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0, test_density = 0.05, learning_rate = 0.8) {
+ard_nmf <- function(A, k_init = 10, n_replicates = 3, tol = 1e-5, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0, test_density = 0.05, learning_rate = 0.8) {
   stopifnot("L1 penalty must be strictly in the range (0, 1]" = L1 < 1)
   stopifnot("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb" = test_density < 0.2 & test_density > 0.01)
   A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
   test_seed <- abs(.Random.seed[[3]])
   At <- Matrix::t(A)
   df <- data.frame("k" = integer(), "rep" = integer(), "test_error" = double())
-  curr_rank <- 2
+  if(is.null(k_init) || is.na(k_init) || k_init < 2) k_init <- 2
   for (curr_rep in 1:n_replicates) {
     if (verbose >= 1 && n_replicates > 1) cat("\nREPLICATE ", curr_rep, "/", n_replicates, "\n")
     step_size <- 1
     if (nrow(df) == 0) {
-      # start at k = 2
-      curr_rank <- 2
+      # start at the specified rank
+      curr_rank <- k_init
     } else {
       # start at the current best rank
       curr_rank <- GetBestRank(df)

@@ -6,6 +6,7 @@
 \usage{
 ard_nmf(
   A,
+  k_init = 10,
   n_replicates = 3,
   tol = 1e-05,
   maxit = 100,
@@ -14,7 +15,7 @@ ard_nmf(
   L2 = 0,
   threads = 0,
   test_density = 0.05,
-  learning_rate = 1
+  learning_rate = 0.8
 )
 }
 \arguments{
