@@ -5,7 +5,15 @@ weight_by_split <- function(A_, split_by, n_groups) {
     .Call(`_singlet_weight_by_split`, A_, split_by, n_groups)
 }
 
-c_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w, link_h, link_w, seed, inv_density) {
-    .Call(`_singlet_c_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w, link_h, link_w, seed, inv_density)
+c_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w) {
+    .Call(`_singlet_c_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w)
+}
+
+c_linked_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w, link_h, link_w) {
+    .Call(`_singlet_c_linked_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w, link_h, link_w)
+}
+
+c_ard_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse) {
+    .Call(`_singlet_c_ard_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse)
 }
 

@@ -235,65 +235,124 @@ inline double mse_test(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::Ve
     return losses.sum() / h.cols();
 }
 
-// NMF FUNCTION ---------------------------------------------------------------------------------------
-// run NMF either with masking or linking
+// NMF FUNCTIONS ---------------------------------------------------------------------------------------
+// no linking or masking
 //[[Rcpp::export]]
 Rcpp::List c_nmf(Rcpp::SparseMatrix A, Rcpp::SparseMatrix At, const double tol, const uint16_t maxit, const bool verbose,
-                 const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, Eigen::MatrixXd link_h,
-                 Eigen::MatrixXd link_w, const uint32_t seed, const uint32_t inv_density) {
-    if (verbose) Rprintf("\n%4s | %8s \n---------------\n", "iter", "tol");
+                 const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w) {
     Eigen::MatrixXd h(w.rows(), A.cols());
     Eigen::VectorXd d(w.rows());
-    const bool masking = (inv_density != 0);
-    const bool linking_h = (link_h.cols() == A.cols());
-    const bool linking_w = (link_w.cols() == A.rows());
     double tol_ = 1;
+    if (verbose)
+        Rprintf("\n%4s | %8s \n---------------\n", "iter", "tol");
 
     // alternating least squares update loop
     for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
         Eigen::MatrixXd w_it = w;
-
-        // update h using appropriate prediction method
-        if (linking_h) {
-            predict_link(A, w, h, L1, L2, threads, link_h);
-        } else if (masking) {
-            predict_mask(A, seed, inv_density, w, h, L1, L2, threads, false);
-        } else {
-            predict(A, w, h, L1, L2, threads);
-        }
+        // update h
+        predict(A, w, h, L1, L2, threads);
         scale(h, d);
         Rcpp::checkUserInterrupt();
-
-        // update w using appropriate prediction method
-        if (linking_w) {
-            predict_link(At, h, w, L1, L2, threads, link_w);
-        } else if (masking) {
-            predict_mask(At, seed, inv_density, h, w, L1, L2, threads, true);
-        } else {
-            predict(At, h, w, L1, L2, threads);
-        }
+        // update w
+        predict(At, h, w, L1, L2, threads);
         scale(w, d);
 
         // calculate tolerance of the model fit to detect convergence
         // correlation between "w" across consecutive iterations
         tol_ = cor(w, w_it);
 
-        if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
-
+        if (verbose)
+            Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
         Rcpp::checkUserInterrupt();
     }
 
-    // calculate test set reconstruction error, if applicable
-    if (masking) {
-        double test_mse = mse_test(A, w, d, h, seed, inv_density, threads);
-        return Rcpp::List::create(
-            Rcpp::Named("w") = w,
-            Rcpp::Named("d") = d,
-            Rcpp::Named("h") = h,
-            Rcpp::Named("test_mse") = test_mse);
+    return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
+}
+
+// NMF FUNCTION ---------------------------------------------------------------------------------------
+// run NMF with linking
+//[[Rcpp::export]]
+Rcpp::List c_linked_nmf(Rcpp::SparseMatrix A, Rcpp::SparseMatrix At, const double tol, const uint16_t maxit, const bool verbose,
+                        const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, Eigen::MatrixXd link_h,
+                        Eigen::MatrixXd link_w) {
+    Eigen::MatrixXd h(w.rows(), A.cols());
+    Eigen::VectorXd d(w.rows());
+    const bool linking_h = (link_h.cols() == A.cols());
+    const bool linking_w = (link_w.cols() == A.rows());
+    double tol_ = 1;
+
+    if (verbose)
+        Rprintf("\n%4s | %8s \n---------------\n", "iter", "tol");
+
+    // alternating least squares update loop
+
+    for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
+        Eigen::MatrixXd w_it = w;
+        linking_h ? predict_link(A, w, h, L1, L2, threads, link_h) : predict(A, w, h, L1, L2, threads);
+        scale(h, d);
+        Rcpp::checkUserInterrupt();
+        linking_w ? predict_link(At, h, w, L1, L2, threads, link_w) : predict(At, h, w, L1, L2, threads);
+        scale(w, d);
+        tol_ = cor(w, w_it);
+        if (verbose)
+            Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
+        Rcpp::checkUserInterrupt();
     }
+    return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
+}
+
+// NMF FUNCTION ---------------------------------------------------------------------------------------
+// run NMF with masking of a random speckled test set
+//[[Rcpp::export]]
+Rcpp::List c_ard_nmf(Rcpp::SparseMatrix A, Rcpp::SparseMatrix At, const double tol, const uint16_t maxit, const bool verbose,
+                     const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, const uint32_t seed,
+                     const uint32_t inv_density, const double overfit_threshold, const uint16_t trace_test_mse) {
+    Eigen::MatrixXd h(w.rows(), A.cols());
+    Eigen::VectorXd d(w.rows());
+    double tol_ = 1;
+    double score_overfit = 0;
+    Rcpp::NumericVector test_mse, fit_tol;
+    Rcpp::IntegerVector iter;
+
+    if (verbose)
+        Rprintf("\n%4s | %8s | %8s \n---------------------------\n", "iter", "tol", "overfit");
+
+    // alternating least squares update loop
+    uint16_t iter_ = 0;
+    for (; iter_ < maxit && tol_ > tol && score_overfit < overfit_threshold; ++iter_) {
+        Eigen::MatrixXd w_it = w;
+        predict_mask(A, seed, inv_density, w, h, L1, L2, threads, false);
+        scale(h, d);
+        Rcpp::checkUserInterrupt();
+        predict_mask(At, seed, inv_density, h, w, L1, L2, threads, true);
+        scale(w, d);
+        tol_ = cor(w, w_it);
+        if (verbose) Rprintf("%4d | %8.2e", iter_ + 1, tol_);
+        if (iter_ % trace_test_mse == 0) {
+            test_mse.push_back(mse_test(A, w, d, h, seed, inv_density, threads));
+            iter.push_back(iter_);
+            fit_tol.push_back(tol_);
+            double this_err = test_mse(test_mse.size() - 1);
+            double min_err = Rcpp::min(test_mse);
+            score_overfit = (this_err - min_err) / (this_err + min_err);
+            if (verbose) Rprintf(" | %8.2e\n", score_overfit);
+        } else if (verbose)
+            Rprintf(" | %8s\n", "-");
+        Rcpp::checkUserInterrupt();
+    }
+    if (iter_ % trace_test_mse != 0) {
+        test_mse.push_back(mse_test(A, w, d, h, seed, inv_density, threads));
+        iter.push_back(iter_);
+        fit_tol.push_back(tol_);
+    }
+
+    // calculate test set reconstruction error, if applicable
     return Rcpp::List::create(
         Rcpp::Named("w") = w,
         Rcpp::Named("d") = d,
-        Rcpp::Named("h") = h);
+        Rcpp::Named("h") = h,
+        Rcpp::Named("test_mse") = test_mse,
+        Rcpp::Named("iter") = iter,
+        Rcpp::Named("tol") = fit_tol,
+        Rcpp::Named("score_overfit") = score_overfit);
 }

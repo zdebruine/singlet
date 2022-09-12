@@ -15,7 +15,10 @@ ard_nmf(
   L2 = 0,
   threads = 0,
   test_density = 0.05,
-  learning_rate = 0.8
+  learning_rate = 0.8,
+  tol_overfit = 1e-04,
+  trace_test_mse = 5,
+  detail_level = 1
 )
 }
 \arguments{
@@ -38,6 +41,12 @@ ard_nmf(
 \item{test_density}{fraction of values to include in the test set}
 
 \item{learning_rate}{exponent on step size for automatic rank determination}
+
+\item{tol_overfit}{stopping criterion, maximum increase in test set reconstruction error at any iteration compared to test set reconstruction error at \code{trace_test_mse}}
+
+\item{trace_test_mse}{first iteration at which to calculate test set reconstruction error, and the error to compare all later iterations to when determining whether overfitting has occurred.}
+
+\item{detail_level}{\code{1} for returning best test set reconstruction error for each factorization, \code{2} to return test set reconstruction error at all \code{trace_test_mse} iterations in each factorization}
 }
 \description{
 ARD NMF quickly finds the optimal rank for an NMF model using an exponentially variable learning rate and basic coordinate descent.

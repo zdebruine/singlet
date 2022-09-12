@@ -7,20 +7,22 @@
 \usage{
 \method{RunNMF}{Seurat}(
   object,
+  split.by = NULL,
   k = 10,
   assay = NULL,
-  reduction.name = "nmf",
-  reduction.key = "NMF_",
-  verbose = 2,
   reps = 3,
-  test.set.density = 0.05,
-  learning.rate = 0.8,
   tol = 1e-05,
-  maxit = 100,
   L1 = 0.01,
   L2 = 0,
+  verbose = 2,
+  reduction.name = "nmf",
+  reduction.key = "NMF_",
+  maxit = 100,
+  test.set.density = 0.05,
+  learning.rate = 0.8,
+  tol.overfit = 0.5,
+  trace.test.mse = 5,
   threads = 0,
-  split.by = NULL,
   ...
 )
 
@@ -29,33 +31,37 @@ RunNMF(object, ...)
 \arguments{
 \item{object}{A Seurat object}
 
+\item{split.by}{column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.}
+
 \item{k}{an initial rank at which to start automatic cross-validation, or a vector of ranks at which to fit.}
 
 \item{assay}{Assay to use, defaults to the default assay of the first object}
 
-\item{reduction.name}{Name to store resulting DimReduc object as}
-
-\item{reduction.key}{Key for resulting DimReduc}
-
-\item{verbose}{Level of console output (0/FALSE, 1/TRUE, 2)}
-
 \item{reps}{number of replicates for cross-validation}
 
-\item{test.set.density}{approximate density of the test set (default 0.05)}
-
-\item{learning.rate}{exponent on step size for automatic rank determination}
-
 \item{tol}{tolerance of the fit (correlation distance of the model across consecutive iterations). Cross-validation fits are 10x coarser than this tolerance.}
-
-\item{maxit}{maximum number of fitting iterations}
 
 \item{L1}{L1/LASSO penalty to increase sparsity of the model}
 
 \item{L2}{L2/Ridge-like penalty to increase angles between factors}
 
-\item{threads}{number of threads to use (0 = let OpenMP use all available threads)}
+\item{verbose}{Level of console output (0/FALSE, 1/TRUE, 2)}
 
-\item{split.by}{column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.}
+\item{reduction.name}{Name to store resulting DimReduc object as}
+
+\item{reduction.key}{Key for resulting DimReduc}
+
+\item{maxit}{maximum number of fitting iterations}
+
+\item{test.set.density}{approximate density of the test set (default 0.05)}
+
+\item{learning.rate}{exponent on step size for automatic rank determination}
+
+\item{tol.overfit}{tolerance for increase in test set reconstruction error relative to minimum observed value during factorization}
+
+\item{trace.test.mse}{during automatic rank determination, calculate test set reconstruction error every trace iterations}
+
+\item{threads}{number of threads to use (0 = let OpenMP use all available threads)}
 
 \item{...}{not implemented}
 }
