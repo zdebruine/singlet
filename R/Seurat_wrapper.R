@@ -41,7 +41,7 @@ RunNMF.Seurat <- function(object,
                           maxit = 100,
                           test.set.density = 0.05,
                           learning.rate = 0.8,
-                          tol.overfit = 0.5,
+                          tol.overfit = 1e-4,
                           trace.test.mse = 5,
                           threads = 0,
                           ...) {
