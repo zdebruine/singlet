@@ -330,6 +330,7 @@ RunLNMF.Seurat <- function(object,
   # balancing step.
   # not sure if this is a good idea.
   if (link.balance.tol != 1 & link.balance.tol != 0) {
+    At <- t(A)
     lnmf_model$w <- t(lnmf_model$w)
     if (verbose > 0) {
       cat("balancing...\n")
@@ -362,7 +363,7 @@ RunLNMF.Seurat <- function(object,
         }
       }
       # run linked nmf
-      lnmf_model <- c_nmf(A, At, tol, 1L, FALSE, L1, L2, threads, lnmf_model$w, link_h, 1, 0)
+      lnmf_model <- c_linked_nmf(A, At, tol, 1L, FALSE, L1, L2, threads, w, lnmf_model$w, link_h)
       m <- MetadataSummary(lnmf_model$h, split.by, FALSE)
       v <- as.vector(abs(1 / length(levels) - m))
       curr.balance.tol <- mean(v[v != 0 & v != 1])
@@ -470,7 +471,7 @@ AnnotateNMF.Seurat <- function(object, fields = NULL, reduction = "nmf", ...){
 #' 
 AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
   if(!("annotations" %in% names(object@misc))){
-    stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
+    stop("the reduction has no 'annotations' slot. Run 'AnnotateNMF' first.")
   }
   if(is.null(plot.field)){
     plot.field <- names(object@misc$annotations)[[1]]
