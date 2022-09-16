@@ -135,13 +135,7 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4, 
   for (curr_rep in 1:n_replicates) {
     if (verbose >= 1 && n_replicates > 1) cat("\nREPLICATE ", curr_rep, "/", n_replicates, "\n")
     step_size <- 1
-    if (nrow(df) == 0) {
-      # start at the specified rank
-      curr_rank <- k_init
-    } else {
-      # start at the current best rank
-      curr_rank <- GetBestRank(df)
-    }
+    curr_rank <- k_init
     max_rank <- ncol(A)
     while (step_size >= 1 && curr_rank < ncol(A)) {
       # as long as we are at a rank less than the rank of the matrix and step size is 1 or greater, continue trying to find the best rank
