@@ -27,6 +27,9 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
   model$d <- model$d[sort_index]
   model$w <- t(model$w)[, sort_index]
   model$h <- model$h[sort_index, ]
+  rownames(model$w) <- rownames(A)
+  colnames(model$h) <- colnames(A)
+  colnames(model$w) <- rownames(model$h) <- paste0("NMF_", 1:ncol(model$w))
   model
 }
 
@@ -210,6 +213,9 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4, 
   model$d <- model$d[sort_index]
   model$w <- t(model$w)[, sort_index]
   model$h <- model$h[sort_index, ]
+  rownames(model$w) <- rownames(A)
+  colnames(model$h) <- colnames(A)
+  colnames(model$w) <- rownames(model$h) <- paste0("NMF_", 1:ncol(model$w))
   model
 }
 

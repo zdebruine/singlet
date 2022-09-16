@@ -61,8 +61,13 @@ RunNMF.Seurat <- function(object,
     object <- PreprocessData(object, assay = assay)
   }
   A <- object@assays[[assay]]@data
-  rnames <- rownames(A)
-  cnames <- colnames(A)
+  if(prod(dim(object@assays[[assay]]@counts)) != 0){
+    rnames <- rownames(object@assays[[assay]]@counts)
+    cnames <- colnames(object@assays[[assay]]@counts)
+  } else {
+    rnames <- rownames(object@assays[[assay]]@data)
+    cnames <- colnames(object@assays[[assay]]@data)
+  }
 
   if (!is.null(split.by)) {
     split.by <- as.integer(as.numeric(as.factor(object@meta.data[[split.by]]))) - 1
