@@ -470,16 +470,16 @@ AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
   if(!("annotations" %in% names(object@misc))){
     stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
   }
-  if(is.null(field)){
-    field <- names(object@misc$annotations)[[1]]
+  if(is.null(plot.field)){
+    plot.field <- names(object@misc$annotations)[[1]]
   } else {
-    if(!(field %in% names(object@misc$annotations))){
-      stop("specified field was not in the annotation object")
+    if(!(plot.field %in% names(object@misc$annotations))){
+      stop("specified plot.field was not in the annotation object")
     }
-    if(length(field) > 1) field <- field[[1]]
+    if(length(plot.field) > 1) plot.field <- plot.field[[1]]
   }
   # construct a matrix of pvalues and fc
-  ann <- object@misc$annotations[[field]]
+  ann <- object@misc$annotations[[plot.field]]
   pvals <- reshape(ann, timevar = "group", idvar = "factor", direction = "wide", drop = "fc")
   fc <- reshape(ann, timevar = "group", idvar = "factor", direction = "wide", drop = "p")
   rownames(pvals) <- pvals[,1]
@@ -505,7 +505,7 @@ AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
                            geom_point() + 
                            scale_color_viridis_c(option = "B", end = 0.9) + 
                            theme_classic() + 
-                           labs(y = field, x = "NMF factor", color = "p-value\n(-log10)", size = "fold enrichment") + 
+                           labs(y = plot.field, x = "NMF factor", color = "p-value\n(-log10)", size = "fold enrichment") + 
                            theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))))
 }
 
