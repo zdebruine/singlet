@@ -5,6 +5,10 @@ weight_by_split <- function(A_, split_by, n_groups) {
     .Call(`_singlet_weight_by_split`, A_, split_by, n_groups)
 }
 
+c_project_model <- function(A, w, L1, L2, threads) {
+    .Call(`_singlet_c_project_model`, A, w, L1, L2, threads)
+}
+
 c_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w) {
     .Call(`_singlet_c_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w)
 }
@@ -15,5 +19,9 @@ c_linked_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w, link_h,
 
 c_ard_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse) {
     .Call(`_singlet_c_ard_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse)
+}
+
+log_normalize <- function(A_, scale_factor, threads) {
+    .Call(`_singlet_log_normalize`, A_, scale_factor, threads)
 }
 

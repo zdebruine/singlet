@@ -24,6 +24,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// c_project_model
+Rcpp::List c_project_model(Rcpp::SparseMatrix A, Eigen::MatrixXd w, const double L1, const double L2, const int threads);
+RcppExport SEXP _singlet_c_project_model(SEXP ASEXP, SEXP wSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::SparseMatrix >::type A(ASEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type w(wSEXP);
+    Rcpp::traits::input_parameter< const double >::type L1(L1SEXP);
+    Rcpp::traits::input_parameter< const double >::type L2(L2SEXP);
+    Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(c_project_model(A, w, L1, L2, threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // c_nmf
 Rcpp::List c_nmf(Rcpp::SparseMatrix A, Rcpp::SparseMatrix At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w);
 RcppExport SEXP _singlet_c_nmf(SEXP ASEXP, SEXP AtSEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP, SEXP wSEXP) {
@@ -87,12 +102,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// log_normalize
+Rcpp::S4 log_normalize(Rcpp::SparseMatrix A_, const unsigned int scale_factor, const int threads);
+RcppExport SEXP _singlet_log_normalize(SEXP A_SEXP, SEXP scale_factorSEXP, SEXP threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::SparseMatrix >::type A_(A_SEXP);
+    Rcpp::traits::input_parameter< const unsigned int >::type scale_factor(scale_factorSEXP);
+    Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(log_normalize(A_, scale_factor, threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_singlet_weight_by_split", (DL_FUNC) &_singlet_weight_by_split, 3},
+    {"_singlet_c_project_model", (DL_FUNC) &_singlet_c_project_model, 5},
     {"_singlet_c_nmf", (DL_FUNC) &_singlet_c_nmf, 9},
     {"_singlet_c_linked_nmf", (DL_FUNC) &_singlet_c_linked_nmf, 11},
     {"_singlet_c_ard_nmf", (DL_FUNC) &_singlet_c_ard_nmf, 13},
+    {"_singlet_log_normalize", (DL_FUNC) &_singlet_log_normalize, 3},
     {NULL, NULL, 0}
 };
 

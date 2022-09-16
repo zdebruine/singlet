@@ -6,7 +6,7 @@
 \usage{
 ard_nmf(
   A,
-  k_init = 10,
+  k_init = 2,
   n_replicates = 3,
   tol = 1e-05,
   maxit = 100,
@@ -23,6 +23,8 @@ ard_nmf(
 }
 \arguments{
 \item{A}{sparse matrix (ideally variance-stabilized) of data for genes x cells (rows x columns)}
+
+\item{k_init}{initial rank at which to begin search for local minimum. \code{k_init = 2} is a reasonable default, higher values can lead to swift convergence to a local minmum.}
 
 \item{n_replicates}{number of random test sets}
 

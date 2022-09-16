@@ -5,7 +5,7 @@
 \alias{RankPlot}
 \title{Plot NMF cross-validation results}
 \usage{
-\method{RankPlot}{Seurat}(object, reduction = "nmf", detail.level = 1)
+\method{RankPlot}{Seurat}(object, reduction = "nmf", detail.level = 1, ...)
 
 RankPlot(object, reduction = "nmf", ...)
 }
@@ -14,9 +14,9 @@ RankPlot(object, reduction = "nmf", ...)
 
 \item{reduction}{name of the NMF reduction in the Seurat object (result of \code{RunNMF}) for which multiple \code{ranks} were computed.}
 
-\item{...}{additional arguments}
+\item{detail.level}{of detail to plot, \code{1} for test set reconstruction error at convergence of each factorization, \code{2} for test set reconstruction error at each fitting iteration of each factorization}
 
-\item{level}{of detail to plot, \code{1} for test set reconstruction error at convergence of each factorization, \code{2} for test set reconstruction error at each fitting iteration of each factorization}
+\item{...}{not implemented}
 }
 \value{
 A ggplot2 object

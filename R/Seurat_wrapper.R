@@ -29,7 +29,7 @@
 #'
 RunNMF.Seurat <- function(object,
                           split.by = NULL,
-                          k = 10,
+                          k = 2,
                           assay = NULL,
                           reps = 3,
                           tol = 1e-5,
@@ -56,7 +56,7 @@ RunNMF.Seurat <- function(object,
   # check if data has been normalized
   v <- object@assays[[assay]]@data@x
   if (sum(as.integer(v)) == sum(v)) {
-    object <- Seurat::NormalizeData(object, assay = assay)
+    object <- PreprocessData(object, assay = assay)
   }
   A <- object@assays[[assay]]@data
   rnames <- rownames(A)
@@ -101,6 +101,134 @@ RunNMF.Seurat <- function(object,
     misc = list("cv_data" = cv_data)
   )
 
+  object
+}
+
+#' Normalize count data
+#' 
+#' Standard log-normalization equivalent to \code{Seurat::LogNormalize}, but faster and more memory-efficient
+#'  
+#' @param object Seurat object
+#' @param assay assay in which the counts matrix resides
+#' @param scale.factor value by which to multiply all columns after unit normalization and before \code{log1p} transformation
+#' @param ... not implemented
+#' @export
+#' @rdname PreprocessData
+#'
+PreprocessData.Seurat <- function(object, scale.factor = 10000, assay = NULL, ...){
+  if(is.null(assay)) assay <- names(object@assays)[[1]]
+  if(is.null(object@assays[[assay]]@key))
+    object@assays[[assay]]@key <- paste0(assay, "_")
+  object@assays[[assay]] <- PreprocessData(object@assays[[assay]], ...)
+  object
+}
+
+#' @rdname PreprocessData
+#' @export
+PreprocessData.Assay <- function(object, scale.factor = 10000, ...){
+  if(ncol(object@counts) == 0){
+    object@data <- PreprocessData(object@data, ...)
+  } else {
+    object@data <- PreprocessData(object@counts, ...)
+  }
+  object
+}
+
+#' @rdname PreprocessData
+#' @export
+PreprocessData.dgCMatrix <- function(object, scale.factor = 10000, ...){
+  log_normalize(object, scale.factor, 0)
+}
+
+#' @export
+#' @rdname PreprocessData
+#'
+PreprocessData <- function(object, scale.factor, ...) {
+  UseMethod("PreprocessData")
+}
+
+#' @export
+#' @rdname PreprocessData
+#' @name PreprocessData
+#'
+.S3method("PreprocessData", "dgCMatrix", PreprocessData.dgCMatrix)
+
+#' @export
+#' @rdname PreprocessData
+#' @name PreprocessData
+#'
+.S3method("PreprocessData", "Assay", PreprocessData.Assay)
+
+
+#' @export
+#' @rdname PreprocessData
+#' @name PreprocessData
+#'
+.S3method("PreprocessData", "Seurat", PreprocessData.Seurat)
+
+
+#' Project data onto a factor model
+#'
+#' @description Non-negative Least Squares (NNLS) projection of assay data onto a factor model for transfer learning
+#'
+#' @inheritParams RunNMF.Seurat
+#' @param w a factor model of the same number of rows as the assay to be projected in the current object, where columns correspond to factors
+#' @param ... not implemented
+#' @details Use \code{set.seed()} to guarantee reproducibility!
+#' @export
+#' @aliases ProjectData
+#' @seealso \code{\link{RunLNMF}}, \code{\link{MetadataSummary}}
+#' @rdname ProjectData
+#' @return Returns a Seurat object with the projection stored in the reductions slot
+#'
+ProjectData.Seurat <- function(object, w,
+                          split.by = NULL,
+                          assay = NULL,
+                          L1 = 0.01,
+                          L2 = 0,
+                          reduction.name = "nmf_projection",
+                          reduction.key = "NNLS_",
+                          threads = 0,
+                          ...) {
+  if (is.null(assay)) {
+    assay <- names(object@assays)[[1]]
+  }
+  
+  # check if data has been normalized
+  v <- object@assays[[assay]]@data@x
+  if (sum(as.integer(v)) == sum(v)) {
+    object <- PreprocessData(object, assay = assay)
+  }
+  A <- object@assays[[assay]]@data
+  rnames <- rownames(A)
+  cnames <- colnames(A)
+  
+  if (!is.null(split.by)) {
+    split.by <- as.integer(as.numeric(as.factor(object@meta.data[[split.by]]))) - 1
+    if (any(sapply(split.by, is.na))) {
+      stop("'split.by' cannot contain NA values")
+    }
+    A <- weight_by_split(A, split.by, length(unique(split.by)))
+  }
+  
+  w <- w[which(rownames(w) %in% rownames(A)), ]
+  A <- A[which(rownames(A) %in% rownames(w)), ]
+  
+  nmf_model <- project_model(A, w, L1, L2, threads)
+  nmf_model$w <- w
+  rownames(nmf_model$h) <- colnames(nmf_model$w) <- paste0(reduction.key, 1:nrow(nmf_model$h))
+  rownames(nmf_model$w) <- rownames(A)
+  colnames(nmf_model$h) <- cnames
+  idx <- order(nmf_model$d, decreasing = TRUE)
+  nmf_model$h <- nmf_model$h[idx, ]
+  nmf_model$d <- nmf_model$d[idx]
+  nmf_model$w <- nmf_model$w[, idx]
+  object@reductions[[reduction.name]] <- new("DimReduc",
+                                             cell.embeddings = t(nmf_model$h),
+                                             feature.loadings.projected = nmf_model$w,
+                                             assay.used = assay,
+                                             stdev = nmf_model$d,
+                                             key = reduction.key)
   object
 }
 
@@ -260,11 +388,182 @@ RunLNMF.Seurat <- function(object,
   object
 }
 
+#' Annotate NMF model with cell metadata
+#' 
+#' @details Maps factor information from the \code{meta.data} slot of a Seurat object or a specified factor to each NMF factor, and computes summary statistics
+#' 
+#' @inheritParams RunNMF
+#' @param fields if a Seurat object is specified, fields in the \code{meta.data} slot may be specified for which to compute summary statistics. If \code{fields = NULL}, all fields that are a \code{factor} with more than one level are considered.
+#' @param meta.data if a DimReduc object is specified, provide a named list containing factor(s) for which to calculate summary statistics against the NMF model
+#' @export
+#' @rdname AnnotateNMF
+#' @aliases AnnotateNMF
+#'
+AnnotateNMF.DimReduc <- function(object, meta.data, ...){
+
+  # get all factors with multiple levels from meta.data data.frame
+  fields <- c()
+  for(i in 1:length(names(meta.data))){
+    if(is.factor(meta.data[, i]) & length(levels(meta.data[, i])) > 1){
+      fields <- c(fields, names(meta.data)[[i]])
+    }
+  }
+  if(length(fields) == 0)
+    stop("there were no factors in the meta.data slot with more than 1 level")
+  
+  # loop through each of these factors and run tests on a grid of all levels vs. all factors
+  annotations <- list()
+  for(field in fields){
+    v <- meta.data[[field]]
+    df <- expand.grid("group" = levels(v), "factor" = 1:ncol(object@cell.embeddings))
+    df$p <- 1
+    df$fc <- 0
+    for(i in 1:nrow(df)){
+      vals <- object@cell.embeddings[, df$factor[[i]]]
+      in_group <- vals[which(v == df$group[[i]])]
+      out_group <- vals[-which(v == df$group[[i]])]
+      fc <- mean(in_group) / mean(out_group)
+      df$fc[[i]] <- ifelse(fc > 1, fc - 1, -1 / fc + 1)
+      if(df$fc[[i]] > 0)
+        df$p[[i]] <- t.test(in_group, out_group, "greater")$p.value
+    }
+    annotations[[field]] <- df
+  }
+  object@misc$annotations <- annotations
+  object
+}
+
+#' @export
+#' @rdname AnnotateNMF
+#' @param reduction the reductions slot in the Seurat object containing the model to annotate
+#' @aliases AnnotateNMF
+#' 
+AnnotateNMF.Seurat <- function(object, fields = NULL, reduction = "nmf", ...){
+  if(!is.null(fields)){
+    for(i in 1:length(fields)){
+      if(!is.factor(object@meta.data[[fields[[i]]]])){
+        stop(fields[[i]], "is not a factor!")
+      } else if(length(levels(object@meta.data[[fields[[i]]]]))){
+        stop(fields[[i]], "is a factor, but only has one level")
+      }
+    }
+    object@reductions[[reduction]] <- AnnotateNMF.DimReduc(object@reductions[[reduction]], object@meta.data[, fields], ...)
+  } else {
+    object@reductions[[reduction]] <- AnnotateNMF.DimReduc(object@reductions[[reduction]], object@meta.data)
+  }
+  object
+}
+
+#' Plot metadata enrichment in NMF factors
+#' 
+#' After running \code{AnnotateNMF}, this function returns a dot plot of the results
+#' 
+#' @inheritParams AnnotateNMF.DimReduc
+#' @param plot.field name of field in \code{meta.data} to plot, if \code{NULL}, plots the first field in the annotation results
+#' @return ggplot2 object
+#' @aliases AnnotationPlot
+#' @rdname AnnotateNMF
+#' @export
+#' @importFrom stats reshape t.test
+#' 
+AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
+  if(!("annotations" %in% names(object@misc))){
+    stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
+  }
+  if(is.null(field)){
+    field <- names(object@misc$annotations)[[1]]
+  } else {
+    if(!(field %in% names(object@misc$annotations))){
+      stop("specified field was not in the annotation object")
+    }
+    if(length(field) > 1) field <- field[[1]]
+  }
+  # construct a matrix of pvalues and fc
+  ann <- object@misc$annotations[[field]]
+  pvals <- reshape(ann, timevar = "group", idvar = "factor", direction = "wide", drop = "fc")
+  fc <- reshape(ann, timevar = "group", idvar = "factor", direction = "wide", drop = "p")
+  rownames(pvals) <- pvals[,1]
+  rownames(fc) <- fc[,1]
+  pvals <- pvals[, -1]
+  fc <- fc[, -1]
+  pvals <- as.matrix(pvals)
+  fc <- as.matrix(fc)
+  colnames(fc) <- colnames(pvals) <- sapply(colnames(pvals), function(x) substr(x, 3, nchar(x)))
+  fc[fc < 0] <- 0
+  idx1 <- hclust(dist(t(fc)), method = "ward.D2")$order
+  idx2 <- hclust(dist(fc), method = "ward.D2")$order
+  fc <- fc[idx2, idx1]
+  pvals <- pvals[idx2, idx1]
+  fc[fc == 0] <- NA
+  pvals <- -log10(pvals)
+  pvals[is.infinite(pvals)] <- 100
+  pvals[pvals > 100] <- 100
+  df <- cbind(reshape2::melt(fc), as.vector(pvals))
+  colnames(df) <- c("factor", "field", "fc", "pval")
+  df$factor <- factor(df$factor, levels = unique(df$factor))
+  suppressWarnings(print(ggplot(df, aes(factor, field, color = pval, size = fc)) + 
+                           geom_point() + 
+                           scale_color_viridis_c(option = "B", end = 0.9) + 
+                           theme_classic() + 
+                           labs(y = field, x = "NMF factor", color = "p-value\n(-log10)", size = "fold enrichment") + 
+                           theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))))
+}
+
+#' @inheritParams AnnotateNMF.Seurat
+#' @aliases AnnotationPlot
+#' @rdname AnnotateNMF
+#' @export
+#' 
+AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", ...){
+  AnnotationPlot(object@reductions[[reduction]])
+}
+
+#' @export
+#' @rdname AnnotateNMF
+#'
+AnnotateNMF <- function(object, ...) {
+  UseMethod("AnnotateNMF")
+}
+
+#' @export
+#' @rdname AnnotateNMF
+#'
+AnnotationPlot <- function(object, ...) {
+  UseMethod("AnnotationPlot")
+}
+
+#' @export
+#' @rdname AnnotateNMF
+#' @name AnnotateNMF
+#'
+.S3method("AnnotationPlot", "Seurat", AnnotationPlot.Seurat)
+
+
+#' @export
+#' @rdname AnnotateNMF
+#' @name AnnotateNMF
+#'
+.S3method("AnnotateNMF", "Seurat", AnnotateNMF.Seurat)
+
+#' @export
+#' @rdname AnnotateNMF
+#' @name AnnotateNMF
+#'
+.S3method("AnnotationPlot", "DimReduc", AnnotationPlot.DimReduc)
+
+
+#' @export
+#' @rdname AnnotateNMF
+#' @name AnnotateNMF
+#'
+.S3method("AnnotateNMF", "DimReduc", AnnotateNMF.DimReduc)
+
+
 #' @export
 #' @rdname RankPlot
 #' @param reduction the NMF reduction slot name (result of \code{RunNMF} where \code{k} was an array)
-#' @param level of detail to plot, \code{1} for test set reconstruction error at convergence of each factorization, \code{2} for test set reconstruction error at each fitting iteration of each factorization
-RankPlot.Seurat <- function(object, reduction = "nmf", detail.level = 1) {
+#' @param detail.level of detail to plot, \code{1} for test set reconstruction error at convergence of each factorization, \code{2} for test set reconstruction error at each fitting iteration of each factorization
+RankPlot.Seurat <- function(object, reduction = "nmf", detail.level = 1, ...) {
   if (detail.level == 2) {
     plot(subset(object@reductions[[reduction]]@misc$cv_data, iter >= 5), detail.level)
   } else {
@@ -278,7 +577,7 @@ RankPlot.Seurat <- function(object, reduction = "nmf", detail.level = 1) {
 #'
 #' @param object a Seurat object or a \code{data.frame} that is the result of \code{RunNMF}
 #' @param reduction name of the NMF reduction in the Seurat object (result of \code{RunNMF}) for which multiple \code{ranks} were computed.
-#' @param ... additional arguments
+#' @param ... not implemented
 #' @export
 #' @return A ggplot2 object
 #' @aliases RankPlot
@@ -292,6 +591,13 @@ RankPlot <- function(object, reduction = "nmf", ...) {
 #'
 RunNMF <- function(object, ...) {
   UseMethod("RunNMF")
+}
+
+#' @export
+#' @rdname ProjectData
+#'
+ProjectData <- function(object, ...) {
+  UseMethod("ProjectData")
 }
 
 #' @export
@@ -419,7 +725,6 @@ RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", categor
       pathways, ranks,
       minSize = min.size, maxSize = max.size, scoreType = "pos"
     ))
-
     utils::setTxtProgressBar(pb, i)
   }
   close(pb)
@@ -509,15 +814,3 @@ GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3) {
     )
 }
 
-ClusteringToDimReduc <- function(object, group.by = "ident", verbose = 0) {
-  ifelse(ident == "active.ident", idents <- as.vector(Idents(object)), idents <- as.vector(object@meta.data[[ident]]))
-  ident.names <- unique(idents)
-  if (verbose > 0) pb <- txtProgressBar(char = "=", style = 3, max = length(ident.names), width = 50)
-  m <- list()
-  for (i in 1:length(ident.names)) {
-    m[[i]] <- Matrix::rowMeans(data[, which(idents == ident.names[i])])
-    if (verbose > 0) setTxtProgressBar(pb = pb, value = i)
-  }
-  result <- do.call(cbind, m)
-  colnames(result) <- ident.names
-}

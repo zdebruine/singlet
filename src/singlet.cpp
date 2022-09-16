@@ -145,6 +145,17 @@ inline void predict(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::Matri
     }
 }
 
+//[[Rcpp::export]]
+Rcpp::List c_project_model(Rcpp::SparseMatrix A, Eigen::MatrixXd w, const double L1, const double L2, const int threads){
+  if(w.rows() == A.rows()) w = w.transpose();
+  Eigen::VectorXd d(w.rows());
+  scale(w, d);
+  Eigen::MatrixXd h(w.rows(), A.cols());
+  predict(A, w, h, L1, L2, threads);
+  scale(h, d);
+  return(Rcpp::List::create(Rcpp::Named("h") = h, Rcpp::Named("d") = d));
+}
+
 // update h given A and w while masking values in h
 inline void predict_link(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads,
                          const Eigen::MatrixXd& link_h) {
@@ -355,4 +366,27 @@ Rcpp::List c_ard_nmf(Rcpp::SparseMatrix A, Rcpp::SparseMatrix At, const double t
         Rcpp::Named("iter") = iter,
         Rcpp::Named("tol") = fit_tol,
         Rcpp::Named("score_overfit") = score_overfit);
+}
+
+//[[Rcpp::export]]
+Rcpp::S4 log_normalize(Rcpp::SparseMatrix A_, const unsigned int scale_factor, const int threads){
+  Rcpp::SparseMatrix A = A_.clone();
+
+  #ifdef _OPENMP
+  #pragma omp parallel for num_threads(threads)
+  #endif
+  for(size_t i = 0; i < A.cols(); ++i){
+    // calculate column sum
+    double sum = 0;
+    for(Rcpp::SparseMatrix::InnerIterator it(A, i); it; ++it)
+      sum += it.value();
+      
+    // multiply by scale_factor
+    double norm = scale_factor / sum;
+  
+    // log-transform
+    for(Rcpp::SparseMatrix::InnerIterator it(A, i); it; ++it)
+      it.value() = std::log1p(it.value() * scale_factor);
+  }
+  return A.wrap();
 }

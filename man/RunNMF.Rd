@@ -8,7 +8,7 @@
 \method{RunNMF}{Seurat}(
   object,
   split.by = NULL,
-  k = 10,
+  k = 2,
   assay = NULL,
   reps = 3,
   tol = 1e-05,

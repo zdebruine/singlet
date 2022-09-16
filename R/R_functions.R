@@ -30,6 +30,20 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
   model
 }
 
+#' Project a factor model
+#' 
+#' @description Project a dataset onto a factor model for transfer learning
+#' 
+#' @inheritParams run_nmf
+#' @param w matrix giving the factor model, of dimensions \code{nrow(A) x k}
+#' @return list of \code{h} and \code{d}, where \code{d} gives the relative contribution of each factor in \code{h} to the model
+#' @export
+project_model <- function(A, w, L1 = 0.01, L2 = 0, threads = 0){
+  if(nrow(w) != nrow(A) & ncol(w) != nrow(A)) stop("'w' must share a common edge with the rows of 'A'")
+
+  c_project_model(A, w, L1, L2, threads)
+}
+
 #' Determine best rank for NMF using cross-validation
 #'
 #' @description Find the rank that minimizes the mean squared error of test set reconstruction using cross-validation.
@@ -102,10 +116,11 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
 #' @inheritParams cross_validate_nmf
 #' @param verbose no output (0/FALSE), rank-level output (1/TRUE) and step size info (2) and individual model fitting updates (3)
 #' @param learning_rate exponent on step size for automatic rank determination
+#' @param k_init initial rank at which to begin search for local minimum. \code{k_init = 2} is a reasonable default, higher values can lead to swift convergence to a local minmum.
 #' @import dplyr
 #' @export
 #'
-ard_nmf <- function(A, k_init = 10, n_replicates = 3, tol = 1e-5, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0,
+ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0,
                     test_density = 0.05, learning_rate = 0.8, tol_overfit = 1e-4, trace_test_mse = 5, detail_level = 1) {
   stopifnot("L1 penalty must be strictly in the range (0, 1]" = L1 < 1)
   stopifnot("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb" = test_density < 0.2 & test_density > 0.01)
@@ -146,6 +161,7 @@ ard_nmf <- function(A, k_init = 10, n_replicates = 3, tol = 1e-5, maxit = 100, v
       df_rep <- df_rep[order(df_rep$k), ]
       best_rank <- GetBestRank(df_rep)
       best_rank_pos <- which(df_rep$k == best_rank)
+      if (verbose > 1) cat("   best rank in replicate =", best_rank, "\n\n")
       if (best_rank_pos == length(df_rep$k) & overfit_score < tol_overfit) {
         # best rank is the largest rank fit so far
         step_size <- step_size * (1 + learning_rate)
@@ -179,7 +195,6 @@ ard_nmf <- function(A, k_init = 10, n_replicates = 3, tol = 1e-5, maxit = 100, v
           }
         }
       }
-      if (verbose > 1) cat("   best rank in replicate =", best_rank, "\n\n")
     }
   }
   df <- arrange(df, rep, k)
