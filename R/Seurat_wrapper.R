@@ -10,7 +10,8 @@
 #' @param k an initial rank at which to start automatic cross-validation, or a vector of ranks at which to fit.
 #' @param reps number of replicates for cross-validation
 #' @param test.set.density approximate density of the test set (default 0.05)
-#' @param tol tolerance of the fit (correlation distance of the model across consecutive iterations). Cross-validation fits are 10x coarser than this tolerance.
+#' @param tol tolerance of the final fit (correlation distance of the model across consecutive iterations). 
+#' @param cv.tol tolerance of the fit during cross-validation
 #' @param maxit maximum number of fitting iterations
 #' @param L1 L1/LASSO penalty to increase sparsity of the model
 #' @param L2 L2/Ridge-like penalty to increase angles between factors
@@ -33,6 +34,7 @@ RunNMF.Seurat <- function(object,
                           assay = NULL,
                           reps = 3,
                           tol = 1e-5,
+                          cv.tol = 1e-4,
                           L1 = 0.01,
                           L2 = 0,
                           verbose = 2,
@@ -75,7 +77,7 @@ RunNMF.Seurat <- function(object,
   if (length(k) > 1) {
     # run cross-validation at specified ranks
     cv_data <- data.frame()
-    cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, L1, L2, threads, test.set.density, tol.overfit, trace.test.mse, 2)
+    cv_data <- cross_validate_nmf(A, k, reps, cv.tol, maxit, verbose, L1, L2, threads, test.set.density, tol.overfit, trace.test.mse, 2)
     best_rank <- GetBestRank(cv_data)
     if (verbose >= 1) {
       cat("best rank: ", best_rank, "\n")
@@ -84,7 +86,7 @@ RunNMF.Seurat <- function(object,
     nmf_model <- run_nmf(A, best_rank, tol, maxit, verbose > 1, L1, L2, threads)
   } else if (length(k) == 1) {
     # run automatic rank determination cross-validation
-    nmf_model <- ard_nmf(A, k, reps, tol, maxit, verbose, L1, L2, threads, test.set.density, learning.rate, tol.overfit, trace.test.mse, 2)
+    nmf_model <- ard_nmf(A, k, reps, tol, cv.tol, maxit, verbose, L1, L2, threads, test.set.density, learning.rate, tol.overfit, trace.test.mse, 2)
     cv_data <- nmf_model$cv_data
   } else {
     stop("value for 'k' was invalid")

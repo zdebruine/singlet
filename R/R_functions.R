@@ -116,11 +116,13 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
 #' @inheritParams cross_validate_nmf
 #' @param verbose no output (0/FALSE), rank-level output (1/TRUE) and step size info (2) and individual model fitting updates (3)
 #' @param learning_rate exponent on step size for automatic rank determination
+#' @param tol tolerance of the final fit
+#' @param cv_tol tolerance for cross-validation
 #' @param k_init initial rank at which to begin search for local minimum. \code{k_init = 2} is a reasonable default, higher values can lead to swift convergence to a local minmum.
 #' @import dplyr
 #' @export
 #'
-ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0,
+ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0,
                     test_density = 0.05, learning_rate = 0.8, tol_overfit = 1e-4, trace_test_mse = 5, detail_level = 1) {
   stopifnot("L1 penalty must be strictly in the range (0, 1]" = L1 < 1)
   stopifnot("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb" = test_density < 0.2 & test_density > 0.01)
@@ -140,12 +142,13 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, maxit = 100, ve
       # start at the current best rank
       curr_rank <- GetBestRank(df)
     }
+    max_rank <- ncol(A)
     while (step_size >= 1 && curr_rank < ncol(A)) {
       # as long as we are at a rank less than the rank of the matrix and step size is 1 or greater, continue trying to find the best rank
       if (verbose > 0) cat("k =", curr_rank, ", rep =", curr_rep, "\n")
       # compute the test set reconstruction error at curr_rank
       set.seed(test_seed)
-      model <- c_ard_nmf(A, At, tol * 10, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * curr_rank), curr_rank, nrow(A)), test_seed + curr_rep, round(1 / test_density), tol_overfit, trace_test_mse)
+      model <- c_ard_nmf(A, At, cv_tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * curr_rank), curr_rank, nrow(A)), test_seed + curr_rep, round(1 / test_density), tol_overfit, trace_test_mse)
       err <- tail(model$test_mse, n = 1L)
       overfit_score <- model$score_overfit
       df <- rbind(df, data.frame("k" = as.integer(curr_rank), "rep" = as.integer(curr_rep), "test_error" = err))
@@ -156,13 +159,14 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, maxit = 100, ve
         if (overfit_score > 0 & overfit_score < tol_overfit) cat("   possibly overfit (overfit_score =", sprintf(overfit_score, fmt = "%#.4e"), ")\n")
         if (overfit_score >= tol_overfit) cat("   overfit (overfit_score =", sprintf(overfit_score, fmt = "%#.4e"), ")\n")
       }
+      if(overfit_score >= tol_overfit) max_rank <- curr_rank
       # now decide what the next rank will be
       df_rep <- subset(df, rep == curr_rep)
       df_rep <- df_rep[order(df_rep$k), ]
-      best_rank <- GetBestRank(df_rep)
+      best_rank <- GetBestRank(subset(df_rep, k < max_rank))
       best_rank_pos <- which(df_rep$k == best_rank)
       if (verbose > 1) cat("   best rank in replicate =", best_rank, "\n\n")
-      if (best_rank_pos == length(df_rep$k) & overfit_score < tol_overfit) {
+      if (best_rank_pos == length(df_rep$k)) {
         # best rank is the largest rank fit so far
         step_size <- step_size * (1 + learning_rate)
         curr_rank <- best_rank + floor(step_size)
@@ -175,22 +179,18 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, maxit = 100, ve
           } else {
             curr_rank <- floor(best_rank / 2)
           }
-        } else if (overfit_score > tol_overfit) {
-          # model is overfit, move to a smaller rank
-          next_lower_rank <- df_rep$k[[best_rank_pos - 1]]
-          diff_lower <- best_rank - next_lower_rank
-          if (diff_lower == 1) break
-          curr_rank <- best_rank - floor(diff_lower / 2)
         } else {
           next_lower_rank <- df_rep$k[[best_rank_pos - 1]]
           next_higher_rank <- df_rep$k[[best_rank_pos + 1]]
           diff_lower <- best_rank - next_lower_rank
           diff_higher <- next_higher_rank - best_rank
-          if (diff_lower == 1 && diff_higher == 1) {
+          higher_option <- best_rank + floor(diff_higher / 2)
+          if(higher_option >= max_rank) diff_higher <- floor(higher_option - best_rank)
+          if (diff_lower <= 1 && diff_higher <= 1) {
             break
-          } else if (diff_lower >= diff_higher) {
+          } else if (diff_lower > diff_higher) {
             curr_rank <- best_rank - floor(diff_lower / 2)
-          } else if (diff_higher > diff_lower) {
+          } else if (diff_higher >= diff_lower) {
             curr_rank <- best_rank + floor(diff_higher / 2)
           }
         }
