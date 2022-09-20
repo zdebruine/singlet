@@ -23,6 +23,12 @@ AnnotateNMF <- function(object, ...) {
 #'
 #' @import limma
 #'
+#' @examples 
+#' if (!exists("pbmc3k") | ! "nmf" %in% Reductions(pbmc3k)) { 
+#'   get_pbmc3k_data() %>% NormalizeData() %>% RunNMF() -> pbmc3k
+#' }
+#' (pbmc3k <- AnnotateNMF(pbmc3k))
+#' 
 #' @export
 #'
 AnnotateNMF.DimReduc <- function(object, meta.data, shrink=TRUE, ...){

@@ -37,8 +37,16 @@ AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", 
 #' @return ggplot2 object
 #' @aliases AnnotationPlot
 #' @rdname AnnotateNMF
-#' @export
+#'
+#' @examples 
+#' if (!exists("pbmc3k") | ! "nmf" %in% Reductions(pbmc3k) | ) { 
+#'   get_pbmc3k_data() %>% NormalizeData() %>% RunNMF() -> pbmc3k
+#' }
+#' pbmc3k %>% AnnotateNMF() %>% AnnotationPlot()
+#'
 #' @importFrom stats reshape t.test
+#'
+#' @export
 #' 
 AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
 
@@ -71,26 +79,30 @@ AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
   colnames(fc) <- colnames(pvals) <- sapply(colnames(pvals), 
                                             function(x) substr(x, 3, nchar(x)))
   fc[fc < 0] <- 0
-  idx1 <- hclust(dist(t(fc)), method = "ward.D2")$order
-  idx2 <- hclust(dist(fc), method = "ward.D2")$order
+  idx1 <- hclust(dist(t(fc), method = "binary"), method = "ward.D2")$order
+  idx2 <- hclust(dist(fc, method = "binary"), method = "ward.D2")$order
+
   fc <- fc[idx2, idx1]
   pvals <- pvals[idx2, idx1]
   fc[fc == 0] <- NA
   pvals <- -log10(pvals)
   pvals[is.infinite(pvals)] <- 100
   pvals[pvals > 100] <- 100
+
+  # these already be melted though?!
   df <- cbind(reshape2::melt(fc), as.vector(pvals))
   colnames(df) <- c("factor", "field", "fc", "pval")
   df$factor <- factor(df$factor, levels = unique(df$factor))
-  p <- ggplot(df, 
-              aes(factor, field, color = pval, size = fc)) + 
+
+  # construct the plot; return it so the user can tweak it more
+  p <- ggplot(df, aes(factor, field, color = pval, size = fc)) + 
          geom_point() + 
          scale_color_viridis_c(option = "B", end = 0.9) + 
-         theme_classic() + 
-         labs(y = field, 
+         theme_minimal() + 
+         labs(y = plot.field, 
               x = "NMF factor", 
-              color = "p-value\n(-log10)", 
-              size = "fold enrichment") + 
+              color = "FDR\n(-log10)", 
+              size = "association\n(log-odds)") + 
          theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
          NULL
 
