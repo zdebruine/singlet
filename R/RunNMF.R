@@ -29,8 +29,7 @@
 #' @name RunNMF.Seurat
 #'
 #' @examples
-#' pbmc3k <- get_pbmc3k_data()
-#' pbmc3k <- RunNMF(pbmc3k)
+#' get_pbmc3k_data() %>% NormalizeData() %>% RunNMF() -> pbmc3k
 #'
 #' @seealso \code{\link{RunLNMF}}, \code{\link{RankPlot}}, \code{\link{MetadataSummary}}
 #'
@@ -104,7 +103,7 @@ RunNMF.Seurat <- function(object,
                          threads=threads,
                          test_density=test.set.density,
                          learning_rate=learning.rate, 
-                         tol.overfit=tol.overfit, 
+                         tol_overfit=tol.overfit, 
                          trace_test_mse=trace.test.mse,
                          detail_level=2)
     cv_data <- nmf_model$cv_data
