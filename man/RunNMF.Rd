@@ -12,7 +12,6 @@
   assay = NULL,
   reps = 3,
   tol = 1e-05,
-  cv.tol = 1e-04,
   L1 = 0.01,
   L2 = 0,
   verbose = 2,
@@ -40,9 +39,7 @@ RunNMF(object, ...)
 
 \item{reps}{number of replicates for cross-validation}
 
-\item{tol}{tolerance of the final fit (correlation distance of the model across consecutive iterations).}
-
-\item{cv.tol}{tolerance of the fit during cross-validation}
+\item{tol}{tolerance of the fit (correlation distance of the model across consecutive iterations). Cross-validation fits are 10x coarser than this tolerance.}
 
 \item{L1}{L1/LASSO penalty to increase sparsity of the model}
 

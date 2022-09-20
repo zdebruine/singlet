@@ -46,22 +46,22 @@ AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
     stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
   }
 
-  if(is.null(field)){
-    field <- names(object@misc$annotations)[[1]]
+  if(is.null(plot.field)){
+    plot.field <- names(object@misc$annotations)[[1]]
   } else {
-    if(!(field %in% names(object@misc$annotations))){
+    if(!(plot.field %in% names(object@misc$annotations))){
       stop("specified field was not in the annotation object")
     }
-    if(length(field) > 1) field <- field[[1]]
+    if(length(plot.field) > 1) plot.field <- plot.field[[1]]
   }
 
   # construct a matrix of pvalues and fc
-  ann <- object@misc$annotations[[field]]
+  ann <- object@misc$annotations[[plot.field]]
 
   pvals <- reshape(ann, timevar = "group", 
-                   idvar = "factor", direction = "wide", drop = "fc")
+                   idvar = "factor", direction = "wide", drop = "fc") # lods
   fc <- reshape(ann, timevar = "group", 
-                idvar = "factor", direction = "wide", drop = "p")
+                idvar = "factor", direction = "wide", drop = "p") # adjusted
   rownames(pvals) <- pvals[,1]
   rownames(fc) <- fc[,1]
   pvals <- pvals[, -1]
