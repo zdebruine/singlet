@@ -74,6 +74,11 @@ Run Non-negative Matrix Factorization with rank determined by CV
 \details{
 Use \code{set.seed()} to guarantee reproducibility!
 }
+\examples{
+pbmc3k <- get_pbmc3k_data()
+pbmc3k <- RunNMF(pbmc3k)
+
+}
 \seealso{
 \code{\link{RunLNMF}}, \code{\link{RankPlot}}, \code{\link{MetadataSummary}}
 }
