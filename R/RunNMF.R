@@ -24,8 +24,9 @@
 #' @return Returns a Seurat object with the NMF model stored in the reductions slot
 #'
 #' @details Use \code{set.seed()} to guarantee reproducibility!
-#' @aliases RunNMF
 #' @rdname RunNMF
+#' @aliases RunNMF.Seurat
+#' @name RunNMF.Seurat
 #'
 #' @seealso \code{\link{RunLNMF}}, \code{\link{RankPlot}}, \code{\link{MetadataSummary}}
 #'
@@ -111,6 +112,8 @@ RunNMF.Seurat <- function(object,
 
 #' @rdname RunNMF
 #'
+#' @name RunNMF
+#'
 #' @export
 #'
 RunNMF <- function(object, ...) {
@@ -119,6 +122,7 @@ RunNMF <- function(object, ...) {
 
 
 #' @rdname RunNMF
+#'
 #' @name RunNMF
 #'
 #' @export
