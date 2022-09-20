@@ -1,5 +1,16 @@
 #' @rdname RunLNMF
-#' @name MetadataPlot
+#'
+#' @export
+#'
+MetadataPlot <- function(object, ...) {
+  UseMethod("MetadataPlot")
+}
+
+
+#' @rdname RunLNMF
+#'
+#' @name   MetadataPlot
+#'
 #' @export
 #'
 MetadataPlot.Seurat <- function(object, split.by, reduction = "lnmf", ...) {
@@ -11,14 +22,9 @@ MetadataPlot.Seurat <- function(object, split.by, reduction = "lnmf", ...) {
 
 
 #' @rdname RunLNMF
+#'
+#' @name   MetadataPlot
+#'
 #' @export
 #'
 .S3method("MetadataPlot", "Seurat", MetadataPlot.Seurat)
-
-
-#' @rdname RunLNMF
-#' @export
-#'
-MetadataPlot <- function(object, ...) {
-  UseMethod("MetadataPlot")
-}

@@ -386,7 +386,7 @@ Rcpp::S4 log_normalize(Rcpp::SparseMatrix A_, const unsigned int scale_factor, c
   
     // log-transform
     for(Rcpp::SparseMatrix::InnerIterator it(A, i); it; ++it)
-      it.value() = std::log1p(it.value() * scale_factor);
+      it.value() = std::log1p(it.value() * norm);
   }
   return A.wrap();
 }

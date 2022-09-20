@@ -1,3 +1,10 @@
+#' @export
+#'
+AnnotateNMF <- function(object, ...) {
+  UseMethod("AnnotateNMF")
+}
+
+
 #' Annotate NMF model with cell metadata
 #' 
 #' Note: some of the documentation (e.g. meta.data is a named list) is wrong.
@@ -27,7 +34,7 @@ AnnotateNMF.DimReduc <- function(object, meta.data, shrink=TRUE, ...){
   names(fields) <- fields
 
 
-  # create means models for each (can also use sparse.model.matrix)
+  # create means models for each field (can also use sparse.model.matrix)
   getModelMatrix <- function(field, meta.data) {
     notNA <- which(is.na(meta.data[, field]))
     mat <- model.matrix(~ 0 + ., data=meta.data[, field, drop=FALSE])
@@ -37,7 +44,7 @@ AnnotateNMF.DimReduc <- function(object, meta.data, shrink=TRUE, ...){
   designs <- lapply(fields, getModelMatrix, meta.data=meta.data)
 
 
-  # get linear all-pairs comparisons fits for each grouping
+  # get linear all-pairs comparisons fits for each field
   getModelFit <- function(design, object, shrink=TRUE) {
     fit <- lmFit(t(object@cell.embeddings[rownames(design), ]), design)
     if (shrink) fit <- eBayes(fit) 
@@ -108,13 +115,3 @@ AnnotateNMF.Seurat <- function(object, fields = NULL, reduction = "nmf", ...){
 #' @export
 #'
 .S3method("AnnotateNMF", "Seurat", AnnotateNMF.Seurat)
-
-
-#' @rdname AnnotateNMF
-#' @name AnnotateNMF
-#'
-#' @export
-#'
-AnnotateNMF <- function(object, ...) {
-  UseMethod("AnnotateNMF")
-}

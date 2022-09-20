@@ -13,7 +13,9 @@
 #' @param padj.sig significance cutoff for BH-adjusted p-values (default 0.01)
 #' @return a Seurat object, with GSEA information in the misc slot. BH-adj p-values are on a -log10 scale.
 #'
-#' @importFrom fgsea msigdbr
+#' @import fgsea
+#' @import msigdbr
+#'
 #' @export
 #'
 RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", category = "C5",

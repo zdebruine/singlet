@@ -42,13 +42,14 @@ pbmc3k[["percent.mt"]] <- PercentageFeatureSet(pbmc3k, pattern = "^MT-")
 pbmc3k <- subset(pbmc3k, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 5)
 ```
 
-Now run NMF cross-validation and learn the model at the (automatically determined) best rank:
+Now run NMF cross-validation and learn the model at the (automatically determined) best rank, then annotate the model with available metadata, which in this case is cell types:
 
 ```{R, results = 'hide', message = FALSE, warning = FALSE, cross-validation}
 set.seed(123)
-pbmc3k <- NormalizeData(pbmc3k) %>%
-  singlet::RunNMF()
+pbmc3k <- PreprocessData(pbmc3k) %>% RunNMF() %>% AnnotateNMF()
 ```
+
+Remember to set the seed, as above, to guarantee reproducibility of your NMF model.
 
 Plot the cross-validation results:
 
@@ -56,7 +57,17 @@ Plot the cross-validation results:
 RankPlot(pbmc3k)
 ```
 
-Remember to set the seed, as above, to guarantee reproducibility of your NMF model.
+You can also look at the iteration-level results:
+
+```{R}
+RankPlot(pbmc3k, detail = 2)
+```
+
+Plot the annotation results for `cell_type`, since `cell_type` is a factor in the `@meta.data` slot of the Seurat object:
+
+```{R}
+AnnotationPlot(pbmc3k)
+```
 
 ## Visualization
 

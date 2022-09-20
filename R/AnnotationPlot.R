@@ -1,6 +1,18 @@
-#' @inheritParams AnnotateNMF.Seurat
-#' @aliases AnnotationPlot
+#' @export
+#'
 #' @rdname AnnotateNMF
+#' @aliases AnnotationPlot
+#'
+AnnotationPlot <- function(object, ...) {
+  UseMethod("AnnotationPlot")
+}
+
+
+#' @inheritParams AnnotateNMF.Seurat
+#'
+#' @rdname AnnotateNMF
+#' @aliases AnnotationPlot
+#'
 #' @export
 #' 
 AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", ...){
@@ -96,13 +108,3 @@ AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
 #' @name AnnotateNMF
 #'
 .S3method("AnnotationPlot", "DimReduc", AnnotationPlot.DimReduc)
-
-
-#' @export
-#' @rdname AnnotateNMF
-#'
-AnnotationPlot <- function(object, ...) {
-  UseMethod("AnnotationPlot")
-}
-
-

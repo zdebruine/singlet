@@ -21,15 +21,27 @@
 #' 
 #' See the vignettes to get started.
 #' 
-#' @import ggplot2 Seurat dplyr Matrix msigdbr fgsea
 #' @useDynLib singlet, .registration = TRUE
+#'
 #' @docType package
+#'
 #' @name singlet
+#'
 #' @author Zach DeBruine
+#'
 #' @aliases singlet-package
+#'
+#' @import ggplot2
+#' @import Seurat
+#' @import dplyr
+#' @import Matrix
+#' @import msigdbr 
+#' @import fgsea
+#'
 #' @importFrom methods as new
 #' @importFrom stats dist hclust
 #' @importFrom utils data
+#'
 #' @md
 #'
 NULL

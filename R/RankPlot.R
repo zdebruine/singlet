@@ -1,3 +1,22 @@
+#' Plot NMF cross-validation results
+#'
+#' Given a NMF reduction at multiple ranks, plot rank vs. test set reconstruction error to determine the optimal rank.
+#'
+#' @param object a Seurat object or a \code{data.frame} that is the result of \code{RunNMF}
+#' @param reduction name of the NMF reduction in the Seurat object (result of \code{RunNMF}) for which multiple \code{ranks} were computed.
+#' @param ... not implemented
+#'
+#' @return A ggplot2 object
+#'
+#' @aliases RankPlot
+#'
+#' @export
+#'
+RankPlot <- function(object, reduction = "nmf", ...) {
+  UseMethod("RankPlot")
+}
+
+
 #' @rdname RankPlot
 #'
 #' @param reduction the NMF reduction slot name (result of \code{RunNMF} where \code{k} was an array)
@@ -25,22 +44,3 @@ RankPlot.Seurat <- function(object, reduction = "nmf", detail.level = 1, ...) {
 #' @export
 #'
 .S3method("RankPlot", "Seurat", RankPlot.Seurat)
-
-
-#' Plot NMF cross-validation results
-#'
-#' Given a NMF reduction at multiple ranks, plot rank vs. test set reconstruction error to determine the optimal rank.
-#'
-#' @param object a Seurat object or a \code{data.frame} that is the result of \code{RunNMF}
-#' @param reduction name of the NMF reduction in the Seurat object (result of \code{RunNMF}) for which multiple \code{ranks} were computed.
-#' @param ... not implemented
-#'
-#' @return A ggplot2 object
-#'
-#' @aliases RankPlot
-#'
-#' @export
-#'
-RankPlot <- function(object, reduction = "nmf", ...) {
-  UseMethod("RankPlot")
-}

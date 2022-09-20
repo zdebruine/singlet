@@ -1,3 +1,12 @@
+#' @rdname RunLNMF
+#'
+#' @export
+#'
+RunLNMF <- function(object, ...) {
+  UseMethod("RunLNMF")
+}
+
+
 #' Run Linked NMF on a Seurat object
 #'
 #' @description Run a Linked Non-negative Matrix Factorization to separate shared and unique signals for integration or signature extraction.
@@ -171,12 +180,3 @@ RunLNMF.Seurat <- function(object,
 #' @export
 #'
 .S3method("RunLNMF", "Seurat", RunLNMF.Seurat)
-
-
-#' @rdname RunLNMF
-#'
-#' @export
-#'
-RunLNMF <- function(object, ...) {
-  UseMethod("RunLNMF")
-}
