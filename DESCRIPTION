@@ -9,16 +9,17 @@ Authors@R: person("Zach", "DeBruine",
     comment = c(ORCID = "0000-0003-2234-4827"))
 Description: Fast NMF with automatic rank-determination for dimension reduction of single-cell data using Seurat.
 License: GPL (>= 2)
+Depends:
+    Seurat,
+    dplyr
 Imports:
     Rcpp, 
     Matrix,
     methods,
     stats,
     ggplot2,
-    dplyr,
     limma,
     reshape2,
-    Seurat,
     knitr,
     utils,
     fgsea,
