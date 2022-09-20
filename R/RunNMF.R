@@ -89,7 +89,20 @@ RunNMF.Seurat <- function(object,
     nmf_model <- run_nmf(A, best_rank, tol, maxit, verbose > 1, L1, L2, threads)
   } else if (length(k) == 1) {
     # run automatic rank determination cross-validation
-    nmf_model <- ard_nmf(A, k, reps, tol, maxit, verbose, L1, L2, threads, test.set.density, learning.rate, tol.overfit, trace.test.mse, 2)
+    nmf_model <- ard_nmf(A=A, 
+                         k_init=k, 
+                         n_replicates=reps, 
+                         tol=tol, 
+                         maxit=maxit, 
+                         verbos=verbose, 
+                         L1=L1, 
+                         L2=L2, 
+                         threads=threads,
+                         test_density=test.set.density,
+                         learning_rate=learning.rate, 
+                         tol.overfit=tol.overfit, 
+                         trace_test_mse=trace.test.mse,
+                         detail_level=2)
     cv_data <- nmf_model$cv_data
   } else {
     stop("value for 'k' was invalid")

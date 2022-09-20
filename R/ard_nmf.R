@@ -3,18 +3,26 @@
 #' ARD NMF quickly finds the optimal rank for an NMF model using an exponentially variable learning rate and basic coordinate descent.
 #'
 #' @inheritParams cross_validate_nmf
+#'
 #' @param verbose no output (0/FALSE), rank-level output (1/TRUE) and step size info (2) and individual model fitting updates (3)
 #' @param learning_rate exponent on step size for automatic rank determination
 #' @param tol tolerance of the final fit
 #' @param cv_tol tolerance for cross-validation
 #' @param k_init initial rank at which to begin search for local minimum. \code{k_init = 2} is a reasonable default, higher values can lead to swift convergence to a local minmum.
+#'
 #' @import dplyr
+#'
 #' @export
 #'
-ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0,
-                    test_density = 0.05, learning_rate = 0.8, tol_overfit = 1e-4, trace_test_mse = 5, detail_level = 1) {
+ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
+                    maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0,
+                    test_density = 0.05, learning_rate = 0.8, 
+                    tol_overfit = 1e-4, trace_test_mse = 5, detail_level = 1) {
+
   stopifnot("L1 penalty must be strictly in the range (0, 1]" = L1 < 1)
+
   stopifnot("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb" = test_density < 0.2 & test_density > 0.01)
+
   A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
   test_seed <- abs(.Random.seed[[3]])
   At <- Matrix::t(A)
