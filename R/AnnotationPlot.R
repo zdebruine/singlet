@@ -183,7 +183,6 @@ AnnotationPlot.data.frame <- function(object, plot.field, ...) {
               size = "association\n(log-odds)") + 
          theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
          NULL
-
   return(p) 
 
 }
