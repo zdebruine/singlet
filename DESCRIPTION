@@ -1,23 +1,25 @@
 Package: singlet
 Type: Package
 Title: Non-negative Matrix Factorization for single-cell analysis
-Version: 0.0.99
-Date: 2022-09-08
+Version: 0.0.9920
+Date: 2022-09-20
 Authors@R: person("Zach", "DeBruine", 
     email = "debruinz@gvsu.edu", 
     role = c("aut", "cre"), 
     comment = c(ORCID = "0000-0003-2234-4827"))
 Description: Fast NMF with automatic rank-determination for dimension reduction of single-cell data using Seurat.
 License: GPL (>= 2)
+Depends:
+    Seurat,
+    dplyr
 Imports:
     Rcpp, 
     Matrix,
     methods,
     stats,
     ggplot2,
-    dplyr,
+    limma,
     reshape2,
-    Seurat,
     knitr,
     utils,
     fgsea,

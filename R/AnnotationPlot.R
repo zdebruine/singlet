@@ -1,0 +1,122 @@
+#' @export
+#'
+#' @rdname AnnotateNMF
+#' @aliases AnnotationPlot
+#'
+AnnotationPlot <- function(object, ...) {
+  UseMethod("AnnotationPlot")
+}
+
+
+#' @inheritParams AnnotateNMF.Seurat
+#'
+#' @rdname AnnotateNMF
+#' @aliases AnnotationPlot
+#'
+#' @export
+#' 
+AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", ...){
+  AnnotationPlot(object@reductions[[reduction]])
+}
+
+
+#' @export
+#' @rdname AnnotateNMF
+#' @name AnnotateNMF
+#'
+.S3method("AnnotationPlot", "Seurat", AnnotationPlot.Seurat)
+
+
+#' Plot metadata enrichment in NMF factors
+#' 
+#' After running \code{AnnotateNMF}, this function returns 
+#' a dot plot of the results
+#' 
+#' @inheritParams AnnotateNMF.DimReduc
+#' @param plot.field name of field in \code{meta.data} to plot, if \code{NULL}, plots the first field in the annotation results
+#' @return ggplot2 object
+#' @aliases AnnotationPlot
+#' @rdname AnnotateNMF
+#'
+#' @examples 
+#' if (!exists("pbmc3k") | ! "nmf" %in% Reductions(pbmc3k) | ) { 
+#'   get_pbmc3k_data() %>% NormalizeData() %>% RunNMF() -> pbmc3k
+#' }
+#' pbmc3k %>% AnnotateNMF() %>% AnnotationPlot()
+#'
+#' @importFrom stats reshape t.test
+#'
+#' @export
+#' 
+AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
+
+  if(!("annotations" %in% names(object@misc))){
+    stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
+  }
+
+  if(is.null(plot.field)){
+    plot.field <- names(object@misc$annotations)[[1]]
+  } else {
+    if(!(plot.field %in% names(object@misc$annotations))){
+      stop("specified field was not in the annotation object")
+    }
+    if(length(plot.field) > 1) plot.field <- plot.field[[1]]
+  }
+
+  # construct a matrix of pvalues and fc
+  ann <- object@misc$annotations[[plot.field]]
+
+  pvals <- reshape(ann, timevar = "group", 
+                   idvar = "factor", direction = "wide", drop = "fc") # lods
+  fc <- reshape(ann, timevar = "group", 
+                idvar = "factor", direction = "wide", drop = "p") # adjusted
+  rownames(pvals) <- pvals[,1]
+  rownames(fc) <- fc[,1]
+  pvals <- pvals[, -1]
+  fc <- fc[, -1]
+  pvals <- as.matrix(pvals)
+  fc <- as.matrix(fc)
+  colnames(fc) <- colnames(pvals) <- sapply(colnames(pvals), 
+                                            function(x) substr(x, 3, nchar(x)))
+  fc[fc < 0] <- 0
+  idx1 <- hclust(dist(t(fc), method = "binary"), method = "ward.D2")$order
+  idx2 <- hclust(dist(fc, method = "binary"), method = "ward.D2")$order
+
+  fc <- fc[idx2, idx1]
+  pvals <- pvals[idx2, idx1]
+  fc[fc == 0] <- NA
+  pvals <- -log10(pvals)
+  pvals[is.infinite(pvals)] <- 100
+  pvals[pvals > 100] <- 100
+
+  # these already be melted though?!
+  df <- cbind(reshape2::melt(fc), as.vector(pvals))
+  colnames(df) <- c("factor", "field", "fc", "pval")
+  df$factor <- factor(df$factor, levels = unique(df$factor))
+
+  # construct the plot; return it so the user can tweak it more
+  p <- ggplot(df, aes(factor, field, color = pval, size = fc)) + 
+         geom_point() + 
+         scale_color_viridis_c(option = "B", end = 0.9) + 
+         theme_minimal() + 
+         labs(y = plot.field, 
+              x = "NMF factor", 
+              color = "FDR\n(-log10)", 
+              size = "association\n(log-odds)") + 
+         theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+         NULL
+
+  # can just return p and print it as needed
+  # users will have it autoplotted,
+  # and can modify the plot object 
+  # suppressWarnings(print(p))
+  return(p) 
+
+}
+
+
+#' @export
+#' @rdname AnnotateNMF
+#' @name AnnotateNMF
+#'
+.S3method("AnnotationPlot", "DimReduc", AnnotationPlot.DimReduc)
