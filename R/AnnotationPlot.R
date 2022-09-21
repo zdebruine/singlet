@@ -1,17 +1,22 @@
+#' Plot annotations from an NMF model or other compatible objects.
+#'
+#' @param object      a compatible object (Seurat, DimReduc, nmf, data.frame) 
+#' @param ...         additional arguments passed to called functions 
+#' @param plot.field  metadata grouping to plot
+#' @param reduction   the reduction to plot (default is 'nmf') 
+#'
+#' @return            a ggplot2 object
+#'
 #' @export
-#'
-#' @rdname AnnotateNMF
-#' @aliases AnnotationPlot
-#'
 AnnotationPlot <- function(object, ...) {
   UseMethod("AnnotationPlot")
 }
 
 
-#' @inheritParams AnnotateNMF.Seurat
+#' @inheritParams AnnotationPlot
 #'
-#' @rdname AnnotateNMF
-#' @aliases AnnotationPlot
+#' @rdname AnnotationPlot
+#' @name AnnotationPlot
 #'
 #' @export
 #' 
@@ -20,10 +25,10 @@ AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", 
 }
 
 
-#' @export
-#' @rdname AnnotateNMF
-#' @name AnnotateNMF
+#' @rdname AnnotationPlot
+#' @name   AnnotationPlot
 #'
+#' @export
 .S3method("AnnotationPlot", "Seurat", AnnotationPlot.Seurat)
 
 
@@ -32,19 +37,23 @@ AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", 
 #' After running \code{AnnotateNMF}, this function returns 
 #' a dot plot of the results
 #' 
-#' @inheritParams AnnotateNMF.DimReduc
-#' @param plot.field name of field in \code{meta.data} to plot, if \code{NULL}, plots the first field in the annotation results
-#' @return ggplot2 object
-#' @aliases AnnotationPlot
-#' @rdname AnnotateNMF
+#' @rdname AnnotationPlot
+#' @name AnnotationPlot
+#'
+#' @inheritParams AnnotationPlot
 #'
 #' @examples 
-#' if (!exists("pbmc3k") | ! "nmf" %in% Reductions(pbmc3k) | ) { 
-#'   get_pbmc3k_data() %>% NormalizeData() %>% RunNMF() -> pbmc3k
+#' if (!exists("pbmc3k") | !"nmf" %in% Reductions(pbmc3k)) {
+#'   get_pbmc3k_data() %>% NormalizeData %>% RunNMF %>% AnnotateNMF -> pbmc3k
 #' }
-#' pbmc3k %>% AnnotateNMF() %>% AnnotationPlot()
+#' if (!"annotations" %in% names(pbmc3k@reductions$nmf@misc)) {
+#'   pbmc3k %>% AnnotateNMF -> pbmc3k
+#' }
+#' pbmc3k %>% AnnotationPlot()
 #'
-#' @importFrom stats reshape t.test
+#' @importFrom stats reshape
+#' @importFrom reshape2 melt
+#' @import     ggplot2
 #'
 #' @export
 #' 
@@ -54,22 +63,104 @@ AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
     stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
   }
 
-  if(is.null(plot.field)){
-    plot.field <- names(object@misc$annotations)[[1]]
+  annot <- object@misc$annotations
+  if (is.null(plot.field)) {
+    plot.field <- names(annot)[[1]]
   } else {
-    if(!(plot.field %in% names(object@misc$annotations))){
-      stop("specified field was not in the annotation object")
+    if(!(plot.field %in% names(annot))) {
+      stop(plot.field, "not found in the annotation columns")
     }
-    if(length(plot.field) > 1) plot.field <- plot.field[[1]]
+    if(length(plot.field) > 1) {
+      plot.field <- plot.field[[1]]
+    }
   }
 
-  # construct a matrix of pvalues and fc
-  ann <- object@misc$annotations[[plot.field]]
+  # plot the lods and p-values per factor by group
+  AnnotationPlot.data.frame(annot[[plot.field]])
 
-  pvals <- reshape(ann, timevar = "group", 
-                   idvar = "factor", direction = "wide", drop = "fc") # lods
-  fc <- reshape(ann, timevar = "group", 
-                idvar = "factor", direction = "wide", drop = "p") # adjusted
+}
+
+
+#' @rdname AnnotationPlot
+#' @name   AnnotationPlot
+#'
+#' @export
+#'
+.S3method("AnnotationPlot", "DimReduc", AnnotationPlot.DimReduc)
+
+
+#' Plot metadata enrichment in NMF factors
+#' 
+#' After running \code{AnnotateNMF}, this function returns 
+#' a dot plot of the results.  Right now the code is the same as for DimReduc.
+#' 
+#' @inheritParams AnnotationPlot
+#' @rdname AnnotationPlot
+#' @name AnnotationPlot
+#'
+#' @importFrom stats reshape
+#' @importFrom reshape2 melt
+#' @import     ggplot2
+#' @import     RcppML 
+#'
+#' @export
+#' 
+AnnotationPlot.nmf <- function(object, plot.field = NULL, ...){
+
+  # nmf objects can have a @misc slot too, so...
+  if(!("annotations" %in% names(object@misc))){
+    stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
+  }
+
+  annot <- object@misc$annotations
+  if (is.null(plot.field)) {
+    plot.field <- names(annot)[[1]]
+  } else {
+    if(!(plot.field %in% names(annot))) {
+      stop(plot.field, "not found in the annotation columns")
+    }
+    if(length(plot.field) > 1) {
+      plot.field <- plot.field[[1]]
+    }
+  }
+
+  # plot the lods and p-values per factor by group
+  AnnotationPlot.data.frame(annot[[plot.field]])
+
+}
+
+
+#' @rdname AnnotationPlot
+#' @name   AnnotationPlot
+#'
+#' @export
+.S3method("AnnotationPlot", "nmf", AnnotationPlot.nmf)
+
+
+
+#' Plot metadata enrichment in NMF factors, once summarized into a data.frame
+#'
+#' @inheritParams AnnotationPlot
+#' @rdname AnnotationPlot
+#' @name AnnotationPlot
+#'
+#' @examples 
+#' obj <- pbmc3k@reductions$nmf@misc$annotations
+#' AnnotationPlot.data.frame(obj, "cell_type")
+#'
+#' @importFrom stats reshape
+#' @importFrom reshape2 melt
+#' @import     ggplot2
+#'
+#' @export
+#' 
+AnnotationPlot.data.frame <- function(object, plot.field = NULL, ...) {
+
+  stopifnot(all(c("group", "factor", "fc", "p") %in% names(object)))
+  pvals <- reshape(object, timevar = "group", idvar = "factor", 
+                   direction = "wide", drop = "fc")
+  fc <- reshape(object, timevar = "group", idvar = "factor", 
+                direction = "wide", drop = "p") # already adjusted
   rownames(pvals) <- pvals[,1]
   rownames(fc) <- fc[,1]
   pvals <- pvals[, -1]
@@ -85,7 +176,7 @@ AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
   fc <- fc[idx2, idx1]
   pvals <- pvals[idx2, idx1]
   fc[fc == 0] <- NA
-  pvals <- -log10(pvals)
+  pvals <- (-1 * log10(pvals))
   pvals[is.infinite(pvals)] <- 100
   pvals[pvals > 100] <- 100
 
@@ -115,8 +206,8 @@ AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
 }
 
 
-#' @export
-#' @rdname AnnotateNMF
-#' @name AnnotateNMF
+#' @rdname AnnotationPlot
+#' @name   AnnotationPlot
 #'
-.S3method("AnnotationPlot", "DimReduc", AnnotationPlot.DimReduc)
+#' @export
+.S3method("AnnotationPlot", "data.frame", AnnotationPlot.data.frame)
