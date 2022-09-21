@@ -113,19 +113,8 @@ AnnotationPlot.nmf <- function(object, plot.field = NULL, ...){
   }
 
   annot <- object@misc$annotations
-  if (is.null(plot.field)) {
-    plot.field <- names(annot)[[1]]
-  } else {
-    if(!(plot.field %in% names(annot))) {
-      stop(plot.field, "not found in the annotation columns")
-    }
-    if(length(plot.field) > 1) {
-      plot.field <- plot.field[[1]]
-    }
-  }
-
   # plot the lods and p-values per factor by group
-  AnnotationPlot.data.frame(annot[[plot.field]])
+  AnnotationPlot.data.frame(annot, plot.field=plot.field)
 
 }
 
@@ -137,7 +126,6 @@ AnnotationPlot.nmf <- function(object, plot.field = NULL, ...){
 .S3method("AnnotationPlot", "nmf", AnnotationPlot.nmf)
 
 
-
 #' Plot metadata enrichment in NMF factors, once summarized into a data.frame
 #'
 #' @inheritParams AnnotationPlot
@@ -145,16 +133,15 @@ AnnotationPlot.nmf <- function(object, plot.field = NULL, ...){
 #' @name AnnotationPlot
 #'
 #' @examples 
-#' obj <- pbmc3k@reductions$nmf@misc$annotations
-#' AnnotationPlot.data.frame(obj, "cell_type")
+#' dat <- pbmc3k@reductions$nmf@misc$annotations$cell_type
+#' AnnotationPlot(dat, "cell_type")
 #'
 #' @importFrom stats reshape
 #' @importFrom reshape2 melt
 #' @import     ggplot2
 #'
 #' @export
-#' 
-AnnotationPlot.data.frame <- function(object, plot.field = NULL, ...) {
+AnnotationPlot.data.frame <- function(object, plot.field, ...) {
 
   stopifnot(all(c("group", "factor", "fc", "p") %in% names(object)))
   pvals <- reshape(object, timevar = "group", idvar = "factor", 
@@ -197,10 +184,6 @@ AnnotationPlot.data.frame <- function(object, plot.field = NULL, ...) {
          theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
          NULL
 
-  # can just return p and print it as needed
-  # users will have it autoplotted,
-  # and can modify the plot object 
-  # suppressWarnings(print(p))
   return(p) 
 
 }

@@ -16,7 +16,7 @@ AnnotationPlot(object, ...)
 
 \method{AnnotationPlot}{nmf}(object, plot.field = NULL, ...)
 
-\method{AnnotationPlot}{data.frame}(object, plot.field = NULL, ...)
+\method{AnnotationPlot}{data.frame}(object, plot.field, ...)
 }
 \arguments{
 \item{object}{a compatible object (Seurat, DimReduc, nmf, data.frame)}
@@ -46,7 +46,7 @@ if (!"annotations" \%in\% names(pbmc3k@reductions$nmf@misc)) {
 }
 pbmc3k \%>\% AnnotationPlot()
 
-obj <- pbmc3k@reductions$nmf@misc$annotations
-AnnotationPlot.data.frame(obj, "cell_type")
+dat <- pbmc3k@reductions$nmf@misc$annotations$cell_type
+AnnotationPlot(dat, "cell_type")
 
 }
