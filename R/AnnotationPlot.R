@@ -148,6 +148,7 @@ AnnotationPlot.data.frame <- function(object, plot.field, ...) {
                    direction = "wide", drop = "fc")
   fc <- reshape(object, timevar = "group", idvar = "factor", 
                 direction = "wide", drop = "p") # already adjusted
+
   rownames(pvals) <- pvals[,1]
   rownames(fc) <- fc[,1]
   pvals <- pvals[, -1]

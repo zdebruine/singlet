@@ -46,3 +46,15 @@ if (!exists("pbmc3k") |
 show(pbmc3k)
 
 }
+\examples{
+if (!exists("pbmc3k") | ! "nmf" \%in\% Reductions(pbmc3k)) { 
+  get_pbmc3k_data() \%>\% NormalizeData() \%>\% RunNMF() -> pbmc3k
+}
+(pbmc3k <- AnnotateNMF(pbmc3k))
+
+if (!exists("pbmc3k") | ! "nmf" \%in\% Reductions(pbmc3k) | ) { 
+  get_pbmc3k_data() \%>\% NormalizeData() \%>\% RunNMF() -> pbmc3k
+}
+pbmc3k \%>\% AnnotateNMF() \%>\% AnnotationPlot()
+
+}
