@@ -75,7 +75,9 @@ Run Non-negative Matrix Factorization with rank determined by CV
 Use \code{set.seed()} to guarantee reproducibility!
 }
 \examples{
-get_pbmc3k_data() \%>\% NormalizeData() \%>\% RunNMF() -> pbmc3k
+get_pbmc3k_data() \%>\%
+  NormalizeData() \%>\%
+  RunNMF() -> pbmc3k
 
 }
 \seealso{
