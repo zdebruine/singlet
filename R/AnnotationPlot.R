@@ -43,13 +43,10 @@ AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", 
 #' @inheritParams AnnotationPlot
 #'
 #' @examples 
-#' if (!exists("pbmc3k") | !"nmf" %in% Reductions(pbmc3k)) {
-#'   get_pbmc3k_data() %>% NormalizeData %>% RunNMF %>% AnnotateNMF -> pbmc3k
-#' }
-#' if (!"annotations" %in% names(pbmc3k@reductions$nmf@misc)) {
-#'   pbmc3k %>% AnnotateNMF -> pbmc3k
-#' }
-#' pbmc3k %>% AnnotationPlot()
+#'
+#' if (!exists("pbmc3k")) get_pbmc3k_data() %>% NormalizeData -> pbmc3k
+#' if (!"nmf" %in% Reductions(pbmc3k)) pbmc3k %>% RunNMF() -> pbmc3k
+#' AnnotateNMF(pbmc3k) %>% AnnotationPlot("cell_type")
 #'
 #' @importFrom stats reshape
 #' @importFrom reshape2 melt
@@ -76,7 +73,7 @@ AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
   }
 
   # plot the lods and p-values per factor by group
-  AnnotationPlot.data.frame(annot[[plot.field]])
+  AnnotationPlot.data.frame(annot[[plot.field]], plot.field=plot.field)
 
 }
 

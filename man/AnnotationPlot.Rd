@@ -38,13 +38,10 @@ After running \code{AnnotateNMF}, this function returns
 a dot plot of the results.  Right now the code is the same as for DimReduc.
 }
 \examples{
-if (!exists("pbmc3k") | !"nmf" \%in\% Reductions(pbmc3k)) {
-  get_pbmc3k_data() \%>\% NormalizeData \%>\% RunNMF \%>\% AnnotateNMF -> pbmc3k
-}
-if (!"annotations" \%in\% names(pbmc3k@reductions$nmf@misc)) {
-  pbmc3k \%>\% AnnotateNMF -> pbmc3k
-}
-pbmc3k \%>\% AnnotationPlot()
+
+if (!exists("pbmc3k")) get_pbmc3k_data() \%>\% NormalizeData -> pbmc3k
+if (!"nmf" \%in\% Reductions(pbmc3k)) pbmc3k \%>\% RunNMF() -> pbmc3k
+AnnotateNMF(pbmc3k) \%>\% AnnotationPlot("cell_type")
 
 dat <- pbmc3k@reductions$nmf@misc$annotations$cell_type
 AnnotationPlot(dat, "cell_type")
