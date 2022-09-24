@@ -38,11 +38,8 @@ Maps factor information from the \code{meta.data} slot of a Seurat object or a s
 Maps factor information in an RcppML::nmf object against meta.data
 }
 \examples{
-if (!exists("pbmc3k") | 
-    !"nmf" \%in\% Reductions(pbmc3k) | 
-    !"annotations" \%in\% names(object@misc)) { 
-  get_pbmc3k_data() \%>\% NormalizeData \%>\% RunNMF \%>\% AnnotateNMF -> pbmc3k
-}
-show(pbmc3k)
+if (!exists("pbmc3k")) get_pbmc3k_data() \%>\% NormalizeData -> pbmc3k
+if (!"nmf" \%in\% Reductions(pbmc3k)) pbmc3k \%>\% RunNMF() -> pbmc3k
+AnnotateNMF(pbmc3k)
 
 }

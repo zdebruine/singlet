@@ -14,14 +14,21 @@
 #' @export
 getModelResults <- function(fit) { 
 
+  # log-odds of differential representation
   stopifnot("lods" %in% names(fit))
   lods <- reshape2::melt(fit$lods)
   names(lods) <- c("factor", "group", "fc")
 
+  # BH-adjusted p-values (treated as one huge vector)
   stopifnot("p.value" %in% names(fit))
-  pBH <- reshape2::melt(apply(fit$p.value, 2, p.adjust, method="BH"))
-  names(pBH) <- c("factor", "group", "p")
+  pmat <- fit$p.value
+  padj <- matrix(p.adjust(pmat, method="fdr"), 
+                 dimnames=dimnames(pmat),
+                 ncol=ncol(pmat))
+  fdr <- reshape2::melt(padj)
+  names(fdr) <- c("factor", "group", "p")
 
-  merge(lods, pBH)
+  # now bolt them back together
+  merge(lods, fdr)
 
 } 
