@@ -58,9 +58,6 @@ Rcpp::S4 weight_by_split(const Rcpp::S4& A_, Rcpp::IntegerVector split_by, const
     return A.wrap();
 }
 
-// this function is used for a GWAS project
-//
-// calculates sum of all values every n rows
 //[[Rcpp::export]]
 Eigen::MatrixXd rowwise_compress(Rcpp::SparseMatrix& A, const size_t n = 10, const size_t threads = 0) {
     const size_t n_rows = (size_t)std::floor(A.rows() / n);
