@@ -174,7 +174,7 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
         model <- c_ard_nmf(A, At, cv_tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * curr_rank), curr_rank, nrow(A)), test_seed + curr_rep, round(1 / test_density), tol_overfit, trace_test_mse)
       }
       err <- tail(model$test_mse, n = 1L)
-      overfit_score <- model$score_overfit
+      overfit_score <- tail(model$score_overfit, n = 1L)
       df <- rbind(df, data.frame("k" = as.integer(curr_rank), "rep" = as.integer(curr_rep), "test_error" = err))
       df2[[length(df2) + 1]] <- data.frame("k" = as.integer(curr_rank), "rep" = as.integer(curr_rep), "test_error" = model$test_mse, "iter" = model$iter, "tol" = model$tol)
       if (verbose > 1) {
