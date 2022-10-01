@@ -24,6 +24,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rowwise_compress
+Eigen::MatrixXd rowwise_compress(Rcpp::SparseMatrix& A, const size_t n, const size_t threads);
+RcppExport SEXP _singlet_rowwise_compress(SEXP ASEXP, SEXP nSEXP, SEXP threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::SparseMatrix& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const size_t >::type n(nSEXP);
+    Rcpp::traits::input_parameter< const size_t >::type threads(threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(rowwise_compress(A, n, threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // c_project_model
 Rcpp::List c_project_model(Rcpp::SparseMatrix A, Eigen::MatrixXd w, const double L1, const double L2, const int threads);
 RcppExport SEXP _singlet_c_project_model(SEXP ASEXP, SEXP wSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP) {
@@ -40,13 +53,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // c_nmf
-Rcpp::List c_nmf(Rcpp::SparseMatrix A, Rcpp::SparseMatrix At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w);
+Rcpp::List c_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w);
 RcppExport SEXP _singlet_c_nmf(SEXP ASEXP, SEXP AtSEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP, SEXP wSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::SparseMatrix >::type A(ASEXP);
-    Rcpp::traits::input_parameter< Rcpp::SparseMatrix >::type At(AtSEXP);
+    Rcpp::traits::input_parameter< Rcpp::SparseMatrix& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< Rcpp::SparseMatrix& >::type At(AtSEXP);
     Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
     Rcpp::traits::input_parameter< const uint16_t >::type maxit(maxitSEXP);
     Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
@@ -55,6 +68,25 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const uint16_t >::type threads(threadsSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type w(wSEXP);
     rcpp_result_gen = Rcpp::wrap(c_nmf(A, At, tol, maxit, verbose, L1, L2, threads, w));
+    return rcpp_result_gen;
+END_RCPP
+}
+// c_nmf_dense
+Rcpp::List c_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w);
+RcppExport SEXP _singlet_c_nmf_dense(SEXP ASEXP, SEXP AtSEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP, SEXP wSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::MatrixXd& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd& >::type At(AtSEXP);
+    Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< const uint16_t >::type maxit(maxitSEXP);
+    Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< const double >::type L1(L1SEXP);
+    Rcpp::traits::input_parameter< const double >::type L2(L2SEXP);
+    Rcpp::traits::input_parameter< const uint16_t >::type threads(threadsSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type w(wSEXP);
+    rcpp_result_gen = Rcpp::wrap(c_nmf_dense(A, At, tol, maxit, verbose, L1, L2, threads, w));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -80,13 +112,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // c_ard_nmf
-Rcpp::List c_ard_nmf(Rcpp::SparseMatrix A, Rcpp::SparseMatrix At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, const uint32_t seed, const uint32_t inv_density, const double overfit_threshold, const uint16_t trace_test_mse);
+Rcpp::List c_ard_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, const uint32_t seed, const uint32_t inv_density, const double overfit_threshold, const uint16_t trace_test_mse);
 RcppExport SEXP _singlet_c_ard_nmf(SEXP ASEXP, SEXP AtSEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP, SEXP wSEXP, SEXP seedSEXP, SEXP inv_densitySEXP, SEXP overfit_thresholdSEXP, SEXP trace_test_mseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::SparseMatrix >::type A(ASEXP);
-    Rcpp::traits::input_parameter< Rcpp::SparseMatrix >::type At(AtSEXP);
+    Rcpp::traits::input_parameter< Rcpp::SparseMatrix& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< Rcpp::SparseMatrix& >::type At(AtSEXP);
     Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
     Rcpp::traits::input_parameter< const uint16_t >::type maxit(maxitSEXP);
     Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
@@ -99,6 +131,29 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type overfit_threshold(overfit_thresholdSEXP);
     Rcpp::traits::input_parameter< const uint16_t >::type trace_test_mse(trace_test_mseSEXP);
     rcpp_result_gen = Rcpp::wrap(c_ard_nmf(A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse));
+    return rcpp_result_gen;
+END_RCPP
+}
+// c_ard_nmf_dense
+Rcpp::List c_ard_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, const uint32_t seed, const uint32_t inv_density, const double overfit_threshold, const uint16_t trace_test_mse);
+RcppExport SEXP _singlet_c_ard_nmf_dense(SEXP ASEXP, SEXP AtSEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP, SEXP wSEXP, SEXP seedSEXP, SEXP inv_densitySEXP, SEXP overfit_thresholdSEXP, SEXP trace_test_mseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Eigen::MatrixXd& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd& >::type At(AtSEXP);
+    Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< const uint16_t >::type maxit(maxitSEXP);
+    Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< const double >::type L1(L1SEXP);
+    Rcpp::traits::input_parameter< const double >::type L2(L2SEXP);
+    Rcpp::traits::input_parameter< const uint16_t >::type threads(threadsSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type w(wSEXP);
+    Rcpp::traits::input_parameter< const uint32_t >::type seed(seedSEXP);
+    Rcpp::traits::input_parameter< const uint32_t >::type inv_density(inv_densitySEXP);
+    Rcpp::traits::input_parameter< const double >::type overfit_threshold(overfit_thresholdSEXP);
+    Rcpp::traits::input_parameter< const uint16_t >::type trace_test_mse(trace_test_mseSEXP);
+    rcpp_result_gen = Rcpp::wrap(c_ard_nmf_dense(A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -118,10 +173,13 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_singlet_weight_by_split", (DL_FUNC) &_singlet_weight_by_split, 3},
+    {"_singlet_rowwise_compress", (DL_FUNC) &_singlet_rowwise_compress, 3},
     {"_singlet_c_project_model", (DL_FUNC) &_singlet_c_project_model, 5},
     {"_singlet_c_nmf", (DL_FUNC) &_singlet_c_nmf, 9},
+    {"_singlet_c_nmf_dense", (DL_FUNC) &_singlet_c_nmf_dense, 9},
     {"_singlet_c_linked_nmf", (DL_FUNC) &_singlet_c_linked_nmf, 11},
     {"_singlet_c_ard_nmf", (DL_FUNC) &_singlet_c_ard_nmf, 13},
+    {"_singlet_c_ard_nmf_dense", (DL_FUNC) &_singlet_c_ard_nmf_dense, 13},
     {"_singlet_log_normalize", (DL_FUNC) &_singlet_log_normalize, 3},
     {NULL, NULL, 0}
 };

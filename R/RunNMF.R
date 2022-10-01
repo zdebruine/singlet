@@ -18,11 +18,23 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
   if (L1 >= 1) {
     stop("L1 penalty must be strictly in the range (0, 1]")
   }
-
-  A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
-
+  
+  if(class(A)[[1]] != "matrix"){
+    if(verbose > 0) cat("running with sparse optimization\n")
+    A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
+    At <- Matrix::t(A)
+    dense_mode <- FALSE
+  } else {
+    if(verbose > 0) cat("running with dense optimization\n")
+    At <- t(A)
+  }
+  
   w_init <- matrix(stats::runif(nrow(A) * rank), rank, nrow(A))
-  model <- c_nmf(A, t(A), tol, maxit, verbose, L1, L2, threads, w_init)
+  if(dense_mode){
+    model <- c_nmf_dense(A, At, tol, maxit, verbose, L1, L2, threads, w_init)
+  } else {
+    model <- c_nmf(A, At, tol, maxit, verbose, L1, L2, threads, w_init)
+  }
   sort_index <- order(model$d, decreasing = TRUE)
   model$d <- model$d[sort_index]
   model$w <- t(model$w)[, sort_index]
@@ -61,8 +73,15 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
     stop("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb")
   }
 
-  A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
-  At <- Matrix::t(A)
+  if(class(A)[[1]] != "matrix"){
+    if(verbose > 0) cat("running with sparse optimization\n")
+    A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
+    At <- Matrix::t(A)
+    dense_mode <- FALSE
+  } else {
+    if(verbose > 0) cat("running with dense optimization\n")
+    At <- t(A)
+  }
 
   df <- expand.grid("k" = ranks, "rep" = 1:n_replicates)
   df2 <- list()
@@ -76,7 +95,11 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
     if (verbose > 1) {
       cat(paste0("k = ", df$k[[i]], ", rep = ", rep, " (", i, "/", nrow(df), "):\n"))
     }
-    model <- c_ard_nmf(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
+    if(dense_mode){
+      model <- c_ard_nmf_dense(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
+    } else {
+      model <- c_ard_nmf(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
+    }
     df$test_error[[i]] <- model$test_mse[[length(model$test_mse)]]
     df2[[length(df2) + 1]] <- data.frame("k" = df$k[[i]], "rep" = df$rep[[i]], "test_error" = model$test_mse, "iter" = model$iter, "tol" = model$tol)
     if (verbose == 1) utils::setTxtProgressBar(pb, i)
@@ -121,10 +144,17 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
   stopifnot("L1 penalty must be strictly in the range (0, 1]" = L1 < 1)
 
   stopifnot("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb" = test_density < 0.2 & test_density > 0.01)
-
-  A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
+  dense_mode <- TRUE
+  if(class(A)[[1]] != "matrix"){
+    if(verbose > 0) cat("running with sparse optimization\n")
+    A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
+    At <- Matrix::t(A)
+    dense_mode <- FALSE
+  } else {
+    if(verbose > 0) cat("running with dense optimization\n")
+    At <- t(A)
+  }
   test_seed <- abs(.Random.seed[[3]])
-  At <- Matrix::t(A)
   df <- data.frame("k" = integer(), "rep" = integer(), "test_error" = double())
   df2 <- list()
   if (is.null(k_init) || is.na(k_init) || k_init < 2) k_init <- 2
@@ -138,9 +168,13 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
       if (verbose > 0) cat("k =", curr_rank, ", rep =", curr_rep, "\n")
       # compute the test set reconstruction error at curr_rank
       set.seed(test_seed)
-      model <- c_ard_nmf(A, At, cv_tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * curr_rank), curr_rank, nrow(A)), test_seed + curr_rep, round(1 / test_density), tol_overfit, trace_test_mse)
+      if(dense_mode){
+        model <- c_ard_nmf_dense(A, At, cv_tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * curr_rank), curr_rank, nrow(A)), test_seed + curr_rep, round(1 / test_density), tol_overfit, trace_test_mse)
+      } else {
+        model <- c_ard_nmf(A, At, cv_tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * curr_rank), curr_rank, nrow(A)), test_seed + curr_rep, round(1 / test_density), tol_overfit, trace_test_mse)
+      }
       err <- tail(model$test_mse, n = 1L)
-      overfit_score <- model$score_overfit
+      overfit_score <- tail(model$score_overfit, n = 1L)
       df <- rbind(df, data.frame("k" = as.integer(curr_rank), "rep" = as.integer(curr_rep), "test_error" = err))
       df2[[length(df2) + 1]] <- data.frame("k" = as.integer(curr_rank), "rep" = as.integer(curr_rep), "test_error" = model$test_mse, "iter" = model$iter, "tol" = model$tol)
       if (verbose > 1) {
@@ -198,9 +232,13 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
 
   # learn final nmf model
   if (verbose > 1) cat("\nUnmasking test set")
-  if (verbose > 0) cat("\nFitting final model at k =", best_rank)
+  if (verbose > 0) cat("\nFitting final model at k =", best_rank, "\n")
   set.seed(test_seed)
-  model <- c_nmf(A, At, tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * best_rank), best_rank, nrow(A)))
+  if(dense_mode){
+    model <- c_nmf_dense(A, At, tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * best_rank), best_rank, nrow(A)))
+  } else {
+    model <- c_nmf(A, At, tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * best_rank), best_rank, nrow(A)))
+  }
   ifelse(detail_level == 1, model$cv_data <- df, model$cv_data <- df2)
   sort_index <- order(model$d, decreasing = TRUE)
   model$d <- model$d[sort_index]
