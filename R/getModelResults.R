@@ -1,10 +1,11 @@
 #' extract data.frame of lods and pvalues for differential factor representation
 #' 
 #' log-odds of non-null differences for a response by a factor are in fit$lods
-#' (which will usually be a matrix) and p-values will be in fit$p.value (these
-#' are raw, so we adjust them to yield a B-H fdr). The results are then merged.
+#' (which will usually be a matrix), and one-sided p-values for the moderated t
+#' test are computed from fit$t and fit$df.total using pt(t, df, lower=FALSE),
+#' then adjusted using the step-up procedure of Benjamini & Hochberg.
 #' 
-#' @param fit   an lmFit result from limma, perhaps shrunken with eBayes()
+#' @param fit   an lmFit result from limma, shrunken with eBayes()
 #'
 #' @return      a data.frame with columns 'factor', 'group', 'fc', and 'p' 
 #' 
@@ -14,21 +15,17 @@
 #' @export
 getModelResults <- function(fit) { 
 
-  # log-odds of differential representation
-  stopifnot("lods" %in% names(fit))
-  lods <- reshape2::melt(fit$lods)
-  names(lods) <- c("factor", "group", "fc")
+  # fits are centered, so use signed lods for evidence 
+  fc <- reshape2::melt(fit$lods * sign(fit$coefficients))
+  names(fc) <- c("factor", "group", "fc")
 
-  # BH-adjusted p-values (treated as one huge vector)
-  stopifnot("p.value" %in% names(fit))
-  pmat <- fit$p.value
-  padj <- matrix(p.adjust(pmat, method="fdr"), 
-                 dimnames=dimnames(pmat),
-                 ncol=ncol(pmat))
+  # computed BH-adjusted moderated one-way p-values 
+  p <- pt(fit$t, fit$df.total, lower=FALSE)
+  padj <- matrix(p.adjust(p, method="fdr"), dimnames=dimnames(p), ncol=ncol(p))
   fdr <- reshape2::melt(padj)
   names(fdr) <- c("factor", "group", "p")
 
   # now bolt them back together
-  merge(lods, fdr)
+  merge(fc, fdr)
 
-} 
+}

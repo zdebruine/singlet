@@ -7,13 +7,14 @@
 getModelResults(fit)
 }
 \arguments{
-\item{fit}{an lmFit result from limma, perhaps shrunken with eBayes()}
+\item{fit}{an lmFit result from limma, shrunken with eBayes()}
 }
 \value{
 a data.frame with columns 'factor', 'group', 'fc', and 'p'
 }
 \description{
 log-odds of non-null differences for a response by a factor are in fit$lods
-(which will usually be a matrix) and p-values will be in fit$p.value (these
-are raw, so we adjust them to yield a B-H fdr). The results are then merged.
+(which will usually be a matrix), and one-sided p-values for the moderated t
+test are computed from fit$t and fit$df.total using pt(t, df, lower=FALSE),
+then adjusted using the step-up procedure of Benjamini & Hochberg.
 }

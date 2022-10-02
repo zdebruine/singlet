@@ -9,28 +9,23 @@
 \usage{
 AnnotateNMF(object, ...)
 
-\method{AnnotateNMF}{DimReduc}(object, meta.data, shrink = TRUE, ...)
+\method{AnnotateNMF}{DimReduc}(object, meta.data, ...)
 
 \method{AnnotateNMF}{Seurat}(object, fields = NULL, reduction = "nmf", ...)
 
-\method{AnnotateNMF}{nmf}(object, meta.data, shrink = TRUE, ...)
+\method{AnnotateNMF}{nmf}(object, meta.data, ...)
 }
 \arguments{
 \item{object}{an object suitable for annotation (Seurat, DimReduc, or nmf)}
 
 \item{meta.data}{a data.frame}
 
-\item{shrink}{apply eBayes to the fits? (TRUE)}
-
 \item{fields}{fields (columns) of meta.data to annotate against}
 
 \item{reduction}{the reductions slot in the Seurat object containing the model to annotate}
 }
 \description{
-Note: some of the documentation (e.g. meta.data is a named list) is wrong.
 This function clearly expects meta.data to be a data.frame with cells as rows
-
-Note: some of the documentation (e.g. meta.data is a named list) is wrong.
 }
 \details{
 Maps factor information from the \code{meta.data} slot of a Seurat object or a specified factor to each NMF factor, and computes summary statistics

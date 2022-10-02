@@ -5,18 +5,27 @@
 \alias{AnnotationPlot.Seurat}
 \alias{AnnotationPlot.DimReduc}
 \alias{AnnotationPlot.nmf}
+\alias{AnnotationPlot.list}
 \alias{AnnotationPlot.data.frame}
 \title{Plot annotations from an NMF model or other compatible objects.}
 \usage{
 AnnotationPlot(object, ...)
 
-\method{AnnotationPlot}{Seurat}(object, plot.field = NULL, reduction = "nmf", ...)
+\method{AnnotationPlot}{Seurat}(
+  object,
+  plot.field = NULL,
+  reduction = "nmf",
+  dropEmpty = FALSE,
+  ...
+)
 
-\method{AnnotationPlot}{DimReduc}(object, plot.field = NULL, ...)
+\method{AnnotationPlot}{DimReduc}(object, plot.field = NULL, dropEmpty = FALSE, ...)
 
-\method{AnnotationPlot}{nmf}(object, plot.field = NULL, ...)
+\method{AnnotationPlot}{nmf}(object, plot.field = NULL, dropEmpty = FALSE, ...)
 
-\method{AnnotationPlot}{data.frame}(object, plot.field, ...)
+\method{AnnotationPlot}{list}(object, plot.field, dropEmpty = FALSE, ...)
+
+\method{AnnotationPlot}{data.frame}(object, plot.field, dropEmpty = FALSE, ...)
 }
 \arguments{
 \item{object}{a compatible object (Seurat, DimReduc, nmf, data.frame)}
@@ -26,6 +35,8 @@ AnnotationPlot(object, ...)
 \item{plot.field}{metadata grouping to plot}
 
 \item{reduction}{the reduction to plot (default is 'nmf')}
+
+\item{dropEmpty}{drop factors without significant associations? (FALSE)}
 }
 \value{
 a ggplot2 object
@@ -45,5 +56,11 @@ AnnotateNMF(pbmc3k) \%>\% AnnotationPlot("cell_type")
 
 dat <- pbmc3k@reductions$nmf@misc$annotations$cell_type
 AnnotationPlot(dat, "cell_type")
+
+# interactive
+if (FALSE) { 
+  library(plotly)
+  ggplotly(AnnotationPlot(dat, "cell_type"))
+}  
 
 }
