@@ -4,16 +4,15 @@
 \alias{getModelFit}
 \title{get linear all-pairs comparisons fits for a design matrix and data matrix}
 \usage{
-getModelFit(design, object, shrink = TRUE)
+getModelFit(design, object)
 }
 \arguments{
 \item{design}{a model.matrix (or a sparse.model.matrix, perhaps)}
 
-\item{object}{a data.matrix or a Seurat DimReduc object}
-
-\item{shrink}{run limma::eBayes() on the model? (TRUE)}
+\item{object}{a data.matrix, Seurat DimReduc, or RcppML nmf object}
 }
 \description{
 Continuing along with the theme of "stupid limma tricks", this function 
-fits and (optionally, though by default) shrinks a linear model for a factor.
+fits and shrinks a means model for a factor. The proportion of factors
+assumed to have a fold-change > 0 is 1%, and a robust fit is applied.
 }

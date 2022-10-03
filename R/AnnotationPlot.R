@@ -4,6 +4,7 @@
 #' @param ...         additional arguments passed to called functions 
 #' @param plot.field  metadata grouping to plot
 #' @param reduction   the reduction to plot (default is 'nmf') 
+#' @param dropEmpty   drop factors without significant associations? (FALSE)
 #'
 #' @return            a ggplot2 object
 #'
@@ -20,8 +21,8 @@ AnnotationPlot <- function(object, ...) {
 #'
 #' @export
 #' 
-AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", ...){
-  AnnotationPlot(object@reductions[[reduction]])
+AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", dropEmpty=FALSE, ...){
+  AnnotationPlot(object@reductions[[reduction]], dropEmpty=dropEmpty)
 }
 
 
@@ -54,7 +55,7 @@ AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", 
 #'
 #' @export
 #' 
-AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
+AnnotationPlot.DimReduc <- function(object, plot.field=NULL, dropEmpty=FALSE, ...) {
 
   if(!("annotations" %in% names(object@misc))){
     stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
@@ -72,8 +73,10 @@ AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
     }
   }
 
-  # plot the lods and p-values per factor by group
-  AnnotationPlot.data.frame(annot[[plot.field]], plot.field=plot.field)
+  # plot per factor by group
+  AnnotationPlot.data.frame(annot[[plot.field]], 
+                            plot.field=plot.field,
+                            dropEmpty=dropEmpty)
 
 }
 
@@ -102,7 +105,7 @@ AnnotationPlot.DimReduc <- function(object, plot.field = NULL, ...){
 #'
 #' @export
 #' 
-AnnotationPlot.nmf <- function(object, plot.field = NULL, ...){
+AnnotationPlot.nmf <- function(object, plot.field=NULL, dropEmpty=FALSE, ...) {
 
   # nmf objects can have a @misc slot too, so...
   if(!("annotations" %in% names(object@misc))){
@@ -110,8 +113,7 @@ AnnotationPlot.nmf <- function(object, plot.field = NULL, ...){
   }
 
   annot <- object@misc$annotations
-  # plot the lods and p-values per factor by group
-  AnnotationPlot.data.frame(annot, plot.field=plot.field)
+  AnnotationPlot(annot, plot.field=plot.field, dropEmpty=dropEmpty)
 
 }
 
@@ -121,6 +123,32 @@ AnnotationPlot.nmf <- function(object, plot.field = NULL, ...){
 #'
 #' @export
 .S3method("AnnotationPlot", "nmf", AnnotationPlot.nmf)
+
+
+#' Plot metadata enrichment in NMF factors, if a list of data.frames
+#'
+#' @inheritParams AnnotationPlot
+#' @rdname AnnotationPlot
+#' @name AnnotationPlot
+#'
+#' @export
+AnnotationPlot.list <- function(object, plot.field, dropEmpty=FALSE, ...) {
+
+  stopifnot(plot.field %in% names(object))
+  AnnotationPlot.data.frame(object[[plot.field]], 
+                            plot.field=plot.field, 
+                            dropEmpty=dropEmpty, 
+                            ...)
+
+}
+
+
+#' @rdname AnnotationPlot
+#' @name   AnnotationPlot
+#'
+#' @export
+.S3method("AnnotationPlot", "list", AnnotationPlot.list)
+
 
 
 #' Plot metadata enrichment in NMF factors, once summarized into a data.frame
@@ -133,18 +161,30 @@ AnnotationPlot.nmf <- function(object, plot.field = NULL, ...){
 #' dat <- pbmc3k@reductions$nmf@misc$annotations$cell_type
 #' AnnotationPlot(dat, "cell_type")
 #'
+#' # interactive
+#' if (FALSE) { 
+#'   library(plotly)
+#'   ggplotly(AnnotationPlot(dat, "cell_type"))
+#' }  
+#'
 #' @importFrom stats reshape
 #' @importFrom reshape2 melt
 #' @import     ggplot2
 #'
 #' @export
-AnnotationPlot.data.frame <- function(object, plot.field, ...) {
+AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=FALSE, ...){
 
   stopifnot(all(c("group", "factor", "fc", "p") %in% names(object)))
-  pvals <- reshape(object, timevar = "group", idvar = "factor", 
-                   direction = "wide", drop = "fc")
-  fc <- reshape(object, timevar = "group", idvar = "factor", 
-                direction = "wide", drop = "p") # already adjusted
+  pvals <- reshape(object, 
+                   timevar = "group", 
+                   idvar = "factor", 
+                   direction = "wide", 
+                   drop = "fc")
+  fc <- reshape(object, 
+                timevar = "group", 
+                idvar = "factor", 
+                direction = "wide",
+                drop = "p") # already adjusted
 
   rownames(pvals) <- pvals[,1]
   rownames(fc) <- fc[,1]
@@ -154,33 +194,51 @@ AnnotationPlot.data.frame <- function(object, plot.field, ...) {
   fc <- as.matrix(fc)
   colnames(fc) <- colnames(pvals) <- sapply(colnames(pvals), 
                                             function(x) substr(x, 3, nchar(x)))
-  fc[fc < 0] <- 0
-  idx1 <- hclust(dist(t(fc), method = "binary"), method = "ward.D2")$order
-  idx2 <- hclust(dist(fc, method = "binary"), method = "ward.D2")$order
+  fc[fc < 0] <- 0 # this tends to drop out factors with no enrichment
+  fdr_weight <- round(-1 * log10(pvals)) # cut off at an FDR of ~0.317
+  fc[fdr_weight == 0] <- 0 # fdr > 0.317
+
+  idx1 <- rev(hclust(dist(t(fc), method = "binary"), method = "ward.D2")$order)
+  idx2 <- rev(hclust(dist(fc, method = "binary"), method = "ward.D2")$order)
 
   fc <- fc[idx2, idx1]
   pvals <- pvals[idx2, idx1]
-  fc[fc == 0] <- NA
-  pvals <- (-1 * log10(pvals))
-  pvals[is.infinite(pvals)] <- 100
-  pvals[pvals > 100] <- 100
+  fc[fc == 0] <- NA 
 
-  # these already be melted though?!
-  df <- cbind(reshape2::melt(fc), as.vector(pvals))
-  colnames(df) <- c("factor", "field", "fc", "pval")
+  negative_log10_fdr <- round(-1 * log10(pvals))
+  negative_log10_fdr[is.infinite(negative_log10_fdr)] <- 100
+  negative_log10_fdr[negative_log10_fdr > 100] <- 100
+
+  # these are already melted though?!
+  df <- cbind(reshape2::melt(fc), as.vector(negative_log10_fdr))
+  colnames(df) <- c("factor", "field", "lods", "negative_log10_fdr")
+  df$field <- factor(sub(plot.field, "", df$field))
   df$factor <- factor(df$factor, levels = unique(df$factor))
 
-  # construct the plot; return it so the user can tweak it more
-  p <- ggplot(df, aes(factor, field, color = pval, size = fc)) + 
+  # drop factors?
+  if (dropEmpty) { 
+    keep <- which(sapply(split(df$lods, df$factor), function(x) !all(is.na(x))))
+    df <- subset(df, factor %in% names(keep))
+  }
+
+  # construct plot
+  p <- ggplot(df, 
+              aes(x = factor, 
+                  y = field, 
+                  color = negative_log10_fdr, 
+                  size = lods)) + 
          geom_point() + 
-         scale_color_viridis_c(option = "B", end = 0.9) + 
+         scale_color_viridis_c(option = "B", end = 0.9) +
          theme_minimal() + 
          labs(y = plot.field, 
               x = "NMF factor", 
               color = "FDR\n(-log10)", 
-              size = "association\n(log-odds)") + 
+              size = "Association\n(log-odds)") + 
          theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+         guides(alpha = "none") + 
          NULL
+  
+  # return so the user can tweak it if necessary
   return(p) 
 
 }

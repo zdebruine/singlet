@@ -4,7 +4,7 @@
 \alias{getModelMatrix}
 \title{automatically generate a means model (one-vs-all group associations)}
 \usage{
-getModelMatrix(field, meta.data, sparse = FALSE)
+getModelMatrix(field, meta.data, sparse = FALSE, ...)
 }
 \arguments{
 \item{field}{the name of a column in the data.frame}
@@ -12,6 +12,8 @@ getModelMatrix(field, meta.data, sparse = FALSE)
 \item{meta.data}{a data.frame with one or more factor columns}
 
 \item{sparse}{fit a sparse model.matrix? (FALSE)}
+
+\item{...}{any additional params to pass to model.matrix}
 }
 \value{
 a model.matrix or sparse.model.matrix (if sparse==TRUE)
