@@ -6,24 +6,23 @@
 #'
 #' @param design      a model.matrix (or a sparse.model.matrix, perhaps)
 #' @param object      a data.matrix, Seurat DimReduc, or RcppML nmf object
+#' @param center      center the factor matrix for testing? (TRUE) 
+#' @param scale       scale the factor matrix for testing? (FALSE) 
 #'
 #' @export
-getModelFit <- function(design, object) {
+getModelFit <- function(design, object, center=TRUE, scale=FALSE) {
 
   dat <- object
   if (is(object, "nmf")) dat <- object@h # RcppML nmf 
   if (is(object, "DimReduc")) dat <- t(object@cell.embeddings) # Seurat DimReduc
   # SingleCellExperiment::reducedDim(object, dimname) just returns a data.matrix
   stopifnot(all(rownames(design) %in% colnames(dat)))
-  dat <- dat[, rownames(design)]
 
-  # center the matrix,
-  # to force exclusivity
-  rmeans <- rowMeans(dat)
-  names(rmeans) <- rownames(dat)
-  tofit <- sweep(dat, 1, rmeans, `-`)
+  tofit <- dat[, rownames(design)]
+  if (center | scale) tofit <- scale(tofit, center=center, scale=scale)
   fit <- eBayes(lmFit(tofit, design), proportion=0.01, robust=TRUE)
-  fit$rowmeans <- rmeans
+  fit$centered <- center
+  fit$scaled <- scale 
   return(fit)
 
 }

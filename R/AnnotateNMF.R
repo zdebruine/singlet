@@ -1,8 +1,11 @@
 #' annotate an NMF model 
 #' 
 #' @param object    an object suitable for annotation (Seurat, DimReduc, or nmf)
-#' @param fields    fields (columns) of meta.data to annotate against
-#' @param meta.data a data.frame
+#' @param columns   factor columns of meta.data (see below) to annotate against
+#' @param meta.data a data.frame, if one is not already part of the object
+#' @param designs   named list of design matrices (supersedes meta.data/columns)
+#' @param center    center the factor matrix for testing? (TRUE) 
+#' @param scale     scale the factor matrix for testing? (FALSE) 
 #'
 #' @export
 #'
@@ -11,11 +14,7 @@ AnnotateNMF <- function(object, ...) {
 }
 
 
-#' Annotate NMF model with cell metadata
-#' 
-#' This function clearly expects meta.data to be a data.frame with cells as rows
-#' 
-#' @details Maps factor information from the \code{meta.data} slot of a Seurat object or a specified factor to each NMF factor, and computes summary statistics
+#' Annotate NMF model with cell or sample metadata
 #' 
 #' @inheritParams AnnotateNMF
 #'
@@ -26,20 +25,12 @@ AnnotateNMF <- function(object, ...) {
 #'
 #' @export
 #'
-AnnotateNMF.DimReduc <- function(object, meta.data, ...){
+AnnotateNMF.DimReduc <- function(object, columns=NULL, meta.data=NULL, designs=NULL, center=TRUE, scale=FALSE, ...){
 
-  # get all factors with multiple levels from meta.data data.frame
-  eligible <- sapply(meta.data, function(x) is(x, "factor") & nlevels(x) > 1)
-  if (sum(eligible) < 1) stop("No factors in meta.data slot with >1 level!")
-  fields <- names(which(eligible))
-  names(fields) <- fields
-
-  designs <- lapply(fields, getModelMatrix, meta.data=meta.data)
-  fits <- lapply(designs, getModelFit, object=object)
-  annotations <- lapply(fits, getModelResults)
-
-  object@misc$annotations <- annotations
-  object
+  designs <- getDesigns(columns=columns, meta.data=meta.data, designs=designs)
+  fits <- lapply(designs, getModelFit, object=object, center=center,scale=scale)
+  object@misc$annotations <- lapply(fits, getModelResults)
+  return(object)
 
 }
 
@@ -67,26 +58,13 @@ AnnotateNMF.DimReduc <- function(object, meta.data, ...){
 #'
 #' @export
 #' 
-AnnotateNMF.Seurat <- function(object, fields = NULL, reduction = "nmf", ...){
+AnnotateNMF.Seurat <- function(object, columns = NULL, reduction = "nmf", ...){
 
-  if(!is.null(fields)){
-    for(i in 1:length(fields)){
-      if(!is.factor(object@meta.data[[fields[[i]]]])){
-        stop(fields[[i]], "is not a factor!")
-      } else if(length(levels(object@meta.data[[fields[[i]]]]))){
-        stop(fields[[i]], "is a factor, but only has one level")
-      }
-    }
-
-    object@reductions[[reduction]] <- AnnotateNMF.DimReduc(object@reductions[[reduction]], object@meta.data[, fields], ...)
-
-  } else {
-
-    object@reductions[[reduction]] <- AnnotateNMF.DimReduc(object@reductions[[reduction]], object@meta.data)
-
-  }
-
-  object
+  columns <- checkColumns(object@meta.data, columns = columns) 
+  object@reductions[[reduction]] <- 
+    AnnotateNMF.DimReduc(object@reductions[[reduction]], 
+                         object@meta.data[, columns], ...)
+  return(object)
 
 }
 
@@ -112,22 +90,12 @@ AnnotateNMF.Seurat <- function(object, fields = NULL, reduction = "nmf", ...){
 #'
 #' @export
 #'
-AnnotateNMF.nmf <- function(object, meta.data, ...){
+AnnotateNMF.nmf <- function(object, meta.data, columns=NULL, designs=NULL, center=TRUE, scale=FALSE, ...){
 
-  # get all factors with multiple levels from meta.data data.frame
-  eligible <- sapply(meta.data, function(x) is(x, "factor") & nlevels(x) > 1)
-  if (sum(eligible) < 1) stop("No factors in meta.data slot with >1 level!")
-  fields <- names(which(eligible))
-  names(fields) <- fields
-
-  designs <- lapply(fields, getModelMatrix, meta.data=meta.data)
-  # it turns out that we can, and did, refactor Seurat vs RcppML::nmf into a fn
-  fits <- lapply(designs, getModelFit, object=object)
-  annotations <- lapply(fits, getModelResults)
-
-  # we use this slot in RcppML::nmf same as in Seurat DimReduc
-  object@misc$annotations <- annotations
-  object
+  designs <- getDesigns(columns=columns, meta.data=meta.data, designs=designs)
+  fits <- lapply(designs, getModelFit, object=object, center=center,scale=scale)
+  object@misc$annotations <- lapply(fits, getModelResults)
+  return(object)
 
 }
 
