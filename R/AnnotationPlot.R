@@ -214,12 +214,15 @@ AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=FALSE, ...){
   colnames(df) <- c("factor", "field", "lods", "negative_log10_fdr")
   df$field <- factor(sub(plot.field, "", df$field))
   df$factor <- factor(df$factor, levels = unique(df$factor))
+  df$covariate <- plot.field
 
   # drop factors?
   if (dropEmpty) { 
     keep <- which(sapply(split(df$lods, df$factor), function(x) !all(is.na(x))))
     df <- subset(df, factor %in% names(keep))
   }
+  df <- df[, c("covariate", "field", "factor", "lods", "negative_log10_fdr")]
+  df <- df[rev(order(df$negative_log10_fdr)), ]
 
   # construct plot
   p <- ggplot(df, 
@@ -237,8 +240,9 @@ AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=FALSE, ...){
          theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
          guides(alpha = "none") + 
          NULL
-  
+ 
   # return so the user can tweak it if necessary
+  message("Protip: capture output with p <- AnnotationPlot and look at p$data.")
   return(p) 
 
 }

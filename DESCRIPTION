@@ -1,8 +1,8 @@
 Package: singlet
 Type: Package
 Title: Non-negative Matrix Factorization for single-cell analysis
-Version: 0.0.9934
-Date: 2022-10-04
+Version: 0.0.9935
+Date: 2022-10-05
 Authors@R: c(person("Zach", "DeBruine", 
              email = "debruinz@gvsu.edu", 
              role = c("aut", "cre"), 
@@ -41,7 +41,9 @@ Suggests:
     cowplot,
     viridis,
     testthat (>= 3.0.0),
+    SingleCellExperiment,
     rWikiPathways,
+    GenomicRanges,
     plotly,
     igvR
 Config/testthat/edition: 3
