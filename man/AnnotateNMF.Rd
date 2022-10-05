@@ -9,27 +9,51 @@
 \usage{
 AnnotateNMF(object, ...)
 
-\method{AnnotateNMF}{DimReduc}(object, meta.data, ...)
+\method{AnnotateNMF}{DimReduc}(
+  object,
+  columns = NULL,
+  meta.data = NULL,
+  designs = NULL,
+  center = TRUE,
+  scale = FALSE,
+  ...
+)
 
-\method{AnnotateNMF}{Seurat}(object, fields = NULL, reduction = "nmf", ...)
+\method{AnnotateNMF}{Seurat}(object, columns = NULL, reduction = "nmf", ...)
 
-\method{AnnotateNMF}{nmf}(object, meta.data, ...)
+\method{AnnotateNMF}{nmf}(
+  object,
+  meta.data,
+  columns = NULL,
+  designs = NULL,
+  center = TRUE,
+  scale = FALSE,
+  ...
+)
 }
 \arguments{
 \item{object}{an object suitable for annotation (Seurat, DimReduc, or nmf)}
 
-\item{meta.data}{a data.frame}
+\item{columns}{factor columns of meta.data (see below) to annotate against}
 
-\item{fields}{fields (columns) of meta.data to annotate against}
+\item{meta.data}{a data.frame, if one is not already part of the object}
+
+\item{designs}{named list of design matrices (supersedes meta.data/columns)}
+
+\item{center}{center the factor matrix for testing? (TRUE)}
+
+\item{scale}{scale the factor matrix for testing? (FALSE)}
 
 \item{reduction}{the reductions slot in the Seurat object containing the model to annotate}
 }
 \description{
-This function clearly expects meta.data to be a data.frame with cells as rows
+annotate an NMF model
+
+Annotate NMF model with cell or sample metadata
+
+Annotate NMF model with cell metadata
 }
 \details{
-Maps factor information from the \code{meta.data} slot of a Seurat object or a specified factor to each NMF factor, and computes summary statistics
-
 Maps factor information in an RcppML::nmf object against meta.data
 }
 \examples{

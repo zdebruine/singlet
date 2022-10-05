@@ -1,0 +1,12 @@
+c(bibentry(bibtype = "Article",
+           key = "fastnmf",
+           title = "{Fast and robust non-negative matrix factorization for single-cell experiments}",
+           author = c(
+               person(c("Zachary", "J."), "Debruine"),
+               person("Karsten", "Melcher"),
+               person(c("Timothy", "J."), "Triche")
+           ),
+           year = 2021,
+           url = "https://doi.org/10.1101/2021.09.01.458620",
+           doi = "10.1101/2021.09.01.458620",
+           header = "The RcppML package is described in:"))
