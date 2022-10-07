@@ -7,7 +7,7 @@
 GSEAHeatmap(object, reduction = "nmf", max.terms.per.factor = 3)
 }
 \arguments{
-\item{object}{Seurat object}
+\item{object}{Seurat or RcppML::nmf object}
 
 \item{reduction}{a dimensional reduction for which GSEA analysis has been performed}
 

@@ -2,8 +2,8 @@
 #'
 #' Run GSEA to identify gene sets that are enriched within NMF factors.
 #'
-#' @param object a Seurat object
-#' @param reduction dimensional reduction to use
+#' @param object a Seurat or RcppML::nmf object
+#' @param reduction dimensional reduction to use (if Seurat)
 #' @param species species for which to load gene sets
 #' @param category msigdbr gene set category (i.e. "H", "C5", etc.)
 #' @param min.size minimum number of terms in a gene set
@@ -11,7 +11,9 @@
 #' @param dims factors in the reduction to use, default \code{NULL} for all factors
 #' @param verbose print progress to console
 #' @param padj.sig significance cutoff for BH-adjusted p-values (default 0.01)
-#' @return a Seurat object, with GSEA information in the misc slot. BH-adj p-values are on a -log10 scale.
+#' @param ...   additional params to pass to msigdbr
+#'
+#' @return a Seurat or nmf object, with GSEA information in the misc slot. BH-adj p-values are on a -log10 scale.
 #'
 #' @import fgsea
 #' @import msigdbr
@@ -20,9 +22,10 @@
 #'
 RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", category = "C5",
                     min.size = 10, max.size = 500, dims = NULL,
-                    verbose = TRUE, padj.sig = 0.01) {
+                    verbose = TRUE, padj.sig = 0.01, ...) {
+
   if (verbose) cat("fetching gene sets\n")
-  gene_sets <- msigdbr(species = species, category = category)
+  gene_sets <- msigdbr(species = species, category = category, ...)
 
   if (verbose) cat("filtering pathways\n")
   pathways <- split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
@@ -30,10 +33,15 @@ RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", categor
 
   if (verbose) cat("filtering genes in pathways to those in reduction\n")
   genes_in_pathways <- unique(unlist(pathways))
-  w <- object@reductions[[reduction]]@feature.loadings
-  if (!is.null(dims)) {
-    w <- w[, dims]
+
+  # work on RcppML nmf objects too: 
+  if (is(object, "Seurat")) {
+    w <- object@reductions[[reduction]]@feature.loadings
+  } else if (is(object, "nmf")) { 
+    w <- object@w
   }
+  if (!is.null(dims)) w <- w[, dims]
+  
   if (verbose) cat("filtering genes in reduction to those in pathways\n")
   w <- w[which(rownames(w) %in% genes_in_pathways), ]
   pathways <- lapply(pathways, function(x) x[x %in% rownames(w)])
@@ -63,8 +71,10 @@ RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", categor
 
   if (!is.null(dims)) {
     dims <- paste0(reduction, dims)
-  } else {
+  } else if (is(object, "Seurat")) {
     dims <- paste0(reduction, 1:ncol(object@reductions[[reduction]]))
+  } else if (is(object, "nmf")) {
+    dims <- paste0("nmf", 1:ncol(w))
   }
   colnames(pval) <- colnames(padj) <- colnames(es) <- colnames(nes) <- dims
 
@@ -77,6 +87,14 @@ RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", categor
   padj <- padj[row_order, col_order]
   es <- es[row_order, col_order]
   nes <- nes[row_order, col_order]
-  object@reductions[[reduction]]@misc$gsea <- list("pval" = pval, "padj" = padj, "es" = es, "nes" = nes)
+
+  if (is(object, "Seurat")) {
+    object@reductions[[reduction]]@misc$gsea <- 
+      list("pval" = pval, "padj" = padj, "es" = es, "nes" = nes)
+  } else if (is(object, "nmf")) { 
+    object@misc$gsea <- 
+      list("pval" = pval, "padj" = padj, "es" = es, "nes" = nes)
+  }
+
   object
 }

@@ -2,7 +2,7 @@
 #'
 #' Plot top GSEA terms for each NMF factor on a heatmap
 #'
-#' @param object Seurat object
+#' @param object Seurat or RcppML::nmf object
 #' @param reduction a dimensional reduction for which GSEA analysis has been performed
 #' @param max.terms.per.factor show this number of top terms for each factor
 #'
@@ -12,7 +12,11 @@
 #'
 GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3) {
 
-  df <- object@reductions[[reduction]]@misc$gsea$padj
+  if (is(object, "Seurat")) {
+    df <- object@reductions[[reduction]]@misc$gsea$padj
+  } else if (is(object, "nmf")) {
+    df <- object@misc$gsea$padj
+  }
 
   # find markers for each factor based on the proportion of signal in that factor
   df2 <- as.matrix(Diagonal(x = 1 / rowSums(df)) %*% df)

@@ -13,13 +13,14 @@ RunGSEA(
   max.size = 500,
   dims = NULL,
   verbose = TRUE,
-  padj.sig = 0.01
+  padj.sig = 0.01,
+  ...
 )
 }
 \arguments{
-\item{object}{a Seurat object}
+\item{object}{a Seurat or RcppML::nmf object}
 
-\item{reduction}{dimensional reduction to use}
+\item{reduction}{dimensional reduction to use (if Seurat)}
 
 \item{species}{species for which to load gene sets}
 
@@ -34,9 +35,11 @@ RunGSEA(
 \item{verbose}{print progress to console}
 
 \item{padj.sig}{significance cutoff for BH-adjusted p-values (default 0.01)}
+
+\item{...}{additional params to pass to msigdbr}
 }
 \value{
-a Seurat object, with GSEA information in the misc slot. BH-adj p-values are on a -log10 scale.
+a Seurat or nmf object, with GSEA information in the misc slot. BH-adj p-values are on a -log10 scale.
 }
 \description{
 Run GSEA to identify gene sets that are enriched within NMF factors.
