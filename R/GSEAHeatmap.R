@@ -5,12 +5,13 @@
 #' @param object Seurat or RcppML::nmf object
 #' @param reduction a dimensional reduction for which GSEA analysis has been performed
 #' @param max.terms.per.factor show this number of top terms for each factor
+#' @param dropcommon  drop broadly enriched terms across factors? (TRUE) 
 #'
 #' @return ggplot2 object
 #'
 #' @export
 #'
-GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3) {
+GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3, dropcommon = TRUE) {
 
   if (is(object, "Seurat")) {
     df <- object@reductions[[reduction]]@misc$gsea$padj
@@ -18,7 +19,7 @@ GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3) {
     df <- object@misc$gsea$padj
   }
 
-  # find markers for each factor based on the proportion of signal in that factor
+  # markers for each factor based on the proportion of signal in that factor
   df2 <- as.matrix(Diagonal(x = 1 / rowSums(df)) %*% df)
   terms <- c()
   for (i in 1:ncol(df2)) {
@@ -40,10 +41,10 @@ GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3) {
     ifelse(nchar(x) > 48, paste0(substr(x, 1, 45), "..."), x)
   })
 
-  # remove terms that are broadly significant
-  v <- which((rowSums(df > -log10(0.05)) > (ncol(df) / 2)))
-  if (length(v) > 0) {
-    df <- df[-v, ]
+  if (dropcommon) { 
+    # remove terms that are broadly significant
+    v <- which((rowSums(df > -log10(0.05)) > (ncol(df) / 2)))
+    if (length(v) > 0) df <- df[-v, ]
   }
   df <- reshape2::melt(df)
   p <- ggplot(df, aes(Var2, Var1, fill = value)) +
@@ -55,7 +56,7 @@ GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3) {
     labs(
       x = "NMF factor",
       y = "GO Term",
-      fill = "BH-adj p-value\n(-log10)"
+      fill = "FDR\n(-log10)"
     ) +
     theme(
       axis.text.y = element_text(size = 6),

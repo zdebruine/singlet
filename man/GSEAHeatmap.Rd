@@ -4,7 +4,12 @@
 \alias{GSEAHeatmap}
 \title{Plot GSEA results on a heatmap}
 \usage{
-GSEAHeatmap(object, reduction = "nmf", max.terms.per.factor = 3)
+GSEAHeatmap(
+  object,
+  reduction = "nmf",
+  max.terms.per.factor = 3,
+  dropcommon = TRUE
+)
 }
 \arguments{
 \item{object}{Seurat or RcppML::nmf object}
@@ -12,6 +17,8 @@ GSEAHeatmap(object, reduction = "nmf", max.terms.per.factor = 3)
 \item{reduction}{a dimensional reduction for which GSEA analysis has been performed}
 
 \item{max.terms.per.factor}{show this number of top terms for each factor}
+
+\item{dropcommon}{drop broadly enriched terms across factors? (TRUE)}
 }
 \value{
 ggplot2 object
