@@ -4,7 +4,7 @@
 #' @param ...         additional arguments passed to called functions 
 #' @param plot.field  metadata grouping to plot
 #' @param reduction   the reduction to plot (default is 'nmf') 
-#' @param dropEmpty   drop factors without significant associations? (FALSE)
+#' @param dropEmpty   drop factors without significant associations? (TRUE)
 #'
 #' @return            a ggplot2 object
 #'
@@ -21,7 +21,7 @@ AnnotationPlot <- function(object, ...) {
 #'
 #' @export
 #' 
-AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", dropEmpty=FALSE, ...){
+AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", dropEmpty=TRUE, ...){
   AnnotationPlot(object@reductions[[reduction]], dropEmpty=dropEmpty)
 }
 
@@ -55,7 +55,7 @@ AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", 
 #'
 #' @export
 #' 
-AnnotationPlot.DimReduc <- function(object, plot.field=NULL, dropEmpty=FALSE, ...) {
+AnnotationPlot.DimReduc <- function(object, plot.field=NULL, dropEmpty=TRUE, ...) {
 
   if(!("annotations" %in% names(object@misc))){
     stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
@@ -105,7 +105,7 @@ AnnotationPlot.DimReduc <- function(object, plot.field=NULL, dropEmpty=FALSE, ..
 #'
 #' @export
 #' 
-AnnotationPlot.nmf <- function(object, plot.field=NULL, dropEmpty=FALSE, ...) {
+AnnotationPlot.nmf <- function(object, plot.field=NULL, dropEmpty=TRUE, ...) {
 
   # nmf objects can have a @misc slot too, so...
   if(!("annotations" %in% names(object@misc))){
@@ -132,7 +132,7 @@ AnnotationPlot.nmf <- function(object, plot.field=NULL, dropEmpty=FALSE, ...) {
 #' @name AnnotationPlot
 #'
 #' @export
-AnnotationPlot.list <- function(object, plot.field, dropEmpty=FALSE, ...) {
+AnnotationPlot.list <- function(object, plot.field, dropEmpty=TRUE, ...) {
 
   stopifnot(plot.field %in% names(object))
   AnnotationPlot.data.frame(object[[plot.field]], 
@@ -172,7 +172,7 @@ AnnotationPlot.list <- function(object, plot.field, dropEmpty=FALSE, ...) {
 #' @import     ggplot2
 #'
 #' @export
-AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=FALSE, ...){
+AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=TRUE, ...){
 
   stopifnot(all(c("group", "factor", "fc", "p") %in% names(object)))
   pvals <- reshape(object, 
@@ -217,10 +217,7 @@ AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=FALSE, ...){
   df$covariate <- plot.field
 
   # drop factors?
-  if (dropEmpty) { 
-    keep <- which(sapply(split(df$lods, df$factor), function(x) !all(is.na(x))))
-    df <- subset(df, factor %in% names(keep))
-  }
+  if (dropEmpty) df <- subset(df, !is.na(lods) & lods > 0)
   df <- df[, c("covariate", "field", "factor", "lods", "negative_log10_fdr")]
   df <- df[rev(order(df$negative_log10_fdr)), ]
 

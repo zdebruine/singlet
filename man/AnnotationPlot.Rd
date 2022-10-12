@@ -15,17 +15,17 @@ AnnotationPlot(object, ...)
   object,
   plot.field = NULL,
   reduction = "nmf",
-  dropEmpty = FALSE,
+  dropEmpty = TRUE,
   ...
 )
 
-\method{AnnotationPlot}{DimReduc}(object, plot.field = NULL, dropEmpty = FALSE, ...)
+\method{AnnotationPlot}{DimReduc}(object, plot.field = NULL, dropEmpty = TRUE, ...)
 
-\method{AnnotationPlot}{nmf}(object, plot.field = NULL, dropEmpty = FALSE, ...)
+\method{AnnotationPlot}{nmf}(object, plot.field = NULL, dropEmpty = TRUE, ...)
 
-\method{AnnotationPlot}{list}(object, plot.field, dropEmpty = FALSE, ...)
+\method{AnnotationPlot}{list}(object, plot.field, dropEmpty = TRUE, ...)
 
-\method{AnnotationPlot}{data.frame}(object, plot.field, dropEmpty = FALSE, ...)
+\method{AnnotationPlot}{data.frame}(object, plot.field, dropEmpty = TRUE, ...)
 }
 \arguments{
 \item{object}{a compatible object (Seurat, DimReduc, nmf, data.frame)}
@@ -36,7 +36,7 @@ AnnotationPlot(object, ...)
 
 \item{reduction}{the reduction to plot (default is 'nmf')}
 
-\item{dropEmpty}{drop factors without significant associations? (FALSE)}
+\item{dropEmpty}{drop factors without significant associations? (TRUE)}
 }
 \value{
 a ggplot2 object
