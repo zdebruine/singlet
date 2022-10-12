@@ -217,7 +217,7 @@ AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=TRUE, ...){
   df$covariate <- plot.field
 
   # drop factors?
-  if (dropEmpty) df <- subset(df, !is.na(lods))
+  if (dropEmpty) df <- subset(df, !is.na(lods) & lods > 0)
   df <- df[, c("covariate", "field", "factor", "lods", "negative_log10_fdr")]
   df <- df[rev(order(df$negative_log10_fdr)), ]
 
