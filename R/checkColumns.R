@@ -16,7 +16,7 @@ checkColumns <- function(meta.data, columns = NULL) {
   discard <- setdiff(columns, keep)
   if (verbose & length(discard) > 0) {
     warning("Some columns are not factors, or have only one level.")
-    warning(paste("Skipping ",  paste(toDrop, collapse=", ")))
+    warning(paste("Skipping ",  paste(discard, collapse=", ")))
   }
   names(keep) <- keep
   return(keep)
