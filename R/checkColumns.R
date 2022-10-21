@@ -15,8 +15,8 @@ checkColumns <- function(meta.data, columns = NULL) {
   keep <- names(which(sapply(columns, .keepColumn, meta.data = meta.data)))
   discard <- setdiff(columns, keep)
   if (verbose & length(discard) > 0) {
-    warning("Some columns are not factors, or have only one level.")
-    warning(paste("Skipping ",  paste(discard, collapse=", ")))
+    message("Some columns are not factors, or have only one level.")
+    message("Skipping `",  paste(discard, collapse="`, `"), "`.")
   }
   names(keep) <- keep
   return(keep)
@@ -30,7 +30,6 @@ checkColumns <- function(meta.data, columns = NULL) {
   if (!x %in% names(meta.data)) return(FALSE)
   if (!is(meta.data[[x]], "factor")) return(FALSE)
   if (nlevels(meta.data[[x]]) < 2) return(FALSE) 
-
   return(TRUE) 
 
 }

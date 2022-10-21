@@ -11,8 +11,8 @@ AnnotateNMF(object, ...)
 
 \method{AnnotateNMF}{DimReduc}(
   object,
-  columns = NULL,
   meta.data = NULL,
+  columns = NULL,
   designs = NULL,
   center = TRUE,
   scale = FALSE,
@@ -34,9 +34,9 @@ AnnotateNMF(object, ...)
 \arguments{
 \item{object}{an object suitable for annotation (Seurat, DimReduc, or nmf)}
 
-\item{columns}{factor columns of meta.data (see below) to annotate against}
-
 \item{meta.data}{a data.frame, if one is not already part of the object}
+
+\item{columns}{factor columns of meta.data (see below) to annotate against}
 
 \item{designs}{named list of design matrices (supersedes meta.data/columns)}
 
