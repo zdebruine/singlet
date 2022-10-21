@@ -4,7 +4,7 @@
 \alias{getModelFit}
 \title{get linear all-pairs comparisons fits for a design matrix and data matrix}
 \usage{
-getModelFit(design, object, center = TRUE, scale = FALSE)
+getModelFit(design, object, center = TRUE, ...)
 }
 \arguments{
 \item{design}{a model.matrix (or a sparse.model.matrix, perhaps)}
@@ -12,8 +12,6 @@ getModelFit(design, object, center = TRUE, scale = FALSE)
 \item{object}{a data.matrix, Seurat DimReduc, or RcppML nmf object}
 
 \item{center}{center the factor matrix for testing? (TRUE)}
-
-\item{scale}{scale the factor matrix for testing? (FALSE)}
 }
 \description{
 Continuing along with the theme of "stupid limma tricks", this function 

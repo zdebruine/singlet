@@ -1,8 +1,8 @@
 Package: singlet
 Type: Package
 Title: Non-negative Matrix Factorization for single-cell analysis
-Version: 0.99.1011
-Date: 2022-10-11
+Version: 0.99.1021
+Date: 2022-10-21
 Authors@R: c(person("Zach", "DeBruine", 
              email = "debruinz@gvsu.edu", 
              role = c("aut", "cre"), 

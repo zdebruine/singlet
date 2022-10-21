@@ -169,56 +169,67 @@ AnnotationPlot.list <- function(object, plot.field, dropEmpty=TRUE, ...) {
 #'
 #' @importFrom stats reshape
 #' @importFrom reshape2 melt
+#' @importFrom reshape2 acast
 #' @import     ggplot2
 #'
 #' @export
 AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=TRUE, ...){
 
-  stopifnot(all(c("group", "factor", "fc", "p") %in% names(object)))
-  pvals <- reshape(object, 
-                   timevar = "group", 
-                   idvar = "factor", 
-                   direction = "wide", 
-                   drop = "fc")
-  fc <- reshape(object, 
-                timevar = "group", 
-                idvar = "factor", 
-                direction = "wide",
-                drop = "p") # already adjusted
+  pcols <- c("factor","group","p")
+  fcols <- c("factor","group","fc")
+  mandatory <- union(pcols, fcols)
+  stopifnot(all(mandatory %in% names(object)))
 
-  rownames(pvals) <- pvals[,1]
-  rownames(fc) <- fc[,1]
-  pvals <- pvals[, -1]
-  fc <- fc[, -1]
-  pvals <- as.matrix(pvals)
-  fc <- as.matrix(fc)
-  colnames(fc) <- colnames(pvals) <- sapply(colnames(pvals), 
-                                            function(x) substr(x, 3, nchar(x)))
-  fc[fc < 0] <- 0 # this tends to drop out factors with no enrichment
+  # cast and cluster LODS ("fc"); could stand to be sparse
+  fc <- reshape2::acast(object[, fcols], group ~ factor, value.var="fc")
+  pvals <- reshape2::acast(object[, pcols], group ~ factor, value.var="p")
+
+  # drop "nmf" from the names
+  # colnames(fc) <- sub("^nmf", "", colnames(fc)) 
+  # colnames(pvals) <- sub("^nmf", "", colnames(pvals)) 
+  
+  # check that all dimnames match
+  stopifnot(identical(rownames(fc), rownames(pvals)))
+  stopifnot(identical(colnames(fc), colnames(pvals)))
+
+  # clean up for clustering on LODs ("fold change")
+  fc[fc < 0] <- 0      # drop out factors with no enrichment
+  fc[is.na(fc)] <- 0   # replace NAs so that clustering works
   fdr_weight <- round(-1 * log10(pvals)) # cut off at an FDR of ~0.317
   fc[fdr_weight == 0] <- 0 # fdr > 0.317
 
-  idx1 <- rev(hclust(dist(t(fc), method = "binary"), method = "ward.D2")$order)
-  idx2 <- rev(hclust(dist(fc, method = "binary"), method = "ward.D2")$order)
-
-  fc <- fc[idx2, idx1]
-  pvals <- pvals[idx2, idx1]
+  # cluster on "fold change" (LODS)
+  ridx <- rev(hclust(dist(fc, method = "binary"), method = "ward.D2")$order)
+  fields <- rownames(fc)[ridx]
+  cidx <- rev(hclust(dist(t(fc), method = "binary"), method = "ward.D2")$order)
+  factors <- colnames(fc)[cidx]
+  pvals <- pvals[fields, factors]
+  fc <- fc[fields, factors]
   fc[fc == 0] <- NA 
-
+  
+  # check that all dimnames match
+  stopifnot(identical(rownames(fc), rownames(pvals)))
+  stopifnot(identical(colnames(fc), colnames(pvals)))
+  
+  # rescale adjusted p-values to -1 * log10(fdr)
   negative_log10_fdr <- round(-1 * log10(pvals))
   negative_log10_fdr[is.infinite(negative_log10_fdr)] <- 100
   negative_log10_fdr[negative_log10_fdr > 100] <- 100
+  is.na(negative_log10_fdr[which(negative_log10_fdr == 0)]) <- TRUE
 
-  # these are already melted though?!
-  df <- cbind(reshape2::melt(fc), as.vector(negative_log10_fdr))
-  colnames(df) <- c("factor", "field", "lods", "negative_log10_fdr")
-  df$field <- factor(sub(plot.field, "", df$field))
-  df$factor <- factor(df$factor, levels = unique(df$factor))
-  df$covariate <- plot.field
+  # check (again!) that all dimnames match
+  stopifnot(identical(rownames(fc), rownames(negative_log10_fdr)))
+  stopifnot(identical(colnames(fc), colnames(negative_log10_fdr)))
 
-  # drop factors?
-  if (dropEmpty) df <- subset(df, !is.na(lods) & lods > 0)
-  df <- df[, c("covariate", "field", "factor", "lods", "negative_log10_fdr")]
+  # melt both and merge
+  df <- merge(melt(fc, value.name="lods"), 
+              melt(negative_log10_fdr, value.name="negative_log10_fdr")) 
+  names(df) <- c("field", "factor", "lods", "negative_log10_fdr")
+  df$factor <- factor(df$factor, levels=factors) # retain clustering
+  df$field <- factor(df$field, levels=fields) # retain clustering
+  if (dropEmpty) df <- subset(df, !is.na(lods) & !is.na(negative_log10_fdr))
+  df$design <- plot.field
+  df <- df[, c("design", "field", "factor", "lods", "negative_log10_fdr")]
   df <- df[rev(order(df$negative_log10_fdr)), ]
 
   # construct plot

@@ -4,10 +4,14 @@
 \alias{getModelResults}
 \title{extract data.frame of lods and pvalues for differential factor representation}
 \usage{
-getModelResults(fit)
+getModelResults(fit, noneg = TRUE, noint = TRUE)
 }
 \arguments{
 \item{fit}{an lmFit result from limma, shrunken with eBayes()}
+
+\item{noneg}{drop results with negative lods scores? (TRUE)}
+
+\item{noint}{drop any results for '(Intercept)'? (TRUE)}
 }
 \value{
 a data.frame with columns 'factor', 'group', 'fc', and 'p'
@@ -17,4 +21,9 @@ log-odds of non-null differences for a response by a factor are in fit$lods
 (which will usually be a matrix), and one-sided p-values for the moderated t
 test are computed from fit$t and fit$df.total using pt(t, df, lower=FALSE),
 then adjusted using the step-up procedure of Benjamini & Hochberg.
+}
+\details{
+If an (Intercept) term is found, it will be dropped, and if
+             negative LODS scores are encountered, they will be dropped,
+             unless `noneg` and/or `noint` are FALSE.
 }

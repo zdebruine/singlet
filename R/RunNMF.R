@@ -164,14 +164,20 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
     curr_rank <- k_init
     max_rank <- ncol(A)
     while (step_size >= 1 && curr_rank < ncol(A)) {
+
       # as long as we are at a rank less than the rank of the matrix and step size is 1 or greater, continue trying to find the best rank
       if (verbose > 0) cat("k =", curr_rank, ", rep =", curr_rep, "\n")
       # compute the test set reconstruction error at curr_rank
       set.seed(test_seed)
-      if(dense_mode){
+
+      if(dense_mode) {
+
         model <- c_ard_nmf_dense(A, At, cv_tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * curr_rank), curr_rank, nrow(A)), test_seed + curr_rep, round(1 / test_density), tol_overfit, trace_test_mse)
+
       } else {
+
         model <- c_ard_nmf(A, At, cv_tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * curr_rank), curr_rank, nrow(A)), test_seed + curr_rep, round(1 / test_density), tol_overfit, trace_test_mse)
+
       }
       err <- tail(model$test_mse, n = 1L)
       overfit_score <- tail(model$score_overfit, n = 1L)
@@ -233,12 +239,21 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
   # learn final nmf model
   if (verbose > 1) cat("\nUnmasking test set")
   if (verbose > 0) cat("\nFitting final model at k =", best_rank, "\n")
+
   set.seed(test_seed)
+
   if(dense_mode){
+
+    # FIXME: crashes due to std::alloc overrun; fix c_nmf_dense 
     model <- c_nmf_dense(A, At, tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * best_rank), best_rank, nrow(A)))
+
   } else {
+
+    # this works fine
     model <- c_nmf(A, At, tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * best_rank), best_rank, nrow(A)))
+
   }
+
   ifelse(detail_level == 1, model$cv_data <- df, model$cv_data <- df2)
   sort_index <- order(model$d, decreasing = TRUE)
   model$d <- model$d[sort_index]

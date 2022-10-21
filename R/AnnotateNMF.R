@@ -25,7 +25,7 @@ AnnotateNMF <- function(object, ...) {
 #'
 #' @export
 #'
-AnnotateNMF.DimReduc <- function(object, columns=NULL, meta.data=NULL, designs=NULL, center=TRUE, scale=FALSE, ...){
+AnnotateNMF.DimReduc <- function(object, meta.data=NULL, columns=NULL, designs=NULL, center=TRUE, scale=FALSE, ...){
 
   designs <- getDesigns(columns=columns, meta.data=meta.data, designs=designs)
   fits <- lapply(designs, getModelFit, object=object, center=center,scale=scale)
@@ -60,10 +60,11 @@ AnnotateNMF.DimReduc <- function(object, columns=NULL, meta.data=NULL, designs=N
 #' 
 AnnotateNMF.Seurat <- function(object, columns = NULL, reduction = "nmf", ...){
 
-  columns <- checkColumns(object@meta.data, columns = columns) 
+  if (is.null(columns)) columns <- colnames(object@meta.data)
   object@reductions[[reduction]] <- 
-    AnnotateNMF.DimReduc(object@reductions[[reduction]], 
-                         object@meta.data[, columns], ...)
+    AnnotateNMF.DimReduc(object=object@reductions[[reduction]], 
+                         meta.data=object@meta.data[, columns], 
+                         columns=columns, ...)
   return(object)
 
 }
@@ -92,7 +93,7 @@ AnnotateNMF.Seurat <- function(object, columns = NULL, reduction = "nmf", ...){
 #'
 AnnotateNMF.nmf <- function(object, meta.data, columns=NULL, designs=NULL, center=TRUE, scale=FALSE, ...){
 
-  designs <- getDesigns(columns=columns, meta.data=meta.data, designs=designs)
+  designs <- getDesigns(columns=columns,meta.data=meta.data,designs=designs,...)
   fits <- lapply(designs, getModelFit, object=object, center=center,scale=scale)
   object@misc$annotations <- lapply(fits, getModelResults)
   return(object)
