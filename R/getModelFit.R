@@ -7,7 +7,7 @@
 #' @param design      a model.matrix (or a sparse.model.matrix, perhaps)
 #' @param object      a data.matrix, Seurat DimReduc, or RcppML nmf object
 #' @param center      center the factor matrix for testing? (TRUE) 
-#'
+#' @param ... not implemented
 #' @export
 getModelFit <- function(design, object, center=TRUE, ...) {
 

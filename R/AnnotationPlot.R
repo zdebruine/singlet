@@ -14,8 +14,6 @@ AnnotationPlot <- function(object, ...) {
 }
 
 
-#' @inheritParams AnnotationPlot
-#'
 #' @rdname AnnotationPlot
 #' @name AnnotationPlot
 #'
@@ -41,13 +39,9 @@ AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", 
 #' @rdname AnnotationPlot
 #' @name AnnotationPlot
 #'
-#' @inheritParams AnnotationPlot
-#'
 #' @examples 
-#'
-#' if (!exists("pbmc3k")) get_pbmc3k_data() %>% NormalizeData -> pbmc3k
-#' if (!"nmf" %in% Reductions(pbmc3k)) pbmc3k %>% RunNMF() -> pbmc3k
-#' AnnotateNMF(pbmc3k) %>% AnnotationPlot("cell_type")
+#' get_pbmc3k_data() %>% NormalizeData %>% RunNMF %>% AnnotateNMF -> pbmc3k
+#' AnnotationPlot(pbmc3k, "cell_type")
 #'
 #' @importFrom stats reshape
 #' @importFrom reshape2 melt
@@ -94,7 +88,6 @@ AnnotationPlot.DimReduc <- function(object, plot.field=NULL, dropEmpty=TRUE, ...
 #' After running \code{AnnotateNMF}, this function returns 
 #' a dot plot of the results.  Right now the code is the same as for DimReduc.
 #' 
-#' @inheritParams AnnotationPlot
 #' @rdname AnnotationPlot
 #' @name AnnotationPlot
 #'
@@ -127,7 +120,6 @@ AnnotationPlot.nmf <- function(object, plot.field=NULL, dropEmpty=TRUE, ...) {
 
 #' Plot metadata enrichment in NMF factors, if a list of data.frames
 #'
-#' @inheritParams AnnotationPlot
 #' @rdname AnnotationPlot
 #' @name AnnotationPlot
 #'
@@ -153,11 +145,11 @@ AnnotationPlot.list <- function(object, plot.field, dropEmpty=TRUE, ...) {
 
 #' Plot metadata enrichment in NMF factors, once summarized into a data.frame
 #'
-#' @inheritParams AnnotationPlot
 #' @rdname AnnotationPlot
 #' @name AnnotationPlot
 #'
 #' @examples 
+#' /dontrun{
 #' dat <- pbmc3k@reductions$nmf@misc$annotations$cell_type
 #' AnnotationPlot(dat, "cell_type")
 #'
@@ -166,7 +158,7 @@ AnnotationPlot.list <- function(object, plot.field, dropEmpty=TRUE, ...) {
 #'   library(plotly)
 #'   ggplotly(AnnotationPlot(dat, "cell_type"))
 #' }  
-#'
+#' }
 #' @importFrom stats reshape
 #' @importFrom reshape2 melt
 #' @importFrom reshape2 acast

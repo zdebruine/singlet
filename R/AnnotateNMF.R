@@ -50,8 +50,7 @@ AnnotateNMF.DimReduc <- function(object, meta.data=NULL, columns=NULL, designs=N
 #' @param reduction the reductions slot in the Seurat object containing the model to annotate
 #'
 #' @examples 
-#' if (!exists("pbmc3k")) get_pbmc3k_data() %>% NormalizeData -> pbmc3k
-#' if (!"nmf" %in% Reductions(pbmc3k)) pbmc3k %>% RunNMF() -> pbmc3k
+#' get_pbmc3k_data() %>% NormalizeData %>% RunNMF %>% pbmc3k
 #' AnnotateNMF(pbmc3k)
 #' 
 #' @aliases AnnotateNMF

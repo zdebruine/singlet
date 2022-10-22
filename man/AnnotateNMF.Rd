@@ -57,8 +57,7 @@ Annotate NMF model with cell metadata
 Maps factor information in an RcppML::nmf object against meta.data
 }
 \examples{
-if (!exists("pbmc3k")) get_pbmc3k_data() \%>\% NormalizeData -> pbmc3k
-if (!"nmf" \%in\% Reductions(pbmc3k)) pbmc3k \%>\% RunNMF() -> pbmc3k
+get_pbmc3k_data() \%>\% NormalizeData \%>\% RunNMF \%>\% pbmc3k
 AnnotateNMF(pbmc3k)
 
 }

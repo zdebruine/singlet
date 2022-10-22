@@ -13,7 +13,7 @@ getDesigns(columns = NULL, meta.data = NULL, designs = NULL)
 
 \item{designs}{named list of design matrices (supersedes meta.data/columns)}
 
-\item{object}{a suitable data structure for validating design matrices}
+\item{...}{not implemented}
 }
 \value{
 a named list of design matrices, if one was not provided
