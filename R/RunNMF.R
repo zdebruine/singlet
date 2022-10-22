@@ -298,10 +298,11 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
 #' @name RunNMF.Seurat
 #'
 #' @examples
+#' \dontrun{
 #' get_pbmc3k_data() %>%
 #'   NormalizeData() %>%
 #'   RunNMF() -> pbmc3k
-#'
+#' }
 #' @seealso \code{\link{RunLNMF}}, \code{\link{RankPlot}}, \code{\link{MetadataSummary}}
 #'
 #' @export
@@ -369,7 +370,7 @@ RunNMF.Seurat <- function(object,
       n_replicates = reps,
       tol = tol,
       maxit = maxit,
-      verbos = verbose,
+      verbose = verbose,
       L1 = L1,
       L2 = L2,
       threads = threads,

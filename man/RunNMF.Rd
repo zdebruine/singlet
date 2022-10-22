@@ -75,10 +75,11 @@ Run Non-negative Matrix Factorization with rank determined by CV
 Use \code{set.seed()} to guarantee reproducibility!
 }
 \examples{
+\dontrun{
 get_pbmc3k_data() \%>\%
   NormalizeData() \%>\%
   RunNMF() -> pbmc3k
-
+}
 }
 \seealso{
 \code{\link{RunLNMF}}, \code{\link{RankPlot}}, \code{\link{MetadataSummary}}

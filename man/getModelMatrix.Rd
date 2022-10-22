@@ -32,10 +32,3 @@ In order to fit one-vs-all comparisons, a means model is the default. If you
 have a referent group (e.g. normal bone marrow vs. a bunch of leukemia cells)
 or simply don't want a means model, set `ova` (one vs all) to FALSE.
 }
-\examples{
-
-if (!exists("pbmc3k") | ! "nmf" \%in\% Reductions(pbmc3k)) { 
-  get_pbmc3k_data() \%>\% NormalizeData \%>\% RunNMF \%>\% AnnotateNMF -> pbmc3k
-} 
-
-}

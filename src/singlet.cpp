@@ -335,7 +335,6 @@ inline double mse_test(const Eigen::MatrixXd& A, const Eigen::MatrixXd& w, Eigen
 // no linking or masking
 template <class Matrix>
 Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w) {
-    // FIXME: segfaults
     Eigen::MatrixXd h(w.rows(), A.cols());
     Eigen::VectorXd d(w.rows());
     double tol_ = 1;

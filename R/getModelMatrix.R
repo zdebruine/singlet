@@ -19,12 +19,6 @@
 #' 
 #' @return            a model.matrix or sparse.model.matrix (if sparse==TRUE)
 #'
-#' @examples 
-#' 
-#' if (!exists("pbmc3k") | ! "nmf" %in% Reductions(pbmc3k)) { 
-#'   get_pbmc3k_data() %>% NormalizeData %>% RunNMF %>% AnnotateNMF -> pbmc3k
-#' } 
-#'
 #' @import Matrix
 #'
 #' @export

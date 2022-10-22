@@ -49,10 +49,11 @@ After running \code{AnnotateNMF}, this function returns
 a dot plot of the results.  Right now the code is the same as for DimReduc.
 }
 \examples{
+\dontrun{
 get_pbmc3k_data() \%>\% NormalizeData \%>\% RunNMF \%>\% AnnotateNMF -> pbmc3k
 AnnotationPlot(pbmc3k, "cell_type")
-
-/dontrun{
+}
+\dontrun{
 dat <- pbmc3k@reductions$nmf@misc$annotations$cell_type
 AnnotationPlot(dat, "cell_type")
 

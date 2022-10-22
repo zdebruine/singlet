@@ -33,9 +33,6 @@ RunLNMF(object, ...)
   L1 = 0.01,
   L2 = 0,
   threads = 0,
-  link.balance.tol = 0,
-  balance.maxit = 100,
-  link.balance.rate = 0.1,
   ...
 )
 }
@@ -67,14 +64,6 @@ RunLNMF(object, ...)
 \item{L2}{L2/Ridge-like penalty to increase angles between factors}
 
 \item{threads}{number of threads to use (0 = let OpenMP use all available threads)}
-
-\item{link.balance.tol}{relative change in factor representation within sample groups between balancing iterations at which to call convergence.}
-
-\item{balance.maxit}{maximum number of iterations for the balancing step}
-
-\item{link.balance.rate}{proportion of difference between current factor weight and equal representation of factors in a sample group to target in a single iteration (default 0.1).}
-
-\item{link.balance}{after initial linking step, weight all shared factors such that each dataset is represented as equally as possible in each factor.}
 }
 \value{
 a Seurat object with the NMF model stored in the reductions slot

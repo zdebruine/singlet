@@ -1,11 +1,9 @@
-#' refactored out from AnnotateNMF to ease argument handling
+#' Refactored out from AnnotateNMF to ease argument handling
 #'
 #' @param columns   factor columns of meta.data, optional if !is.null(designs)
 #' @param meta.data a data.frame of annotations, optional if !is.null(designs)
 #' @param designs   named list of design matrices (supersedes meta.data/columns)
-#' @param ... not implemented
-#' @return          a named list of design matrices, if one was not provided
-#'
+#' @return a named list of design matrices, if one was not provided
 #' @export
 getDesigns <- function(columns=NULL, meta.data=NULL, designs=NULL) {
 

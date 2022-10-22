@@ -40,9 +40,10 @@ AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", 
 #' @name AnnotationPlot
 #'
 #' @examples 
+#' \dontrun{
 #' get_pbmc3k_data() %>% NormalizeData %>% RunNMF %>% AnnotateNMF -> pbmc3k
 #' AnnotationPlot(pbmc3k, "cell_type")
-#'
+#' }
 #' @importFrom stats reshape
 #' @importFrom reshape2 melt
 #' @import     ggplot2
@@ -149,7 +150,7 @@ AnnotationPlot.list <- function(object, plot.field, dropEmpty=TRUE, ...) {
 #' @name AnnotationPlot
 #'
 #' @examples 
-#' /dontrun{
+#' \dontrun{
 #' dat <- pbmc3k@reductions$nmf@misc$annotations$cell_type
 #' AnnotationPlot(dat, "cell_type")
 #'
