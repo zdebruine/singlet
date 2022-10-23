@@ -259,8 +259,6 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
   model
 }
 
-
-
 #' Run NMF on a Seurat object
 #'
 #' @description Run Non-negative Matrix Factorization with rank determined by CV
@@ -282,6 +280,7 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
 #' @param learning.rate exponent on step size for automatic rank determination
 #' @param tol.overfit tolerance for increase in test set reconstruction error relative to minimum observed value during fitting
 #' @param trace.test.mse during automatic rank determination, calculate test set reconstruction error every trace iterations
+#' @param features if \code{NULL} use all features, if \code{var.features} use variable feature stored in the Assay object, if index array use those rows.
 #' @param ... not implemented
 #'
 #' @return Returns a Seurat object with the NMF model stored in the reductions slot
@@ -318,6 +317,7 @@ RunNMF.Seurat <- function(object,
                           tol.overfit = 1e-4,
                           trace.test.mse = 5,
                           threads = 0,
+                          features = NULL,
                           ...) {
   if (is.null(assay)) {
     assay <- names(object@assays)[[1]]
@@ -329,6 +329,18 @@ RunNMF.Seurat <- function(object,
     object <- PreprocessData(object, assay = assay)
   }
   A <- object@assays[[assay]]@data
+
+  if (!is.null(features)) {
+    if (features[[1]] == "var.features") {
+      A <- A[object@assays[[assay]]@var.features, ]
+    } else if (is.integer(features) || is.character(features)) {
+      # array of indices or rownames
+      A <- A[features, ]
+    } else {
+      stop("'features' vector was invalid.")
+    }
+  }
+
   rnames <- rownames(A)
   cnames <- colnames(A)
 

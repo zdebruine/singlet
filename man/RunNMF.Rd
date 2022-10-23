@@ -23,6 +23,7 @@
   tol.overfit = 1e-04,
   trace.test.mse = 5,
   threads = 0,
+  features = NULL,
   ...
 )
 
@@ -62,6 +63,8 @@ RunNMF(object, ...)
 \item{trace.test.mse}{during automatic rank determination, calculate test set reconstruction error every trace iterations}
 
 \item{threads}{number of threads to use (0 = let OpenMP use all available threads)}
+
+\item{features}{if \code{NULL} use all features, if \code{var.features} use variable feature stored in the Assay object, if index array use those rows.}
 
 \item{...}{not implemented}
 }
