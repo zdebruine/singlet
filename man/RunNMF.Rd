@@ -8,7 +8,7 @@
 \method{RunNMF}{Seurat}(
   object,
   split.by = NULL,
-  k = 2,
+  k = NULL,
   assay = NULL,
   reps = 3,
   tol = 1e-05,
@@ -31,9 +31,9 @@ RunNMF(object, ...)
 \arguments{
 \item{object}{A Seurat object}
 
-\item{split.by}{column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.}
+\item{split.by}{column name in \code{@meta.data} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.}
 
-\item{k}{an initial rank at which to start automatic cross-validation, or a vector of ranks at which to fit.}
+\item{k}{either \code{NULL} for automatic rank determination, a single integer giving the desired rank, or a vector of ranks to use for cross-validation.}
 
 \item{assay}{Assay to use, defaults to the default assay of the first object}
 
@@ -57,7 +57,7 @@ RunNMF(object, ...)
 
 \item{learning.rate}{exponent on step size for automatic rank determination}
 
-\item{tol.overfit}{tolerance for increase in test set reconstruction error relative to minimum observed value during factorization}
+\item{tol.overfit}{tolerance for increase in test set reconstruction error relative to minimum observed value during fitting}
 
 \item{trace.test.mse}{during automatic rank determination, calculate test set reconstruction error every trace iterations}
 

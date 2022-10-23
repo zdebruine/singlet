@@ -18,19 +18,19 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
   if (L1 >= 1) {
     stop("L1 penalty must be strictly in the range (0, 1]")
   }
-  
-  if(class(A)[[1]] != "matrix"){
-    if(verbose > 0) cat("running with sparse optimization\n")
+
+  if (class(A)[[1]] != "matrix") {
+    if (verbose > 0) cat("running with sparse optimization\n")
     A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
     At <- Matrix::t(A)
     dense_mode <- FALSE
   } else {
-    if(verbose > 0) cat("running with dense optimization\n")
+    if (verbose > 0) cat("running with dense optimization\n")
     At <- t(A)
   }
-  
+
   w_init <- matrix(stats::runif(nrow(A) * rank), rank, nrow(A))
-  if(dense_mode){
+  if (dense_mode) {
     model <- c_nmf_dense(A, At, tol, maxit, verbose, L1, L2, threads, w_init)
   } else {
     model <- c_nmf(A, At, tol, maxit, verbose, L1, L2, threads, w_init)
@@ -73,13 +73,13 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
     stop("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb")
   }
 
-  if(class(A)[[1]] != "matrix"){
-    if(verbose > 0) cat("running with sparse optimization\n")
+  if (class(A)[[1]] != "matrix") {
+    if (verbose > 0) cat("running with sparse optimization\n")
     A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
     At <- Matrix::t(A)
     dense_mode <- FALSE
   } else {
-    if(verbose > 0) cat("running with dense optimization\n")
+    if (verbose > 0) cat("running with dense optimization\n")
     At <- t(A)
   }
 
@@ -95,7 +95,7 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
     if (verbose > 1) {
       cat(paste0("k = ", df$k[[i]], ", rep = ", rep, " (", i, "/", nrow(df), "):\n"))
     }
-    if(dense_mode){
+    if (dense_mode) {
       model <- c_ard_nmf_dense(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
     } else {
       model <- c_ard_nmf(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
@@ -145,13 +145,13 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
 
   stopifnot("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb" = test_density < 0.2 & test_density > 0.01)
   dense_mode <- TRUE
-  if(class(A)[[1]] != "matrix"){
-    if(verbose > 0) cat("running with sparse optimization\n")
+  if (class(A)[[1]] != "matrix") {
+    if (verbose > 0) cat("running with sparse optimization\n")
     A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
     At <- Matrix::t(A)
     dense_mode <- FALSE
   } else {
-    if(verbose > 0) cat("running with dense optimization\n")
+    if (verbose > 0) cat("running with dense optimization\n")
     At <- t(A)
   }
   test_seed <- abs(.Random.seed[[3]])
@@ -170,14 +170,10 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
       # compute the test set reconstruction error at curr_rank
       set.seed(test_seed)
 
-      if(dense_mode) {
-
+      if (dense_mode) {
         model <- c_ard_nmf_dense(A, At, cv_tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * curr_rank), curr_rank, nrow(A)), test_seed + curr_rep, round(1 / test_density), tol_overfit, trace_test_mse)
-
       } else {
-
         model <- c_ard_nmf(A, At, cv_tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * curr_rank), curr_rank, nrow(A)), test_seed + curr_rep, round(1 / test_density), tol_overfit, trace_test_mse)
-
       }
       err <- tail(model$test_mse, n = 1L)
       overfit_score <- tail(model$score_overfit, n = 1L)
@@ -242,16 +238,14 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
 
   set.seed(test_seed)
 
-  if(dense_mode){
+  if (dense_mode) {
 
-    # FIXME: crashes due to std::alloc overrun; fix c_nmf_dense 
+    # FIXME: crashes due to std::alloc overrun; fix c_nmf_dense
     model <- c_nmf_dense(A, At, tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * best_rank), best_rank, nrow(A)))
-
   } else {
 
     # this works fine
     model <- c_nmf(A, At, tol, maxit, verbose > 2, L1, L2, threads, matrix(runif(nrow(A) * best_rank), best_rank, nrow(A)))
-
   }
 
   ifelse(detail_level == 1, model$cv_data <- df, model$cv_data <- df2)
@@ -276,7 +270,7 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
 #' @param reduction.name Name to store resulting DimReduc object as
 #' @param reduction.key Key for resulting DimReduc
 #' @param verbose Level of console output (0/FALSE, 1/TRUE, 2)
-#' @param k an initial rank at which to start automatic cross-validation, or a vector of ranks at which to fit.
+#' @param k either \code{NULL} for automatic rank determination, a single integer giving the desired rank, or a vector of ranks to use for cross-validation.
 #' @param reps number of replicates for cross-validation
 #' @param test.set.density approximate density of the test set (default 0.05)
 #' @param tol tolerance of the fit (correlation distance of the model across consecutive iterations). Cross-validation fits are 10x coarser than this tolerance.
@@ -284,9 +278,9 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
 #' @param L1 L1/LASSO penalty to increase sparsity of the model
 #' @param L2 L2/Ridge-like penalty to increase angles between factors
 #' @param threads number of threads to use (0 = let OpenMP use all available threads)
-#' @param split.by column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.
+#' @param split.by column name in \code{@meta.data} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.
 #' @param learning.rate exponent on step size for automatic rank determination
-#' @param tol.overfit tolerance for increase in test set reconstruction error relative to minimum observed value during factorization
+#' @param tol.overfit tolerance for increase in test set reconstruction error relative to minimum observed value during fitting
 #' @param trace.test.mse during automatic rank determination, calculate test set reconstruction error every trace iterations
 #' @param ... not implemented
 #'
@@ -309,7 +303,7 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
 #'
 RunNMF.Seurat <- function(object,
                           split.by = NULL,
-                          k = 2,
+                          k = NULL,
                           assay = NULL,
                           reps = 3,
                           tol = 1e-5,
@@ -325,10 +319,6 @@ RunNMF.Seurat <- function(object,
                           trace.test.mse = 5,
                           threads = 0,
                           ...) {
-  if (length(k) <= 1) {
-    stopifnot("k must be an integer or vector of integers" = !is.na(k) || !is.null(k))
-  }
-
   if (is.null(assay)) {
     assay <- names(object@assays)[[1]]
   }
@@ -352,7 +342,7 @@ RunNMF.Seurat <- function(object,
   At <- Matrix::t(A)
   seed.use <- abs(.Random.seed[[3]])
 
-  if (length(k) > 1) {
+  if (!is.null(k) && length(k) > 1) {
     # run cross-validation at specified ranks
     cv_data <- data.frame()
     cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, L1, L2, threads, test.set.density, tol.overfit, trace.test.mse, 2)
@@ -362,7 +352,7 @@ RunNMF.Seurat <- function(object,
     }
     cat("\nfitting final model:\n")
     nmf_model <- run_nmf(A, best_rank, tol, maxit, verbose > 1, L1, L2, threads)
-  } else if (length(k) == 1) {
+  } else if (is.null(k)) {
     # run automatic rank determination cross-validation
     nmf_model <- ard_nmf(
       A = A,
@@ -381,6 +371,9 @@ RunNMF.Seurat <- function(object,
       detail_level = 2
     )
     cv_data <- nmf_model$cv_data
+  } else if (length(k) == 1) {
+    nmf_model <- run_nmf(A, k, tol, maxit, verbose > 1, L1, L2, threads)
+    cv_data <- list()
   } else {
     stop("value for 'k' was invalid")
   }
