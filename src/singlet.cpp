@@ -1,6 +1,3 @@
-#define EIGEN_NO_DEBUG
-#define EIGEN_INITIALIZE_MATRICES_BY_ZERO
-
 //[[Rcpp::plugins(openmp)]]
 #ifdef _OPENMP
 #include <omp.h>
@@ -335,6 +332,7 @@ inline double mse_test(const Eigen::MatrixXd& A, const Eigen::MatrixXd& w, Eigen
 // no linking or masking
 template <class Matrix>
 Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w) {
+
     Eigen::MatrixXd h(w.rows(), A.cols());
     Eigen::VectorXd d(w.rows());
     double tol_ = 1;
@@ -343,6 +341,7 @@ Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t ma
 
     // alternating least squares update loop
     for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
+
         Eigen::MatrixXd w_it = w;
         // update h
         predict(A, w, h, L1, L2, threads);
@@ -359,9 +358,11 @@ Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t ma
         if (verbose)
             Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
         Rcpp::checkUserInterrupt();
+
     }
 
     return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
+
 }
 
 //[[Rcpp::export]]

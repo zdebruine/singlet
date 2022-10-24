@@ -32,3 +32,12 @@ In order to fit one-vs-all comparisons, a means model is the default. If you
 have a referent group (e.g. normal bone marrow vs. a bunch of leukemia cells)
 or simply don't want a means model, set `ova` (one vs all) to FALSE.
 }
+\examples{
+
+covs <- get_pbmc3k_data()@meta.data
+design <- getModelMatrix("cell_type", covs)
+head(design)
+sparsedesign <- getModelMatrix("cell_type", covs, sparse=TRUE)
+head(sparsedesign)
+
+}

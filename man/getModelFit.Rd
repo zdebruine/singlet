@@ -13,7 +13,7 @@ getModelFit(design, object, center = TRUE, ...)
 
 \item{center}{center the factor matrix for testing? (TRUE)}
 
-\item{...}{not implemented}
+\item{...}{additional arguments, passed to base::scale}
 }
 \description{
 Continuing along with the theme of "stupid limma tricks", this function 

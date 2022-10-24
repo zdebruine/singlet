@@ -19,6 +19,14 @@
 #' 
 #' @return            a model.matrix or sparse.model.matrix (if sparse==TRUE)
 #'
+#' @examples 
+#' 
+#' covs <- get_pbmc3k_data()@meta.data
+#' design <- getModelMatrix("cell_type", covs)
+#' head(design)
+#' sparsedesign <- getModelMatrix("cell_type", covs, sparse=TRUE)
+#' head(sparsedesign)
+#'
 #' @import Matrix
 #'
 #' @export
