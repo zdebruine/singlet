@@ -1,8 +1,10 @@
 Package: singlet
 Type: Package
 Title: Non-negative Matrix Factorization for single-cell analysis
-Version: 0.99.1021
-Date: 2022-10-21
+Version: 0.99.1024
+Date: 2022-10-24
+Author: Zach Debruine <debruinz@gvsu.edu>
+Maintainer: Zach Debruine <debruinz@gvsu.edu>
 Authors@R: c(person("Zach", "DeBruine", 
              email = "debruinz@gvsu.edu", 
              role = c("aut", "cre"), 
@@ -18,6 +20,7 @@ Description: Fast NMF with automatic rank-determination for dimension reduction 
 License: GPL (>= 2)
 Depends:
     Seurat,
+    RcppML,
     dplyr
 Imports:
     Rcpp, 
