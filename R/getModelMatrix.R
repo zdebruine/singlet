@@ -21,9 +21,11 @@
 #'
 #' @examples 
 #' 
-#' if (!exists("pbmc3k") | ! "nmf" %in% Reductions(pbmc3k)) { 
-#'   get_pbmc3k_data() %>% NormalizeData %>% RunNMF %>% AnnotateNMF -> pbmc3k
-#' } 
+#' covs <- get_pbmc3k_data()@meta.data
+#' design <- getModelMatrix("cell_type", covs)
+#' head(design)
+#' sparsedesign <- getModelMatrix("cell_type", covs, sparse=TRUE)
+#' head(sparsedesign)
 #'
 #' @import Matrix
 #'

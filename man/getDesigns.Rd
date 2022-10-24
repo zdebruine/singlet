@@ -2,7 +2,7 @@
 % Please edit documentation in R/getDesigns.R
 \name{getDesigns}
 \alias{getDesigns}
-\title{refactored out from AnnotateNMF to ease argument handling}
+\title{Refactored out from AnnotateNMF to ease argument handling}
 \usage{
 getDesigns(columns = NULL, meta.data = NULL, designs = NULL)
 }
@@ -12,12 +12,10 @@ getDesigns(columns = NULL, meta.data = NULL, designs = NULL)
 \item{meta.data}{a data.frame of annotations, optional if !is.null(designs)}
 
 \item{designs}{named list of design matrices (supersedes meta.data/columns)}
-
-\item{object}{a suitable data structure for validating design matrices}
 }
 \value{
 a named list of design matrices, if one was not provided
 }
 \description{
-refactored out from AnnotateNMF to ease argument handling
+Refactored out from AnnotateNMF to ease argument handling
 }

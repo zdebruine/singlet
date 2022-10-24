@@ -10,8 +10,7 @@
 #' @export
 #'
 plotFactorWeights <- function(object, gr, factors=1:3, plot=NULL) {
-
-  stopifnot(require("GenomicRanges"))
+  requireNamespace("GenomicRanges")
   stopifnot(is(gr, "GRanges"))
   stopifnot(all(rownames(object@w) %in% names(gr)))
   gr <- gr[rownames(object@w)]
@@ -21,8 +20,9 @@ plotFactorWeights <- function(object, gr, factors=1:3, plot=NULL) {
     mcols(gr)[, fact] <- object@w[, fact]
   }
 
-  if (is.null(plot)) plot <- require(igvR)
-  if (plot) message("igvR support is in process")
+  # use :: not require()
+  #  if (is.null(plot)) plot <- require(igvR)
+  #  if (plot) message("igvR support is in process")
 
   return(gr)
 

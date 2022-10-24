@@ -23,17 +23,17 @@ Depends:
     RcppML,
     dplyr
 Imports:
-    Rcpp, 
     Matrix,
     methods,
     stats,
+    knitr,
     ggplot2,
     limma,
     reshape2,
-    knitr,
     utils,
     fgsea,
-    msigdbr
+    msigdbr,
+    RcppML
 LinkingTo: 
     Rcpp
 VignetteBuilder: knitr

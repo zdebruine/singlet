@@ -169,7 +169,7 @@ inline void predict(Eigen::MatrixXd A, const Eigen::MatrixXd& w, Eigen::MatrixXd
 #pragma omp parallel for num_threads(threads)
 #endif
     for (size_t i = 0; i < h.cols(); ++i) {
-        Eigen::VectorXd b = A.col(i) * w;
+        Eigen::VectorXd b = w * A.col(i);
         b.array() -= L1;
         nnls(a, b, h, i);
     }
@@ -336,7 +336,6 @@ inline double mse_test(const Eigen::MatrixXd& A, const Eigen::MatrixXd& w, Eigen
 template <class Matrix>
 Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w) {
 
-    // FIXME: segfaults 
     Eigen::MatrixXd h(w.rows(), A.cols());
     Eigen::VectorXd d(w.rows());
     double tol_ = 1;

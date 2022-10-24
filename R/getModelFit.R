@@ -7,6 +7,7 @@
 #' @param design      a model.matrix (or a sparse.model.matrix, perhaps)
 #' @param object      a data.matrix, Seurat DimReduc, or RcppML nmf object
 #' @param center      center the factor matrix for testing? (TRUE) 
+#' @param ...         additional arguments, passed to base::scale
 #'
 #' @export
 getModelFit <- function(design, object, center=TRUE, ...) {
@@ -18,7 +19,7 @@ getModelFit <- function(design, object, center=TRUE, ...) {
   stopifnot(all(rownames(design) %in% colnames(dat)))
 
   tofit <- dat[, rownames(design)]
-  if (center) tofit <- t(scale(t(tofit), scale=FALSE))
+  if (center) tofit <- t(scale(t(tofit), ...))
   fit <- eBayes(lmFit(tofit, design), proportion=0.01, robust=TRUE)
   fit$centered <- center
   return(fit)

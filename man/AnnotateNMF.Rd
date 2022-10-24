@@ -34,6 +34,8 @@ AnnotateNMF(object, ...)
 \arguments{
 \item{object}{an object suitable for annotation (Seurat, DimReduc, or nmf)}
 
+\item{...}{not implemented}
+
 \item{meta.data}{a data.frame, if one is not already part of the object}
 
 \item{columns}{factor columns of meta.data (see below) to annotate against}
@@ -57,8 +59,8 @@ Annotate NMF model with cell metadata
 Maps factor information in an RcppML::nmf object against meta.data
 }
 \examples{
-if (!exists("pbmc3k")) get_pbmc3k_data() \%>\% NormalizeData -> pbmc3k
-if (!"nmf" \%in\% Reductions(pbmc3k)) pbmc3k \%>\% RunNMF() -> pbmc3k
+\dontrun{
+get_pbmc3k_data() \%>\% NormalizeData \%>\% RunNMF -> pbmc3k
 AnnotateNMF(pbmc3k)
-
+}
 }

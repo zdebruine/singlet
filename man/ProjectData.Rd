@@ -25,7 +25,7 @@ ProjectData(object, ...)
 
 \item{w}{a factor model of the same number of rows as the assay to be projected in the current object, where columns correspond to factors}
 
-\item{split.by}{column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.}
+\item{split.by}{column name in \code{@meta.data} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.}
 
 \item{assay}{Assay to use, defaults to the default assay of the first object}
 

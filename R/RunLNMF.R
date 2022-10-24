@@ -73,10 +73,6 @@ run_linked_nmf <- function(A, w, link_h = NULL, link_w = NULL, tol = 1e-4, maxit
 #' @inheritParams RunNMF.Seurat
 #' @param split.by column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.
 #' @param link.cutoff if the relative contribution of samples in any given group to a factor falls below \code{link.cutoff}, unlink it from the factor. \code{link.cutoff = 1} means a factor must contribute exactly equally before being unlinked.
-#' @param link.balance after initial linking step, weight all shared factors such that each dataset is represented as equally as possible in each factor.
-#' @param link.balance.tol relative change in factor representation within sample groups between balancing iterations at which to call convergence.
-#' @param link.balance.rate proportion of difference between current factor weight and equal representation of factors in a sample group to target in a single iteration (default 0.1).
-#' @param balance.maxit maximum number of iterations for the balancing step
 #' @param reduction.use NMF reduction to use for initializing the linked factorization.
 #' @param reduction.name name to store resulting DimReduc object as
 #' @param reduction.key key for resulting DimReduc
@@ -111,9 +107,7 @@ RunLNMF.Seurat <- function(object,
                            L1 = 0.01,
                            L2 = 0,
                            threads = 0,
-                           link.balance.tol = 0,
-                           balance.maxit = 100,
-                           link.balance.rate = 0.1, ...) {
+                           ...) {
   link_w <- NULL
   w <- object@reductions[[reduction.use]]@feature.loadings
   h <- object@reductions[[reduction.use]]@cell.embeddings
@@ -164,52 +158,6 @@ RunLNMF.Seurat <- function(object,
 
   lnmf_model <- run_linked_nmf(A, w, link_h, link_w, tol, maxit, verbose, L1, L2, threads)
 
-  # balancing step.
-  # not sure if this is a good idea.
-  if (link.balance.tol != 1 & link.balance.tol != 0) {
-    lnmf_model$w <- t(lnmf_model$w)
-    if (verbose > 0) {
-      cat("balancing...\n")
-    }
-    # get factor representation
-    m <- MetadataSummary(lnmf_model$h, split.by, FALSE)
-    prev.balance.tol <- 1
-    v <- as.vector(abs(1 / length(levels) - m))
-    curr.balance.tol <- mean(v[v != 0 & v != 1])
-    this.balance.tol <- abs(curr.balance.tol - prev.balance.tol) / (curr.balance.tol + prev.balance.tol)
-    balance.iter <- 0
-    while (this.balance.tol > link.balance.tol & balance.iter < balance.maxit) {
-      # construct new linking matrix to correct for unequal factor representation
-      for (i in 1:nrow(m)) {
-        for (j in 1:ncol(m)) {
-          if (m[i, j] != 1 & m[i, j] != 0) {
-            if (m[i, j] < 0.5) {
-              m[i, j] <- 1 + (0.5 - m[i, j]) * link.balance.rate
-            } else {
-              m[i, j] <- 1
-            }
-          }
-        }
-      }
-
-      link_h <- matrix(1, ncol(h), nrow(h))
-      for (factor in 1:nrow(m)) {
-        for (j in 1:ncol(m)) {
-          link_h[factor, which(split.by == levels[[j]])] <- m[factor, j]
-        }
-      }
-      # run linked nmf
-      lnmf_model <- c_nmf(A, At, tol, 1L, FALSE, L1, L2, threads, lnmf_model$w, link_h, 1, 0)
-      m <- MetadataSummary(lnmf_model$h, split.by, FALSE)
-      v <- as.vector(abs(1 / length(levels) - m))
-      curr.balance.tol <- mean(v[v != 0 & v != 1])
-      this.balance.tol <- abs(curr.balance.tol - prev.balance.tol) / (curr.balance.tol + prev.balance.tol)
-      prev.balance.tol <- curr.balance.tol
-      if (verbose > 0) cat("it: ", balance.iter, ", tol:", this.balance.tol, "\n")
-      balance.iter <- balance.iter + 1
-    }
-    lnmf_model$w <- t(lnmf_model$w)
-  }
   if (transpose_model) {
     lnmf_model <- list("w" = t(lnmf_model$h), "d" = lnmf_model$d, "h" = t(lnmf_model$h))
   }

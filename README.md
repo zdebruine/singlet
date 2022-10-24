@@ -23,11 +23,8 @@ library(singlet)
 library(Seurat)
 library(dplyr)
 library(cowplot)
-set.seed(123)
-
-pbmc3k <- singlet::get_pbmc3k_data()
-pbmc3k <- NormalizeData(pbmc3k) %>%
-  RunNMF()
+set.seed(123) # for reproducible NMF models
+get_pbmc3k_data() %>% NormalizeData %>% RunNMF -> pbmc3k
 pbmc3k <- RunUMAP(pbmc3k, reduction = "nmf", dims = 1:ncol(pbmc3k@reductions$nmf))
 
 plot_grid(

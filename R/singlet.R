@@ -38,8 +38,8 @@
 #' @import msigdbr 
 #' @import fgsea
 #'
-#' @importFrom methods as new
-#' @importFrom stats dist hclust
+#' @importFrom methods as new is
+#' @importFrom stats dist hclust model.matrix p.adjust
 #' @importFrom utils data
 #'
 #' @md

@@ -12,6 +12,8 @@ getModelFit(design, object, center = TRUE, ...)
 \item{object}{a data.matrix, Seurat DimReduc, or RcppML nmf object}
 
 \item{center}{center the factor matrix for testing? (TRUE)}
+
+\item{...}{additional arguments, passed to base::scale}
 }
 \description{
 Continuing along with the theme of "stupid limma tricks", this function 

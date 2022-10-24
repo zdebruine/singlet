@@ -6,7 +6,7 @@
 #' @param designs   named list of design matrices (supersedes meta.data/columns)
 #' @param center    center the factor matrix for testing? (TRUE) 
 #' @param scale     scale the factor matrix for testing? (FALSE) 
-#'
+#' @param ... not implemented
 #' @export
 #'
 AnnotateNMF <- function(object, ...) {
@@ -16,8 +16,6 @@ AnnotateNMF <- function(object, ...) {
 
 #' Annotate NMF model with cell or sample metadata
 #' 
-#' @inheritParams AnnotateNMF
-#'
 #' @rdname AnnotateNMF
 #' @aliases AnnotateNMF
 #'
@@ -45,15 +43,13 @@ AnnotateNMF.DimReduc <- function(object, meta.data=NULL, columns=NULL, designs=N
 
 #' @rdname AnnotateNMF
 #'
-#' @inheritParams AnnotateNMF
-#'
 #' @param reduction the reductions slot in the Seurat object containing the model to annotate
 #'
 #' @examples 
-#' if (!exists("pbmc3k")) get_pbmc3k_data() %>% NormalizeData -> pbmc3k
-#' if (!"nmf" %in% Reductions(pbmc3k)) pbmc3k %>% RunNMF() -> pbmc3k
+#' \dontrun{
+#' get_pbmc3k_data() %>% NormalizeData %>% RunNMF -> pbmc3k
 #' AnnotateNMF(pbmc3k)
-#' 
+#' }
 #' @aliases AnnotateNMF
 #'
 #' @export
@@ -82,8 +78,6 @@ AnnotateNMF.Seurat <- function(object, columns = NULL, reduction = "nmf", ...){
 #' 
 #' @details Maps factor information in an RcppML::nmf object against meta.data
 #' 
-#' @inheritParams AnnotateNMF
-#'
 #' @rdname AnnotateNMF
 #' @aliases AnnotateNMF
 #'
