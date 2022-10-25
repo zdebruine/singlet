@@ -30,3 +30,32 @@ setAs("list", "nmf",
         }
 
       })
+
+
+#' @exportMethod [ 
+#' @importClassesFrom RcppML nmf
+setMethod("[", "nmf",
+          function(x, i, j, ..., drop=TRUE) {
+            if (missing(i) & missing(j)) return(x)
+            if (missing(i)) i <- seq_along(x@d)
+            if (missing(j)) j <- colnames(x@h)
+            if ("covs" %in% names(x@misc)) x@misc$covs <- x@misc$covs[j, ]
+            new("nmf", w = x@w[, i], d = x@d[i], h = x@h[i, j], misc = x@misc)
+          })
+
+
+#' @exportMethod [[
+#' @importClassesFrom RcppML nmf
+setMethod("[[", c("nmf", "ANY", "missing"),
+          function(x, i, j, ...) {
+            x@misc$covs[[i, ...]]
+          })
+
+
+#' @exportMethod [[<-
+#' @importClassesFrom RcppML nmf
+setReplaceMethod("[[", c("nmf", "ANY", "missing"),
+          function(x, i, j, ..., value) {
+            x@misc$covs[[i, ...]] <- value
+            return(x)
+          })
