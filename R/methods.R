@@ -44,18 +44,25 @@ setMethod("[", "nmf",
           })
 
 
-#' @exportMethod [[
+#' @exportMethod $<-
 #' @importClassesFrom RcppML nmf
-setMethod("[[", c("nmf", "ANY", "missing"),
-          function(x, i, j, ...) {
-            x@misc$covs[[i, ...]]
+setMethod("$", "nmf", 
+          function(x, name) {
+            if ("covs" %in% names(x@misc)) {
+              x@misc$covs[[name]]
+            } else { 
+              NULL
+            }
           })
 
 
-#' @exportMethod [[<-
+#' @exportMethod $<-
 #' @importClassesFrom RcppML nmf
-setReplaceMethod("[[", c("nmf", "ANY", "missing"),
-          function(x, i, j, ..., value) {
-            x@misc$covs[[i, ...]] <- value
+setReplaceMethod("$", "nmf", 
+          function(x, name, value) {
+            if (is.null(x@misc$covs)) {
+              x@misc$covs <- data.frame(row.names = colnames(x@h))
+            }
+            x@misc$covs[[name]] <- value
             return(x)
           })
