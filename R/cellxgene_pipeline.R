@@ -14,9 +14,9 @@
 #' @export
 #' @md
 #'
-cellxgene_pipeline <- function(url, reps = 1, verbose = 3, L1 = 0.05, ...) {
-    cat("reading ", url, "\n")
-    A <- readRDS(url(url))
+cellxgene_pipeline <- function(filename, reps = 1, verbose = 3, L1 = 0.05, ...) {
+    cat("reading ", filename, "\n")
+    A <- readRDS(filename)
     if ("RNA" %in% names(A@assays)) {
         A@assays$RNA@key <- "RNA_"
         # keep only RNA assay
