@@ -56,9 +56,9 @@ Rcpp::S4 weight_by_split(const Rcpp::S4& A_, Rcpp::IntegerVector split_by, const
 }
 
 //[[Rcpp::export]]
-Eigen::MatrixXd rowwise_compress(Rcpp::SparseMatrix& A, const size_t n = 10, const size_t threads = 0) {
+Rcpp::NumericMatrix rowwise_compress_sparse(Rcpp::SparseMatrix& A, const size_t n = 10, const size_t threads = 0) {
     const size_t n_rows = (size_t)std::floor(A.rows() / n);
-    Eigen::MatrixXd res(n_rows, A.cols());
+    Rcpp::NumericMatrix res(n_rows, A.cols());
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads)
 #endif
@@ -67,7 +67,27 @@ Eigen::MatrixXd rowwise_compress(Rcpp::SparseMatrix& A, const size_t n = 10, con
             size_t row = (size_t)std::floor(it.row() / n);
             res(row, col) += it.value();
         }
-    res.array() /= n;  // calculate mean
+    for (size_t j = 0; j < res.cols(); ++j)
+        for (size_t i = 0; i < res.rows(); ++i)
+            res(i, j) /= n;  // calculate mean
+    return res;
+}
+
+//[[Rcpp::export]]
+Rcpp::NumericMatrix rowwise_compress_dense(Rcpp::NumericMatrix& A, const size_t n = 10, const size_t threads = 0) {
+    const size_t n_rows = (size_t)std::floor(A.rows() / n);
+    Rcpp::NumericMatrix res(n_rows, A.cols());
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads)
+#endif
+    for (size_t col = 0; col < A.cols(); ++col) {
+        size_t res_row = 0;
+        for (size_t row = 0; row < A.rows(); row += n, ++res_row) {
+            for (size_t i = 0; i < n; ++i)
+                res(res_row, col) += A(row + i, col);
+            res(res_row, col) /= n;  // calculate mean
+        }
+    }
     return res;
 }
 
@@ -332,7 +352,6 @@ inline double mse_test(const Eigen::MatrixXd& A, const Eigen::MatrixXd& w, Eigen
 // no linking or masking
 template <class Matrix>
 Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w) {
-
     Eigen::MatrixXd h(w.rows(), A.cols());
     Eigen::VectorXd d(w.rows());
     double tol_ = 1;
@@ -341,7 +360,6 @@ Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t ma
 
     // alternating least squares update loop
     for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
-
         Eigen::MatrixXd w_it = w;
         // update h
         predict(A, w, h, L1, L2, threads);
@@ -358,11 +376,9 @@ Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t ma
         if (verbose)
             Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
         Rcpp::checkUserInterrupt();
-
     }
 
     return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
-
 }
 
 //[[Rcpp::export]]

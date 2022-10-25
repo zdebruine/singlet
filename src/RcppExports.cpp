@@ -24,16 +24,29 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// rowwise_compress
-Eigen::MatrixXd rowwise_compress(Rcpp::SparseMatrix& A, const size_t n, const size_t threads);
-RcppExport SEXP _singlet_rowwise_compress(SEXP ASEXP, SEXP nSEXP, SEXP threadsSEXP) {
+// rowwise_compress_sparse
+Rcpp::NumericMatrix rowwise_compress_sparse(Rcpp::SparseMatrix& A, const size_t n, const size_t threads);
+RcppExport SEXP _singlet_rowwise_compress_sparse(SEXP ASEXP, SEXP nSEXP, SEXP threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::SparseMatrix& >::type A(ASEXP);
     Rcpp::traits::input_parameter< const size_t >::type n(nSEXP);
     Rcpp::traits::input_parameter< const size_t >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(rowwise_compress(A, n, threads));
+    rcpp_result_gen = Rcpp::wrap(rowwise_compress_sparse(A, n, threads));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rowwise_compress_dense
+Rcpp::NumericMatrix rowwise_compress_dense(Rcpp::NumericMatrix& A, const size_t n, const size_t threads);
+RcppExport SEXP _singlet_rowwise_compress_dense(SEXP ASEXP, SEXP nSEXP, SEXP threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const size_t >::type n(nSEXP);
+    Rcpp::traits::input_parameter< const size_t >::type threads(threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(rowwise_compress_dense(A, n, threads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -173,7 +186,8 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_singlet_weight_by_split", (DL_FUNC) &_singlet_weight_by_split, 3},
-    {"_singlet_rowwise_compress", (DL_FUNC) &_singlet_rowwise_compress, 3},
+    {"_singlet_rowwise_compress_sparse", (DL_FUNC) &_singlet_rowwise_compress_sparse, 3},
+    {"_singlet_rowwise_compress_dense", (DL_FUNC) &_singlet_rowwise_compress_dense, 3},
     {"_singlet_c_project_model", (DL_FUNC) &_singlet_c_project_model, 5},
     {"_singlet_c_nmf", (DL_FUNC) &_singlet_c_nmf, 9},
     {"_singlet_c_nmf_dense", (DL_FUNC) &_singlet_c_nmf_dense, 9},

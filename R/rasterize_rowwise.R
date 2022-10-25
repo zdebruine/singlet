@@ -8,7 +8,12 @@
 #' @export
 #' 
 RasterizeRowwise <- function(A, n = 10, threads = 0){
-  B <- rowwise_compress(A, n, threads)
+  if(class(A)[[1]] == "dgCMatrix"){
+    B <- rowwise_compress_sparse(A, n, threads)
+  } else {
+    A <- as.matrix(A)
+    B <- rowwise_compress_dense(A, n, threads)
+  }
   rownames(B) <- rownames(A)[seq(1, floor(nrow(A) / n) * n, n)]
   colnames(B) <- colnames(A)
   B
