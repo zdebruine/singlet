@@ -44,7 +44,7 @@ setMethod("[", "nmf",
           })
 
 
-#' @exportMethod $<-
+#' @exportMethod $
 #' @importClassesFrom RcppML nmf
 setMethod("$", "nmf", 
           function(x, name) {
