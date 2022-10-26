@@ -16,6 +16,7 @@ AnnotateNMF(object, ...)
   designs = NULL,
   center = TRUE,
   scale = FALSE,
+  max.levels = 200,
   ...
 )
 
@@ -28,6 +29,7 @@ AnnotateNMF(object, ...)
   designs = NULL,
   center = TRUE,
   scale = FALSE,
+  max.levels = 200,
   ...
 )
 }
@@ -46,6 +48,8 @@ AnnotateNMF(object, ...)
 
 \item{scale}{scale the factor matrix for testing? (FALSE)}
 
+\item{max.levels}{maximum number of levels a factor may have in order to be included in analysis}
+
 \item{reduction}{the reductions slot in the Seurat object containing the model to annotate}
 }
 \description{
@@ -60,7 +64,9 @@ Maps factor information in an RcppML::nmf object against meta.data
 }
 \examples{
 \dontrun{
-get_pbmc3k_data() \%>\% NormalizeData \%>\% RunNMF -> pbmc3k
+get_pbmc3k_data() \%>\%
+  NormalizeData() \%>\%
+  RunNMF() -> pbmc3k
 AnnotateNMF(pbmc3k)
 }
 }

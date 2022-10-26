@@ -4,7 +4,7 @@
 \alias{getDesigns}
 \title{Refactored out from AnnotateNMF to ease argument handling}
 \usage{
-getDesigns(columns = NULL, meta.data = NULL, designs = NULL)
+getDesigns(columns = NULL, meta.data = NULL, designs = NULL, max.levels = 200)
 }
 \arguments{
 \item{columns}{factor columns of meta.data, optional if !is.null(designs)}
@@ -12,6 +12,8 @@ getDesigns(columns = NULL, meta.data = NULL, designs = NULL)
 \item{meta.data}{a data.frame of annotations, optional if !is.null(designs)}
 
 \item{designs}{named list of design matrices (supersedes meta.data/columns)}
+
+\item{max.levels}{maximum number of levels permitted for a factor to be kept}
 }
 \value{
 a named list of design matrices, if one was not provided
