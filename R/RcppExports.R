@@ -5,8 +5,12 @@ weight_by_split <- function(A_, split_by, n_groups) {
     .Call(`_singlet_weight_by_split`, A_, split_by, n_groups)
 }
 
-rowwise_compress <- function(A, n = 10L, threads = 0L) {
-    .Call(`_singlet_rowwise_compress`, A, n, threads)
+rowwise_compress_sparse <- function(A, n = 10L, threads = 0L) {
+    .Call(`_singlet_rowwise_compress_sparse`, A, n, threads)
+}
+
+rowwise_compress_dense <- function(A, n = 10L, threads = 0L) {
+    .Call(`_singlet_rowwise_compress_dense`, A, n, threads)
 }
 
 c_project_model <- function(A, w, L1, L2, threads) {
