@@ -4,12 +4,14 @@
 \alias{checkColumns}
 \title{verify that columns for auto-annotation are factors with > 1 level}
 \usage{
-checkColumns(meta.data, columns = NULL)
+checkColumns(meta.data, columns = NULL, max.levels = 200)
 }
 \arguments{
 \item{meta.data}{the meta.data (or a Seurat object if needs be)}
 
 \item{columns}{the columns (optional; if NULL, will check all columns)}
+
+\item{max.levels}{maximum number of levels permitted for a factor to be kept}
 }
 \value{
 a vector of suitable columns (may be length 0)

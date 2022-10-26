@@ -4,12 +4,12 @@
 \alias{cellxgene_pipeline}
 \title{Learn an NMF model from a cellxgene Seurat object}
 \usage{
-cellxgene_pipeline(url, reps = 1, verbose = 3, L1 = 0.05, ...)
+cellxgene_pipeline(filename, reps = 1, verbose = 3, L1 = 0.05, ...)
 }
 \arguments{
-\item{url}{download url for a Seurat v4 object}
-
 \item{...}{arguments to \code{RunNMF}}
+
+\item{url}{download url for a Seurat v4 object}
 }
 \description{
 Provide a link to download a cellxgene Seurat object, and this pipeline will return a standardized annotated NMF object at the optimal rank
