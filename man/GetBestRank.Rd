@@ -2,16 +2,20 @@
 % Please edit documentation in R/GetBestRank.R
 \name{GetBestRank}
 \alias{GetBestRank}
-\title{determine the appropriate rank for an ARD ("RADAR") NMF decomposition}
+\title{determine the appropriate rank for an AutoNMF decomposition}
 \usage{
-GetBestRank(df)
+GetBestRank(df, tol.overfit = 1e-04, ...)
 }
 \arguments{
 \item{df}{a data.frame of output from crossvalidation: rep, rank, error}
+
+\item{tol.overfit}{tolerance for increase in test set reconstruction error relative to minimum observed value during fitting}
+
+\item{...}{not implemented}
 }
 \value{
 the lowest rank that minimizes the reconstruction error
 }
 \description{
-determine the appropriate rank for an ARD ("RADAR") NMF decomposition
+determine the appropriate rank for an AutoNMF decomposition
 }

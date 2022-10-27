@@ -2,14 +2,14 @@
 #'
 #' @param x the result of \code{cross_validate_nmf} (a data.frame)
 #' @param detail level of detail to plot
-#'
+#' @inheritParams ard_nmf
 #' @rdname cross_validate_nmf
 #'
-#' @import ggplot2 
+#' @import ggplot2
 #'
 #' @export
 #'
-plot.cross_validate_nmf_data <- function(x, detail = 2, ...) {
+plot.cross_validate_nmf_data <- function(x, detail = 2, tol.overfit = 1e-4, ...) {
   if (ncol(x) == 5 & detail == 1) {
     x <- as.data.frame(group_by(x, rep, k) %>% slice(which.max(iter)))
     x$iter <- NULL
@@ -22,7 +22,7 @@ plot.cross_validate_nmf_data <- function(x, detail = 2, ...) {
       idx <- which(x$rep == rep)
       x$test_error[idx] <- x$test_error[idx] / min(x$test_error[idx])
     }
-    best_rank <- GetBestRank(x)
+    best_rank <- GetBestRank(x, tol.overfit)
     ggplot(x, aes(k, test_error, color = factor(rep))) +
       geom_point() +
       geom_line() +
@@ -33,7 +33,7 @@ plot.cross_validate_nmf_data <- function(x, detail = 2, ...) {
       scale_y_continuous(trans = "log10")
   } else {
     # detail_level = 2 format
-    best_rank <- GetBestRank(x)
+    best_rank <- GetBestRank(x, tol.overfit)
     if (length(unique(x$rep)) == 1) {
       ggplot(x, aes(k, test_error, color = iter, group = iter)) +
         geom_line() +
