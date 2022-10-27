@@ -31,7 +31,7 @@ GetBestRank <- function(df, tol.overfit = 1e-4, ...) {
       best_ranks <- c(best_ranks, df_rep$k[[1]])
     } else {
       # condense to simple format by taking the last iteration in each model
-      df_rep <- as.data.frame(group_by(df, rep, k) %>% slice(which.max(iter)))
+      df_rep <- as.data.frame(group_by(df_rep, rep, k) %>% slice(which.max(iter)))
       best_ranks <- c(best_ranks, df_rep$k[which.min(df_rep$test_error)])
     }
   }
