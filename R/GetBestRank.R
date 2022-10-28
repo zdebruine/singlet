@@ -18,6 +18,9 @@ GetBestRank <- function(df, tol.overfit = 1e-4, ...) {
         if (nrow(df_rank) > 1) {
           v2 <- df_rank$test_error[2:nrow(df_rank)]
           v1 <- df_rank$test_error[1:(nrow(df_rank) - 1)]
+          for (pos in 2:length(v1)) {
+            if (v1[[pos]] > v1[[pos - 1]]) v1[[pos]] <- v1[[pos - 1]]
+          }
           if (max(c(0, (v2 - v1) / (v2 + v1))) > tol.overfit) {
             max_rank <- rank
           }

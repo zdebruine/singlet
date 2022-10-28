@@ -44,7 +44,7 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
     At <- t(A)
   }
   test_seed <- abs(.Random.seed[[3]])
-  df <- data.frame("k" = integer(), "rep" = integer(), "test_error" = double(), "iter" = integer(), "tol" = double())
+  df <- data.frame("k" = integer(), "rep" = integer(), "test_error" = double(), "iter" = integer(), "tol" = double(), "overfit_score" = double())
   class(df) <- c("cross_validate_nmf_data", "data.frame")
   if (is.null(k_init) || is.na(k_init) || k_init < 2) k_init <- 2
   for (curr_rep in 1:n_replicates) {
@@ -66,7 +66,7 @@ ard_nmf <- function(A, k_init = 2, n_replicates = 3, tol = 1e-5, cv_tol = 1e-4,
       }
       err <- tail(model$test_mse, n = 1L)
       overfit_score <- tail(model$score_overfit, n = 1L)
-      df <- rbind(df, data.frame("k" = as.integer(curr_rank), "rep" = as.integer(curr_rep), "test_error" = model$test_mse, "iter" = model$iter, "tol" = model$tol))
+      df <- rbind(df, data.frame("k" = as.integer(curr_rank), "rep" = as.integer(curr_rep), "test_error" = model$test_mse, "iter" = model$iter, "tol" = model$tol, "overfit_score" = overfit_score))
       if (verbose > 1) {
         cat("   test_error =", sprintf(err, fmt = "%#.4e"), "\n")
         if (overfit_score == 0) cat("   not overfit\n")
