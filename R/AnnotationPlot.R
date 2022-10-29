@@ -154,11 +154,9 @@ AnnotationPlot.list <- function(object, plot.field, dropEmpty=TRUE, ...) {
 #' dat <- pbmc3k@reductions$nmf@misc$annotations$cell_type
 #' AnnotationPlot(dat, "cell_type")
 #'
-#' # interactive
-#' if (FALSE) { 
-#'   library(plotly)
-#'   ggplotly(AnnotationPlot(dat, "cell_type"))
-#' }  
+#' # if running interactively:
+#' library(plotly)
+#' ggplotly(AnnotationPlot(dat, "cell_type"))
 #' }
 #' @importFrom stats reshape
 #' @importFrom reshape2 melt
@@ -218,10 +216,20 @@ AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=TRUE, ...){
   df <- merge(melt(fc, value.name="lods"), 
               melt(negative_log10_fdr, value.name="negative_log10_fdr")) 
   names(df) <- c("field", "factor", "lods", "negative_log10_fdr")
-  df$factor <- factor(df$factor, levels=factors) # retain clustering
-  df$field <- factor(df$field, levels=fields) # retain clustering
+
+  # retain clustering of NMF fractors along the columns
+  df$factor <- factor(df$factor, levels=factors)
+
+  # retain clustering of predictors along the rows
+  df$field <- factor(df$field, levels=fields)
+
+  # drop factors and fields without associations, unless requested not to 
   if (dropEmpty) df <- subset(df, !is.na(lods) & !is.na(negative_log10_fdr))
+
+  # not always useful:
   df$design <- plot.field
+
+  # condense somewhat 
   df <- df[, c("design", "field", "factor", "lods", "negative_log10_fdr")]
   df <- df[rev(order(df$negative_log10_fdr)), ]
 
@@ -243,7 +251,6 @@ AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=TRUE, ...){
          NULL
  
   # return so the user can tweak it if necessary
-  message("Protip: capture output with p <- AnnotationPlot and look at p$data.")
   return(p) 
 
 }
