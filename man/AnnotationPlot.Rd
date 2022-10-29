@@ -57,10 +57,8 @@ AnnotationPlot(pbmc3k, "cell_type")
 dat <- pbmc3k@reductions$nmf@misc$annotations$cell_type
 AnnotationPlot(dat, "cell_type")
 
-# interactive
-if (FALSE) { 
-  library(plotly)
-  ggplotly(AnnotationPlot(dat, "cell_type"))
-}  
+# if running interactively:
+library(plotly)
+ggplotly(AnnotationPlot(dat, "cell_type"))
 }
 }
