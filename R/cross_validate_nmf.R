@@ -8,7 +8,6 @@
 #' @param test_density fraction of values to include in the test set
 #' @param tol_overfit stopping criterion, maximum increase in test set reconstruction error at any iteration compared to test set reconstruction error at \code{trace_test_mse}
 #' @param trace_test_mse first iteration at which to calculate test set reconstruction error, and the error to compare all later iterations to when determining whether overfitting has occurred.
-#' @param detail_level \code{1} for returning best test set reconstruction error for each factorization, \code{2} to return test set reconstruction error at all \code{trace_test_mse} iterations in each factorization
 #' @return a \code{data.frame} of test set reconstruction error vs. rank of class \code{nmf_cross_validate_data}. Use \code{plot} method to visualize or \code{min} to compute optimal rank.
 #' @rdname cross_validate_nmf
 #' @param ... additional arguments (not implemented)
@@ -17,7 +16,7 @@
 #' @importFrom stats runif
 #'
 cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0,
-                               threads = 0, test_density = 0.05, tol_overfit = 1e-4, trace_test_mse = 5, detail_level = 1) {
+                               threads = 0, test_density = 0.05, tol_overfit = 1e-4, trace_test_mse = 5) {
   if (L1 >= 1) {
     stop("L1 penalty must be strictly in the range (0, 1]")
   }
@@ -67,10 +66,5 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
   class(df) <- c("cross_validate_nmf_data", "data.frame")
   df2 <- do.call(rbind, df2)
   class(df2) <- c("cross_validate_nmf_data", "data.frame")
-  if (detail_level == 1) {
-    return(df)
-  } else {
-    return(df2)
-  }
+  df2
 }
-

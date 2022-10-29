@@ -18,11 +18,10 @@ cross_validate_nmf(
   threads = 0,
   test_density = 0.05,
   tol_overfit = 1e-04,
-  trace_test_mse = 5,
-  detail_level = 1
+  trace_test_mse = 5
 )
 
-\method{plot}{cross_validate_nmf_data}(x, detail = 2, ...)
+\method{plot}{cross_validate_nmf_data}(x, detail = 2, tol.overfit = 1e-04, ...)
 }
 \arguments{
 \item{A}{sparse matrix (ideally variance-stabilized) of data for genes x cells (rows x columns)}
@@ -48,8 +47,6 @@ cross_validate_nmf(
 \item{tol_overfit}{stopping criterion, maximum increase in test set reconstruction error at any iteration compared to test set reconstruction error at \code{trace_test_mse}}
 
 \item{trace_test_mse}{first iteration at which to calculate test set reconstruction error, and the error to compare all later iterations to when determining whether overfitting has occurred.}
-
-\item{detail_level}{\code{1} for returning best test set reconstruction error for each factorization, \code{2} to return test set reconstruction error at all \code{trace_test_mse} iterations in each factorization}
 
 \item{x}{the result of \code{cross_validate_nmf} (a data.frame)}
 
