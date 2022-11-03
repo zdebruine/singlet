@@ -5,25 +5,115 @@
 
 #include <singlet.h>
 
-// RANDOM NUMBER GENERATOR  ---------------------------------------------------------------------------------
-// two-dimensional linear congruential random number generator using
-//   Marsaglia's xorshift32 algorithm together with xoroshiro128++ and a
-//   random seed. The generated RNG is non-correlated with sequences in `i` and `j`.
-//   The returned logical is a probability of 1/max and is transpose-identical (independent of order of `i` and `j`).
-//   "t" implicitly transposes the matrix
-inline bool is_masked(uint32_t i, uint32_t j, uint32_t state, uint32_t max, const bool t) {
-    if (t) std::swap(i, j);
-    // if (j >= i) std::swap(i, j);
-    uint64_t ij = (i + 1) * (i + 2) / 2 + j + 1;
-    ij ^= ij << 13 | (i << 17);
-    ij ^= ij >> 7 | (j << 5);
-    ij ^= ij << 17;
-    uint64_t s = state ^ ij;
-    s ^= s << 23;
-    s = s ^ ij ^ (s >> 18) ^ (ij >> 5);
-    s += ij;
-    return s % max == 0;
-}
+// xorshift64 Linear Congruential Generator
+class rng {
+   private:
+    uint64_t state;
+
+   public:
+    rng(uint64_t state) : state(state) {}
+
+    void advance_state() {
+        state ^= state << 19;
+        state ^= state >> 7;
+        state ^= state << 36;
+    }
+
+    uint64_t operator*() const {
+        return state;
+    }
+
+    uint64_t rand() {
+        uint64_t x = state ^ (state << 38);
+        x ^= x >> 13;
+        x ^= x << 23;
+    }
+
+    uint64_t rand(uint64_t i) {
+        // advance i
+        i ^= i << 19;
+        i ^= i >> 7;
+        i ^= i << 36;
+
+        // add i to state
+        uint64_t x = state + i;
+
+        // advance state
+        x ^= x << 38;
+        x ^= x >> 13;
+        x ^= x << 23;
+
+        return x;
+    }
+
+    uint64_t rand(uint64_t i, uint64_t j) {
+        uint64_t x = rand(i);
+
+        // advance j
+        j ^= j >> 7;
+        j ^= j << 23;
+        j ^= j >> 8;
+
+        // add j to state
+        x += j;
+
+        // advance state
+        x ^= x >> 7;
+        x ^= x << 53;
+        x ^= x >> 4;
+
+        return x;
+    }
+
+    template <typename T>
+    T sample(T max_value) {
+        return rand() % max_value;
+    }
+
+    template <typename T>
+    T sample(uint64_t i, T max_value) {
+        return rand(i) % max_value;
+    }
+
+    template <typename T>
+    T sample(uint64_t i, uint64_t j, T max_value) {
+        return rand(i, j) % max_value;
+    }
+
+    template <typename T>
+    bool draw(T probability) {
+        return sample(probability) == 0;
+    }
+
+    template <typename T>
+    bool draw(uint64_t i, T probability) {
+        return sample(i, probability) == 0;
+    }
+
+    template <typename T>
+    bool draw(uint64_t i, uint64_t j, T probability) {
+        sample(i, j, probability);
+        return sample(i, j, probability) == 0;
+    }
+
+    template <typename T>
+    double uniform() {
+        T x = (T)rand() / UINT64_MAX;
+        return x - std::floor(x);
+    }
+
+    template <typename T>
+    double uniform(uint64_t i) {
+        T x = (T)rand(i) / UINT64_MAX;
+        return x - std::floor(x);
+    }
+
+    template <typename T>
+    double uniform(uint64_t i, uint64_t j) {
+        T x = (T)rand(i, j) / UINT64_MAX;
+        return x - std::floor(x);
+    }
+};
 
 // MATRIX NORMALIZATION BY GROUP -----------------------------------------------------------------------------
 // simply makes all values in each group of samples sum to the same value
@@ -120,7 +210,7 @@ inline Eigen::MatrixXd AAt(const Eigen::MatrixXd& A) {
 // subset columns from a matrix (deep copy)
 // could not figure out how to do better than a deep copy:
 //   https://stackoverflow.com/questions/72100483/matrix-multiplication-of-an-eigen-matrix-for-a-subset-of-columns
-inline Eigen::MatrixXd submat(const Eigen::MatrixXd& x, const std::vector<uint32_t>& col_indices) {
+inline Eigen::MatrixXd submat(const Eigen::MatrixXd& x, const std::vector<uint64_t>& col_indices) {
     Eigen::MatrixXd x_(x.rows(), col_indices.size());
     for (size_t i = 0; i < col_indices.size(); ++i)
         x_.col(i) = x.col(col_indices[i]);
@@ -224,7 +314,7 @@ inline void predict_link(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::
 }
 
 // update h given A and w while masking a random speckled test set
-inline void predict_mask(Rcpp::SparseMatrix A, const uint32_t seed, const uint32_t inv_density, const Eigen::MatrixXd& w,
+inline void predict_mask(Rcpp::SparseMatrix A, rng seed, const uint64_t inv_density, const Eigen::MatrixXd& w,
                          Eigen::MatrixXd& h, const double L1, const double L2, const int threads, const bool mask_t) {
     Eigen::MatrixXd a = AAt(w);
 
@@ -235,10 +325,10 @@ inline void predict_mask(Rcpp::SparseMatrix A, const uint32_t seed, const uint32
         if (A.p[i] == A.p[i + 1]) continue;
         Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
         Rcpp::SparseMatrix::InnerIterator it(A, i);
-        std::vector<uint32_t> idx;
+        std::vector<uint64_t> idx;
         idx.reserve(A.rows() / inv_density);
-        for (uint32_t j = 0; j < A.rows(); ++j) {
-            if (is_masked(i, j, seed, inv_density, mask_t)) {
+        for (uint64_t j = 0; j < A.rows(); ++j) {
+            if (mask_t ? seed.draw(j, i, inv_density) : seed.draw(i, j, inv_density)) {
                 idx.push_back(j);
                 if (it && j == it.row())
                     ++it;
@@ -257,7 +347,7 @@ inline void predict_mask(Rcpp::SparseMatrix A, const uint32_t seed, const uint32
 }
 
 // update h given A and w while masking a random speckled test set
-inline void predict_mask(const Eigen::MatrixXd& A, const uint32_t seed, const uint32_t inv_density, const Eigen::MatrixXd& w,
+inline void predict_mask(const Eigen::MatrixXd& A, rng seed, const uint64_t inv_density, const Eigen::MatrixXd& w,
                          Eigen::MatrixXd& h, const double L1, const double L2, const int threads, const bool mask_t) {
     Eigen::MatrixXd a = AAt(w);
 
@@ -266,10 +356,10 @@ inline void predict_mask(const Eigen::MatrixXd& A, const uint32_t seed, const ui
 #endif
     for (size_t i = 0; i < h.cols(); ++i) {
         Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
-        std::vector<uint32_t> idx;
+        std::vector<uint64_t> idx;
         idx.reserve(A.rows() / inv_density);
-        for (uint32_t j = 0; j < A.rows(); ++j) {
-            if (is_masked(i, j, seed, inv_density, mask_t)) {
+        for (uint64_t j = 0; j < A.rows(); ++j) {
+            if (mask_t ? seed.draw(j, i, inv_density) : seed.draw(i, j, inv_density)) {
                 idx.push_back(j);
             } else {
                 b += A(j, i) * w.col(j);
@@ -288,7 +378,7 @@ inline void predict_mask(const Eigen::MatrixXd& A, const uint32_t seed, const ui
 
 // calculate mean squared error of the model at test set indices only
 inline double mse_test(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::VectorXd& d, Eigen::MatrixXd& h,
-                       const uint32_t seed, const uint32_t inv_density, const uint16_t threads) {
+                       rng seed, const uint64_t inv_density, const uint16_t threads) {
     // multiply w by d
     Eigen::MatrixXd w_ = w.transpose();
     for (size_t i = 0; i < w.cols(); ++i)
@@ -299,12 +389,12 @@ inline double mse_test(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::Ve
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads)
 #endif
-    for (uint32_t j = 0; j < h.cols(); ++j) {
-        uint32_t n = 0;
+    for (uint64_t j = 0; j < h.cols(); ++j) {
+        uint64_t n = 0;
         double s = 0;
         Rcpp::SparseMatrix::InnerIterator it(A, j);
-        for (uint32_t i = 0; i < A.rows(); ++i) {
-            if (is_masked(j, i, seed, inv_density, false)) {
+        for (uint64_t i = 0; i < A.rows(); ++i) {
+            if (seed.draw(j, i, inv_density)) {
                 ++n;
                 if (it && i == it.row()) {
                     s += std::pow(w_.row(i) * h.col(j) - it.value(), 2);
@@ -323,7 +413,7 @@ inline double mse_test(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::Ve
 
 // calculate mean squared error of the model at test set indices only
 inline double mse_test(const Eigen::MatrixXd& A, const Eigen::MatrixXd& w, Eigen::VectorXd& d, Eigen::MatrixXd& h,
-                       const uint32_t seed, const uint32_t inv_density, const uint16_t threads) {
+                       rng seed, const uint64_t inv_density, const uint16_t threads) {
     // multiply w by d
     Eigen::MatrixXd w_ = w.transpose();
     for (size_t i = 0; i < w.cols(); ++i)
@@ -334,11 +424,11 @@ inline double mse_test(const Eigen::MatrixXd& A, const Eigen::MatrixXd& w, Eigen
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads)
 #endif
-    for (uint32_t j = 0; j < h.cols(); ++j) {
-        uint32_t n = 0;
+    for (uint64_t j = 0; j < h.cols(); ++j) {
+        uint64_t n = 0;
         double s = 0;
-        for (uint32_t i = 0; i < A.rows(); ++i) {
-            if (is_masked(j, i, seed, inv_density, false)) {
+        for (uint64_t i = 0; i < A.rows(); ++i) {
+            if (seed.draw(j, i, inv_density)) {
                 ++n;
                 s += std::pow(w_.row(i) * h.col(j) - A(i, j), 2);
             }
@@ -428,13 +518,15 @@ Rcpp::List c_linked_nmf(Rcpp::SparseMatrix A, Rcpp::SparseMatrix At, const doubl
 // run NMF with masking of a random speckled test set
 template <class Matrix>
 Rcpp::List c_ard_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose,
-                          const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, const uint32_t seed,
-                          const uint32_t inv_density, const double overfit_threshold, const uint16_t trace_test_mse) {
+                          const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, const uint64_t rng_seed,
+                          const uint64_t inv_density, const double overfit_threshold, const uint16_t trace_test_mse) {
     Eigen::MatrixXd h(w.rows(), A.cols());
     Eigen::VectorXd d(w.rows());
     double tol_ = 1;
     Rcpp::NumericVector test_mse, fit_tol, score_overfit;
     Rcpp::IntegerVector iter;
+
+    rng seed(rng_seed);
 
     if (verbose)
         Rprintf("\n%4s | %8s | %8s \n---------------------------\n", "iter", "tol", "overfit");
@@ -490,15 +582,15 @@ Rcpp::List c_ard_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_
 
 //[[Rcpp::export]]
 Rcpp::List c_ard_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose,
-                     const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, const uint32_t seed,
-                     const uint32_t inv_density, const double overfit_threshold, const uint16_t trace_test_mse) {
+                     const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, const uint64_t seed,
+                     const uint64_t inv_density, const double overfit_threshold, const uint16_t trace_test_mse) {
     return c_ard_nmf_base(A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse);
 }
 
 //[[Rcpp::export]]
 Rcpp::List c_ard_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double tol, const uint16_t maxit, const bool verbose,
-                           const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, const uint32_t seed,
-                           const uint32_t inv_density, const double overfit_threshold, const uint16_t trace_test_mse) {
+                           const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, const uint64_t seed,
+                           const uint64_t inv_density, const double overfit_threshold, const uint16_t trace_test_mse) {
     return c_ard_nmf_base(A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse);
 }
 
