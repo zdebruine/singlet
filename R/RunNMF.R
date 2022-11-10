@@ -215,10 +215,16 @@ RunNMF.SingleCellExperiment <- function(object,
                                         threads = 0,
                                         features = NULL,
                                         ...) {
-  
+ 
+  # check
+  requireNamespace("SingleCellExperiment")
+
   # the kludge to end all kludges
   if (is.null(assay)) assay <- "logcounts"
-  if (!assay %in% assayNames(object)) object <- scater::logNormCounts(object)
+  if (!assay %in% assayNames(object)) {
+    requireNamespace("scater")
+    object <- scater::logNormCounts(object)
+  }
   A <- assays(object)[[assay]]
 
   if (!is.null(split.by)) {
@@ -283,9 +289,10 @@ RunNMF.SingleCellExperiment <- function(object,
       paste0(reduction.key, seq_len(nrow(nmf_model$h)))
   rownames(nmf_model$w) <- rownames(object)
   colnames(nmf_model$h) <- colnames(object)
+  requireNamespace("SummarizedExperiment")
   metadata(object)[["nmf_model"]] <- nmf_model
   metadata(object)[["cv_data"]] <- nmf_model$cv_data
-  reducedDim(object, reduction.name) <- t(nmf_model$h)
+  SingleCellExperiment::reducedDim(object, reduction.name) <- t(nmf_model$h)
   object
 
 }
