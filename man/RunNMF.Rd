@@ -3,6 +3,7 @@
 \name{RunNMF.Seurat}
 \alias{RunNMF.Seurat}
 \alias{RunNMF}
+\alias{RunNMF.SingleCellExperiment}
 \title{Run NMF on a Seurat object}
 \usage{
 \method{RunNMF}{Seurat}(
@@ -28,15 +29,37 @@
 )
 
 RunNMF(object, ...)
+
+\method{RunNMF}{SingleCellExperiment}(
+  object,
+  split.by = NULL,
+  k = NULL,
+  assay = NULL,
+  reps = 3,
+  tol = 1e-05,
+  L1 = 0.01,
+  L2 = 0,
+  verbose = 2,
+  reduction.name = "nmf",
+  reduction.key = "NMF_",
+  maxit = 100,
+  test.set.density = 0.05,
+  learning.rate = 0.8,
+  tol.overfit = 1e-04,
+  trace.test.mse = 5,
+  threads = 0,
+  features = NULL,
+  ...
+)
 }
 \arguments{
-\item{object}{A Seurat object}
+\item{object}{A SingleCellExperiment}
 
-\item{split.by}{column name in \code{@meta.data} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.}
+\item{split.by}{column name in \code{colData} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.}
 
 \item{k}{either \code{NULL} for automatic rank determination, a single integer giving the desired rank, or a vector of ranks to use for cross-validation.}
 
-\item{assay}{Assay to use, defaults to the default assay of the first object}
+\item{assay}{Assay to use, defaults to logcounts}
 
 \item{reps}{number of replicates for cross-validation}
 
@@ -48,9 +71,9 @@ RunNMF(object, ...)
 
 \item{verbose}{Level of console output (0/FALSE, 1/TRUE, 2)}
 
-\item{reduction.name}{Name to store resulting DimReduc object as}
+\item{reduction.name}{Name to store resulting DimReduc object as ("NMF")}
 
-\item{reduction.key}{Key for resulting DimReduc}
+\item{reduction.key}{Key for resulting DimReduc ("NMF")}
 
 \item{maxit}{maximum number of fitting iterations}
 
@@ -64,17 +87,23 @@ RunNMF(object, ...)
 
 \item{threads}{number of threads to use (0 = let OpenMP use all available threads)}
 
-\item{features}{if \code{NULL} use all features, if \code{var.features} use variable feature stored in the Assay object, if index array use those rows.}
+\item{features}{unused for this method}
 
 \item{...}{not implemented}
 }
 \value{
 Returns a Seurat object with the NMF model stored in the reductions slot
+
+Returns an SCE with the NMF model stored in reducedDim
 }
 \description{
 Run Non-negative Matrix Factorization with rank determined by CV
+
+Run Non-negative Matrix Factorization with rank determined by CV
 }
 \details{
+Use \code{set.seed()} to guarantee reproducibility!
+
 Use \code{set.seed()} to guarantee reproducibility!
 }
 \examples{

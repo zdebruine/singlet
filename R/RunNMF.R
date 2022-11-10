@@ -161,3 +161,129 @@ RunNMF <- function(object, ...) {
 #' @export
 #'
 .S3method("RunNMF", "Seurat", RunNMF.Seurat)
+
+
+#' Run NMF on a SingleCellExperiment
+#'
+#' @description Run Non-negative Matrix Factorization with rank determined by CV
+#'
+#' @param object A SingleCellExperiment
+#' @param assay Assay to use, defaults to logcounts
+#' @param reduction.name Name to store resulting DimReduc object as ("NMF")
+#' @param reduction.key Key for resulting DimReduc ("NMF")
+#' @param verbose Level of console output (0/FALSE, 1/TRUE, 2)
+#' @param k either \code{NULL} for automatic rank determination, a single integer giving the desired rank, or a vector of ranks to use for cross-validation.
+#' @param reps number of replicates for cross-validation
+#' @param test.set.density approximate density of the test set (default 0.05)
+#' @param tol tolerance of the fit (correlation distance of the model across consecutive iterations). Cross-validation fits are 10x coarser than this tolerance.
+#' @param maxit maximum number of fitting iterations
+#' @param L1 L1/LASSO penalty to increase sparsity of the model
+#' @param L2 L2/Ridge-like penalty to increase angles between factors
+#' @param threads number of threads to use (0 = let OpenMP use all available threads)
+#' @param split.by column name in \code{colData} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.
+#' @param learning.rate exponent on step size for automatic rank determination
+#' @param tol.overfit tolerance for increase in test set reconstruction error relative to minimum observed value during fitting
+#' @param trace.test.mse during automatic rank determination, calculate test set reconstruction error every trace iterations
+#' @param features unused for this method
+#' @param ... not implemented
+#'
+#' @return Returns an SCE with the NMF model stored in reducedDim
+#'
+#' @details Use \code{set.seed()} to guarantee reproducibility!
+#' @rdname RunNMF
+#' @aliases RunNMF.SingleCellExperiment
+#' @name RunNMF.SingleCellExperiment
+#'
+#' @examples
+#'
+#' @export
+#'
+RunNMF.SingleCellExperiment <- function(object,
+                                        split.by = NULL,
+                                        k = NULL,
+                                        assay = NULL,
+                                        reps = 3,
+                                        tol = 1e-5,
+                                        L1 = 0.01,
+                                        L2 = 0,
+                                        verbose = 2,
+                                        reduction.name = "nmf",
+                                        reduction.key = "NMF_",
+                                        maxit = 100,
+                                        test.set.density = 0.05,
+                                        learning.rate = 0.8,
+                                        tol.overfit = 1e-4,
+                                        trace.test.mse = 5,
+                                        threads = 0,
+                                        features = NULL,
+                                        ...) {
+  
+  # the kludge to end all kludges
+  if (is.null(assay)) assay <- "logcounts"
+  if (!assay %in% assayNames(object)) object <- scater::logNormCounts(object)
+  A <- assays(object)[[assay]]
+
+  rnames <- rownames(A)
+  cnames <- colnames(A)
+
+  if (!is.null(split.by)) {
+    split.by <- as.integer(as.numeric(as.factor(colData(object)[[split.by]])))-1
+    if (any(sapply(split.by, is.na))) stop("'split.by' can't contain NA values")
+    A <- weight_by_split(A, split.by, length(unique(split.by)))
+  }
+
+  At <- Matrix::t(A)
+  seed.use <- abs(.Random.seed[[3]])
+
+  if (!is.null(k) && length(k) > 1) {
+    # run cross-validation at specified ranks
+    cv_data <- data.frame()
+    cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, L1, L2, threads, test.set.density, tol.overfit, trace.test.mse, 2)
+    best_rank <- GetBestRank(cv_data, tol.overfit)
+    if (verbose >= 1) {
+      cat("best rank: ", best_rank, "\n")
+    }
+    cat("\nfitting final model:\n")
+    nmf_model <- run_nmf(A, best_rank, tol, maxit, verbose > 1, L1, L2, threads)
+  } else if (is.null(k)) {
+    # run automatic rank determination cross-validation
+    nmf_model <- ard_nmf(
+      A = A,
+      k_init = k,
+      n_replicates = reps,
+      tol = tol,
+      maxit = maxit,
+      verbose = verbose,
+      L1 = L1,
+      L2 = L2,
+      threads = threads,
+      test_density = test.set.density,
+      learning_rate = learning.rate,
+      tol_overfit = tol.overfit,
+      trace_test_mse = trace.test.mse
+    )
+    cv_data <- nmf_model$cv_data
+  } else if (length(k) == 1) {
+    nmf_model <- run_nmf(A, k, tol, maxit, verbose > 1, L1, L2, threads)
+    cv_data <- list()
+  } else {
+    stop("value for 'k' was invalid")
+  }
+  rownames(nmf_model$h) <- colnames(nmf_model$w) <- paste0(reduction.key, 1:nrow(nmf_model$h))
+  rownames(nmf_model$w) <- rnames
+  colnames(nmf_model$h) <- cnames
+
+  metadata(object)[["nmf_model"]] <- nmf_model
+  reducedDims(object, reduction.name) <- t(nmf_model$h)
+  object
+
+}
+
+
+#' @rdname RunNMF
+#'
+#' @name RunNMF
+#'
+#' @export
+#'
+.S3method("RunNMF", "SingleCellExperiment", RunNMF.SingleCellExperiment)
