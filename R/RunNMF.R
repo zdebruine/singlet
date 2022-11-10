@@ -194,8 +194,6 @@ RunNMF <- function(object, ...) {
 #' @aliases RunNMF.SingleCellExperiment
 #' @name RunNMF.SingleCellExperiment
 #'
-#' @examples
-#'
 #' @export
 #'
 RunNMF.SingleCellExperiment <- function(object,
@@ -223,9 +221,6 @@ RunNMF.SingleCellExperiment <- function(object,
   if (!assay %in% assayNames(object)) object <- scater::logNormCounts(object)
   A <- assays(object)[[assay]]
 
-  rnames <- rownames(A)
-  cnames <- colnames(A)
-
   if (!is.null(split.by)) {
     split.by <- as.integer(as.numeric(as.factor(colData(object)[[split.by]])))-1
     if (any(sapply(split.by, is.na))) stop("'split.by' can't contain NA values")
@@ -236,16 +231,23 @@ RunNMF.SingleCellExperiment <- function(object,
   seed.use <- abs(.Random.seed[[3]])
 
   if (!is.null(k) && length(k) > 1) {
+
     # run cross-validation at specified ranks
     cv_data <- data.frame()
-    cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, L1, L2, threads, test.set.density, tol.overfit, trace.test.mse, 2)
+    cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, 
+                                  L1, L2, threads, test.set.density, 
+                                  tol.overfit, trace.test.mse, 2)
     best_rank <- GetBestRank(cv_data, tol.overfit)
+
     if (verbose >= 1) {
       cat("best rank: ", best_rank, "\n")
     }
+
     cat("\nfitting final model:\n")
     nmf_model <- run_nmf(A, best_rank, tol, maxit, verbose > 1, L1, L2, threads)
+
   } else if (is.null(k)) {
+
     # run automatic rank determination cross-validation
     nmf_model <- ard_nmf(
       A = A,
@@ -262,19 +264,28 @@ RunNMF.SingleCellExperiment <- function(object,
       tol_overfit = tol.overfit,
       trace_test_mse = trace.test.mse
     )
+
     cv_data <- nmf_model$cv_data
+
   } else if (length(k) == 1) {
+
     nmf_model <- run_nmf(A, k, tol, maxit, verbose > 1, L1, L2, threads)
     cv_data <- list()
-  } else {
-    stop("value for 'k' was invalid")
-  }
-  rownames(nmf_model$h) <- colnames(nmf_model$w) <- paste0(reduction.key, 1:nrow(nmf_model$h))
-  rownames(nmf_model$w) <- rnames
-  colnames(nmf_model$h) <- cnames
 
+  } else {
+
+    stop("value for 'k' was invalid")
+
+  }
+
+  rownames(nmf_model$h) <- 
+    colnames(nmf_model$w) <- 
+      paste0(reduction.key, seq_len(nrow(nmf_model$h)))
+  rownames(nmf_model$w) <- rownames(object)
+  colnames(nmf_model$h) <- colnames(object)
   metadata(object)[["nmf_model"]] <- nmf_model
-  reducedDims(object, reduction.name) <- t(nmf_model$h)
+  metadata(object)[["cv_data"]] <- nmf_model$cv_data
+  reducedDim(object, reduction.name) <- t(nmf_model$h)
   object
 
 }
