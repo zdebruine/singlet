@@ -748,8 +748,12 @@ inline void updateGraph(Rcpp::SparseMatrix& G, Rcpp::SparseMatrix& dE) {
         Rcpp::SparseMatrix::InnerIterator it_dE(dE, i);
         Rcpp::SparseMatrix::InnerIterator it_G(G, i);
         double sum = 0;
+        // absolute shrink G. Then normalize. G -= GL1 * (change in loss)
         for (; it_G; ++it_G, ++it_dE) {
-            it_G.value() = it_G.value() * it_dE.value();
+            it_G.value() -= it_G.value() * it_dE.value() * 10;
+            // this approach works, but it must enforce that m convolves (i.e. equal contributions of normal NMF objective and spatial objective)
+            // thus when b is updated it must be equally off-diagonal graph and on-diagonal graph. Change the normalization of the graph.
+            if (it_G.value() < 0) it_G.value() = 0;
             sum += it_G.value();
         }
         // normalize column to sum to one
@@ -783,9 +787,9 @@ Rcpp::List c_cnmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, Rcpp::SparseMat
     Rcpp::List costs(maxit);
 
     // update the graph by least squares to minimize reconstruction error
-    //    Eigen::VectorXd err = Eigen::VectorXd::Zero(A.cols());
-    //    Eigen::VectorXd prev_err = err;
-    //    Eigen::VectorXd rel_err = err;
+    //Eigen::VectorXd err = Eigen::VectorXd::Zero(A.cols());
+    //Eigen::VectorXd prev_err = err;
+    //Eigen::VectorXd rel_err = err;
 
     // convolve points that the model fits really well to
     // visualize goodness of fit to the model. For a given convolution Gij, the goodness of fit is the euclidean distance between the two points on NMF coordinates.
@@ -802,21 +806,22 @@ Rcpp::List c_cnmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, Rcpp::SparseMat
         cost.setOnes();
         // calculate Euclidean distance between sample pairs on H matrix
         for (size_t i = 0; i < G.cols(); ++i) {
-            for (Rcpp::SparseMatrix::InnerIterator it(cost, i); it; ++it) {
+            Rcpp::SparseMatrix::InnerIterator it_G(G, i);
+            for (Rcpp::SparseMatrix::InnerIterator it(cost, i); it; ++it, ++it_G) {
                 double d = 0;
                 for (size_t k = 0; k < h.rows(); ++k)
                     d += std::pow(h(k, i) - h(k, it.row()), 2);
                 it.value() = std::sqrt(d);
             }
         }
-        costs[iter_] = cost.wrap();
+        if (iter_ > 0) updateGraph(G, cost);
+        costs[iter_] = G.wrap();
+        // use change in loss because loss is guaranteed to converge.
+        // Change g by a function of the change in loss. If the loss changed for the better, strengthen that connection
+        // absolute shrink G. Then normalize. G -= GL1 * (change in loss)
         // update graph
-        //        err = mse(A, w, d, h, threads);  // calculate losses for each column
-        //        if (iter_ > 0) {
-        //            updateErrGraph(dE, err, prev_err);
-        //            updateGraph(G, dE);
-        //        }
-        //        prev_err = err;
+        //err = mse(A, w, d, h, threads);  // calculate losses for each column
+        //prev_err = err;
 
         tol_ = cor(w, w_it);
         if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
