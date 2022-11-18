@@ -467,7 +467,6 @@ Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t ma
             Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
         Rcpp::checkUserInterrupt();
     }
-
     return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
 }
 
@@ -615,4 +614,212 @@ Rcpp::S4 log_normalize(Rcpp::SparseMatrix A_, const unsigned int scale_factor, c
             it.value() = std::log1p(it.value() * norm);
     }
     return A.wrap();
+}
+
+// ---- CONVOLUTIONAL NMF FUNCTIONS
+
+//[[Rcpp::export]]
+Rcpp::S4 spatial_graph(std::vector<double> c1, std::vector<double> c2, double max_dist, size_t max_k = 100, const size_t threads = 0) {
+    // calculate euclidean distances between all elements in x and y, return only those less than max_dist
+    size_t n = c1.size();
+    float scale_factor = 1 / max_dist;
+    Eigen::MatrixXd x_ = Eigen::MatrixXd::Zero(max_k, n);
+    Eigen::MatrixXi i_ = Eigen::MatrixXi::Zero(max_k, n);
+
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads)
+#endif
+    for (size_t i = 0; i < n; ++i) {
+        size_t pos = 0;
+        for (size_t j = 0; j < n && pos < max_k; ++j) {
+            double d = std::sqrt((c1[i] - c1[j]) * (c1[i] - c1[j]) + (c2[i] - c2[j]) * (c2[i] - c2[j]));
+            if (d < max_dist) {
+                i_(pos, i) = j;
+                x_(pos, i) = (max_dist - d) * scale_factor;
+                ++pos;
+            }
+        }
+        //normalize columns to sum to 1
+        double sum = x_.col(i).sum();
+        x_.col(i).array() /= sum;
+    }
+
+    // convert to vector form
+    size_t nnz = 0;
+    for (size_t i = 0; i < n; ++i)
+        for (size_t j = 0; j < max_k; ++j)
+            if (x_(j, i) != 0) ++nnz;
+    //    for (auto it = i_.data(); it != (i_.data() + i_.size()); ++it)
+    //       if (*it != 0) ++nnz;
+
+    Rcpp::IntegerVector idx(nnz), colptrs(n + 1), Dim(2, n);
+    Rcpp::NumericVector vals(nnz);
+    size_t pos = 0;
+    for (size_t i = 0; i < n; ++i) {
+        for (size_t j = 0; j < max_k; ++j) {
+            if (x_(j, i) != 0) {
+                idx[pos] = i_(j, i);
+                vals[pos] = x_(j, i);
+                ++pos;
+            }
+        }
+        colptrs[i + 1] = pos;
+    }
+    Rcpp::SparseMatrix m(vals, idx, colptrs, Dim);
+    return m.wrap();
+}
+
+// update h given A and w
+inline void cnmf_update_h(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, Rcpp::SparseMatrix G, const double L1, const double L2, const int threads) {
+    Eigen::MatrixXd a = AAt(w);
+    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+    // calculate b like in non-convolutional updates
+    Eigen::MatrixXd b = Eigen::MatrixXd::Zero(h.rows(), A.cols());
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads)
+#endif
+    for (size_t j = 0; j < h.cols(); ++j) {
+        if (A.p[j] == A.p[j + 1]) continue;
+        for (Rcpp::SparseMatrix::InnerIterator it(A, j); it; ++it)
+            b.col(j) += it.value() * w.col(it.row());
+    }
+
+    // generate convolutional b by convolving b using the graph pattern and then solve NNLS
+    for (size_t j = 0; j < b.cols(); ++j) {
+        Eigen::VectorXd b_ = Eigen::VectorXd::Zero(b.rows());
+        for (Rcpp::SparseMatrix::InnerIterator it(G, j); it; ++it)
+            b_ += it.value() * b.col(it.row());
+        b_.array() -= L1;
+        nnls(a, b_, h, j);
+    }
+}
+
+// update w given A and h
+inline void cnmf_update_w(Rcpp::SparseMatrix At, Eigen::MatrixXd& w, const Eigen::MatrixXd& h, Rcpp::SparseMatrix G, const double L1, const double L2, const int threads) {
+    Eigen::MatrixXd a = AAt(h);
+    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads)
+#endif
+    for (size_t j = 0; j < w.cols(); ++j) {
+        Eigen::VectorXd b = Eigen::VectorXd::Zero(w.rows());
+        for (Rcpp::SparseMatrix::InnerIterator it(At, j); it; ++it) {
+            for (Rcpp::SparseMatrix::InnerIterator it2(G, it.row()); it2; ++it2) {
+                b += (it.value() * it2.value()) * h.col(it2.row());
+            }
+        }
+        b.array() -= L1;
+        nnls(a, b, w, j);
+    }
+}
+
+// calculate mean squared error of the model at test set indices only
+Eigen::VectorXd mse(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::VectorXd& d, Eigen::MatrixXd& h, const uint16_t threads) {
+    // multiply w by d
+    Eigen::MatrixXd w_ = w.transpose();
+    for (size_t i = 0; i < w.cols(); ++i)
+        for (size_t j = 0; j < w.rows(); ++j)
+            w_(i, j) *= d(j);
+
+    Eigen::VectorXd losses(h.cols());
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads)
+#endif
+    for (uint64_t j = 0; j < h.cols(); ++j) {
+        double s = 0;
+        Rcpp::SparseMatrix::InnerIterator it(A, j);
+        for (uint64_t i = 0; i < A.rows(); ++i) {
+            if (it && i == it.row()) {
+                s += std::pow(w_.row(i) * h.col(j) - it.value(), 2);
+                ++it;
+            } else {
+                s += std::pow(w_.row(i) * h.col(j), 2);
+            }
+        }
+        losses(j) = s;
+    }
+    return losses;
+}
+
+// update graph
+inline void updateGraph(Rcpp::SparseMatrix& G, Rcpp::SparseMatrix& dE) {
+    for (size_t i = 0; i < G.cols(); ++i) {
+        Rcpp::SparseMatrix::InnerIterator it_dE(dE, i);
+        Rcpp::SparseMatrix::InnerIterator it_G(G, i);
+        double sum = 0;
+        for (; it_G; ++it_G, ++it_dE) {
+            it_G.value() = it_G.value() * it_dE.value();
+            sum += it_G.value();
+        }
+        // normalize column to sum to one
+        for (Rcpp::SparseMatrix::InnerIterator it(G, i); it; ++it)
+            it.value() /= sum;
+    }
+}
+
+void updateErrGraph(Rcpp::SparseMatrix& dE, Eigen::VectorXd& err, Eigen::VectorXd& prev_err) {
+    for (size_t i = 0; i < err.size(); ++i)
+        err(i) = (err(i) - prev_err(i)) / prev_err(i);
+
+    for (size_t i = 0; i < dE.cols(); ++i) {
+        for (Rcpp::SparseMatrix::InnerIterator it(dE, i); it; ++it)
+            it.value() = err[i] - prev_err[i];
+    }
+}
+
+// we only want pairs of points to be convoluted which have the lowest error.
+// If we deconvolute everything, and then convolute everything, find the relative change in Euclidean distance on the "H" matrix of convoluted/deconvoluted and multiply graph weights by that change.
+
+//[[Rcpp::export]]
+Rcpp::List c_cnmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, Rcpp::SparseMatrix& G, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w) {
+    Eigen::MatrixXd h = Eigen::MatrixXd::Zero(w.rows(), A.cols());
+    Eigen::VectorXd d = Eigen::VectorXd::Ones(w.rows());
+    double tol_ = 1;
+    if (verbose) Rprintf("\n%4s | %8s \n---------------\n", "iter", "tol");
+    // store relative change in graph weights from previous iteration (initializing with 1)
+    //    Rcpp::SparseMatrix dG = G.clone();
+    //    dG.setOnes();
+    Rcpp::List costs(maxit);
+
+    // update the graph by least squares to minimize reconstruction error
+    //    Eigen::VectorXd err = Eigen::VectorXd::Zero(A.cols());
+    //    Eigen::VectorXd prev_err = err;
+    //    Eigen::VectorXd rel_err = err;
+
+    // convolve points that the model fits really well to
+    // visualize goodness of fit to the model. For a given convolution Gij, the goodness of fit is the euclidean distance between the two points on NMF coordinates.
+
+    for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
+        Eigen::MatrixXd w_it = w;
+        cnmf_update_h(A, w, h, G, L1, L2, threads);
+        scale(h, d);
+        cnmf_update_w(At, w, h, G, L1, L2, threads);
+        scale(w, d);
+        Rcpp::checkUserInterrupt();
+
+        Rcpp::SparseMatrix cost = G.clone();
+        cost.setOnes();
+        // calculate Euclidean distance between sample pairs on H matrix
+        for (size_t i = 0; i < G.cols(); ++i) {
+            for (Rcpp::SparseMatrix::InnerIterator it(cost, i); it; ++it) {
+                double d = 0;
+                for (size_t k = 0; k < h.rows(); ++k)
+                    d += std::pow(h(k, i) - h(k, it.row()), 2);
+                it.value() = std::sqrt(d);
+            }
+        }
+        costs[iter_] = cost.wrap();
+        // update graph
+        //        err = mse(A, w, d, h, threads);  // calculate losses for each column
+        //        if (iter_ > 0) {
+        //            updateErrGraph(dE, err, prev_err);
+        //            updateGraph(G, dE);
+        //        }
+        //        prev_err = err;
+
+        tol_ = cor(w, w_it);
+        if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
+    }
+    return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h, Rcpp::Named("costs") = costs);
 }
