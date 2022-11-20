@@ -622,7 +622,7 @@ Rcpp::S4 log_normalize(Rcpp::SparseMatrix A_, const unsigned int scale_factor, c
 Rcpp::S4 spatial_graph(std::vector<double> c1, std::vector<double> c2, double max_dist, size_t max_k = 100, const size_t threads = 0) {
     // calculate euclidean distances between all elements in x and y, return only those less than max_dist
     size_t n = c1.size();
-    float scale_factor = 1 / max_dist;
+    double scale_factor = 1 / max_dist;
     Eigen::MatrixXd x_ = Eigen::MatrixXd::Zero(max_k, n);
     Eigen::MatrixXi i_ = Eigen::MatrixXi::Zero(max_k, n);
 
@@ -639,7 +639,7 @@ Rcpp::S4 spatial_graph(std::vector<double> c1, std::vector<double> c2, double ma
                 ++pos;
             }
         }
-        //normalize columns to sum to 1
+        // normalize columns to sum to 1
         double sum = x_.col(i).sum();
         x_.col(i).array() /= sum;
     }
@@ -666,6 +666,122 @@ Rcpp::S4 spatial_graph(std::vector<double> c1, std::vector<double> c2, double ma
         colptrs[i + 1] = pos;
     }
     Rcpp::SparseMatrix m(vals, idx, colptrs, Dim);
+    return m.wrap();
+}
+
+//[[Rcpp::export]]
+Rcpp::S4 spatial_graph2(Rcpp::NumericVector x, Rcpp::NumericVector y, Rcpp::NumericMatrix& h, uint32_t radius, uint32_t k, double jaccard_cutoff = 0, bool verbose = true, size_t threads = 0) {
+    // x and y are integral coordinates in space
+    // h is a matrix giving sample embeddings in a reduced non-negative dimension (i.e. non-convolutional NMF)
+
+    if (h.rows() != h.cols() && h.rows() == x.size()) h = Rcpp::transpose(h);
+    if (h.cols() != x.size()) Rcpp::stop("cannot construct graph when dimensions of spatial coordinates are not the same as the number of columns in 'h'");
+
+    // maximum number of edges in graph possible for any given node
+    uint32_t n_max_edges = std::pow(radius * 2 + 1, 2);
+    uint32_t n = x.size();
+    if (verbose) Rprintf("maximum number of edges per node: %u\n", n_max_edges);
+
+    // allocate sufficient memory in sparse matrix structure
+    Rcpp::NumericVector res_x(n_max_edges * n);
+    Rcpp::IntegerVector res_i(n_max_edges * n);
+    Rcpp::IntegerVector res_p(n + 1);
+
+    // column pointers assume maximum number of edges used
+    for (size_t i = 1; i < res_p.size(); ++i)
+        res_p(i) = res_p(i - 1) + n_max_edges;
+
+    if (verbose) Rprintf("filtering %llu edges\n", n * n_max_edges);
+
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads)
+#endif
+    for (size_t point1 = 0; point1 < n; ++point1) {
+        uint32_t pos = res_p[point1];
+        // calculate Jaccard overlap between h[, col] and all other columns within radius
+        for (size_t point2 = 0; point2 < n; ++point2) {
+            if (point1 == point2) {
+                res_x[pos] = 1;
+                res_i[pos] = point1;
+                ++pos;
+            } else {
+                // check if point2 is within bounding box of point1
+                if (std::abs(x[point1] - x[point2]) <= radius && std::abs(y[point1] - y[point2]) <= radius) {
+                    // now check if it is within circular position of point1
+                    // note previous check avoids expensive squaring operation if we can help it
+                    uint32_t d = std::floor(std::sqrt((x[point1] - x[point2]) * (x[point1] - x[point2]) + (y[point1] - y[point2]) * (y[point1] - y[point2])));
+                    if (d <= radius) {
+                        // calculate jaccard similarity between both points on the H matrix
+                        double pq = 0, p2 = 0, q2 = 0;
+                        for (size_t j = 0; j < h.rows(); ++j) {
+                            pq += h(j, point1) * h(j, point2);
+                            p2 += h(j, point1) * h(j, point1);
+                            q2 += h(j, point2) * h(j, point2);
+                        }
+                        pq = 1 - pq / (p2 + q2 - pq);
+                        if (pq > jaccard_cutoff) {
+                            res_x[pos] = pq;
+                            res_i[pos] = point2;
+                            ++pos;
+                        }
+                    }
+                }
+            }
+        }
+        // select top k points
+        // find number of non-zero values in the range and get minimum
+        // set minimum value to zero
+        uint32_t curr_k = 0;
+        for (pos = res_p[point1]; pos < res_p[point1 + 1]; ++pos)
+            if (res_x[pos] != 0) ++curr_k;
+
+        while (curr_k > k) {
+            curr_k = 0;
+            double min_val = DBL_MAX;
+            uint32_t min_pos = 0;
+            for (pos = res_p[point1]; pos < res_p[point1 + 1]; ++pos) {
+                if (res_x[pos] != 0 && res_x[pos] < min_val) {
+                    min_val = res_x[pos];
+                    min_pos = pos;
+                    ++curr_k;
+                }
+            }
+            res_x[min_pos] = 0;
+        }
+
+        // normalize column to sum to 1
+        double sum = 0;
+        for (pos = res_p[point1]; pos < res_p[point1 + 1]; ++pos)
+            sum += res_x[pos];
+        for (pos = res_p[point1]; pos < res_p[point1 + 1]; ++pos)
+            res_x[pos] /= sum;
+    }
+    // drop0's
+    uint32_t pos1 = 0, pos2 = 0;
+    for (uint32_t pos_p = 1; pos2 < res_x.size(); ++pos2) {
+        if (pos2 == res_p[pos_p]) {
+            res_p[pos_p] = pos1;
+            ++pos_p;
+        }
+        if (res_x[pos2] != 0) {
+            res_x[pos1] = res_x[pos2];
+            res_i[pos1] = res_i[pos2];
+            ++pos1;
+        }
+    }
+    // create deep copy, because Rcpp vectors don't have a .resize() function
+    Rcpp::NumericVector res_x2(pos1);
+    Rcpp::IntegerVector res_i2(pos1);
+    for (uint32_t i = 0; i < pos1; ++i) {
+        res_x2[i] = res_x[i];
+        res_i2[i] = res_i[i];
+    }
+    res_p[res_p.size() - 1] = pos1;
+
+    if (verbose) Rprintf("selected %llu edges\n", res_x2.size());
+
+    Rcpp::IntegerVector Dim(2, n);
+    Rcpp::SparseMatrix m(res_x2, res_i2, res_p, Dim);
     return m.wrap();
 }
 
@@ -714,86 +830,12 @@ inline void cnmf_update_w(Rcpp::SparseMatrix At, Eigen::MatrixXd& w, const Eigen
     }
 }
 
-// calculate mean squared error of the model at test set indices only
-Eigen::VectorXd mse(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::VectorXd& d, Eigen::MatrixXd& h, const uint16_t threads) {
-    // multiply w by d
-    Eigen::MatrixXd w_ = w.transpose();
-    for (size_t i = 0; i < w.cols(); ++i)
-        for (size_t j = 0; j < w.rows(); ++j)
-            w_(i, j) *= d(j);
-
-    Eigen::VectorXd losses(h.cols());
-#ifdef _OPENMP
-#pragma omp parallel for num_threads(threads)
-#endif
-    for (uint64_t j = 0; j < h.cols(); ++j) {
-        double s = 0;
-        Rcpp::SparseMatrix::InnerIterator it(A, j);
-        for (uint64_t i = 0; i < A.rows(); ++i) {
-            if (it && i == it.row()) {
-                s += std::pow(w_.row(i) * h.col(j) - it.value(), 2);
-                ++it;
-            } else {
-                s += std::pow(w_.row(i) * h.col(j), 2);
-            }
-        }
-        losses(j) = s;
-    }
-    return losses;
-}
-
-// update graph
-inline void updateGraph(Rcpp::SparseMatrix& G, Rcpp::SparseMatrix& dE) {
-    for (size_t i = 0; i < G.cols(); ++i) {
-        Rcpp::SparseMatrix::InnerIterator it_dE(dE, i);
-        Rcpp::SparseMatrix::InnerIterator it_G(G, i);
-        double sum = 0;
-        // absolute shrink G. Then normalize. G -= GL1 * (change in loss)
-        for (; it_G; ++it_G, ++it_dE) {
-            it_G.value() -= it_G.value() * it_dE.value() * 10;
-            // this approach works, but it must enforce that m convolves (i.e. equal contributions of normal NMF objective and spatial objective)
-            // thus when b is updated it must be equally off-diagonal graph and on-diagonal graph. Change the normalization of the graph.
-            if (it_G.value() < 0) it_G.value() = 0;
-            sum += it_G.value();
-        }
-        // normalize column to sum to one
-        for (Rcpp::SparseMatrix::InnerIterator it(G, i); it; ++it)
-            it.value() /= sum;
-    }
-}
-
-void updateErrGraph(Rcpp::SparseMatrix& dE, Eigen::VectorXd& err, Eigen::VectorXd& prev_err) {
-    for (size_t i = 0; i < err.size(); ++i)
-        err(i) = (err(i) - prev_err(i)) / prev_err(i);
-
-    for (size_t i = 0; i < dE.cols(); ++i) {
-        for (Rcpp::SparseMatrix::InnerIterator it(dE, i); it; ++it)
-            it.value() = err[i] - prev_err[i];
-    }
-}
-
-// we only want pairs of points to be convoluted which have the lowest error.
-// If we deconvolute everything, and then convolute everything, find the relative change in Euclidean distance on the "H" matrix of convoluted/deconvoluted and multiply graph weights by that change.
-
 //[[Rcpp::export]]
 Rcpp::List c_cnmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, Rcpp::SparseMatrix& G, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w) {
     Eigen::MatrixXd h = Eigen::MatrixXd::Zero(w.rows(), A.cols());
     Eigen::VectorXd d = Eigen::VectorXd::Ones(w.rows());
     double tol_ = 1;
     if (verbose) Rprintf("\n%4s | %8s \n---------------\n", "iter", "tol");
-    // store relative change in graph weights from previous iteration (initializing with 1)
-    //    Rcpp::SparseMatrix dG = G.clone();
-    //    dG.setOnes();
-    Rcpp::List costs(maxit);
-
-    // update the graph by least squares to minimize reconstruction error
-    //Eigen::VectorXd err = Eigen::VectorXd::Zero(A.cols());
-    //Eigen::VectorXd prev_err = err;
-    //Eigen::VectorXd rel_err = err;
-
-    // convolve points that the model fits really well to
-    // visualize goodness of fit to the model. For a given convolution Gij, the goodness of fit is the euclidean distance between the two points on NMF coordinates.
-
     for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
         Eigen::MatrixXd w_it = w;
         cnmf_update_h(A, w, h, G, L1, L2, threads);
@@ -801,30 +843,8 @@ Rcpp::List c_cnmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, Rcpp::SparseMat
         cnmf_update_w(At, w, h, G, L1, L2, threads);
         scale(w, d);
         Rcpp::checkUserInterrupt();
-
-        Rcpp::SparseMatrix cost = G.clone();
-        cost.setOnes();
-        // calculate Euclidean distance between sample pairs on H matrix
-        for (size_t i = 0; i < G.cols(); ++i) {
-            Rcpp::SparseMatrix::InnerIterator it_G(G, i);
-            for (Rcpp::SparseMatrix::InnerIterator it(cost, i); it; ++it, ++it_G) {
-                double d = 0;
-                for (size_t k = 0; k < h.rows(); ++k)
-                    d += std::pow(h(k, i) - h(k, it.row()), 2);
-                it.value() = std::sqrt(d);
-            }
-        }
-        if (iter_ > 0) updateGraph(G, cost);
-        costs[iter_] = G.wrap();
-        // use change in loss because loss is guaranteed to converge.
-        // Change g by a function of the change in loss. If the loss changed for the better, strengthen that connection
-        // absolute shrink G. Then normalize. G -= GL1 * (change in loss)
-        // update graph
-        //err = mse(A, w, d, h, threads);  // calculate losses for each column
-        //prev_err = err;
-
         tol_ = cor(w, w_it);
         if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
     }
-    return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h, Rcpp::Named("costs") = costs);
+    return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
 }
