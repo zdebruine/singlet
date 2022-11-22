@@ -623,7 +623,6 @@ Rcpp::S4 spatial_graph(std::vector<double> c1, std::vector<double> c2, double ma
     // calculate euclidean distances between all elements in x and y, return only those less than max_dist
     size_t n = c1.size();
     double scale_factor = 1 / max_dist;
-    double scale_factor = 1 / max_dist;
     Eigen::MatrixXd x_ = Eigen::MatrixXd::Zero(max_k, n);
     Eigen::MatrixXi i_ = Eigen::MatrixXi::Zero(max_k, n);
 
@@ -640,7 +639,6 @@ Rcpp::S4 spatial_graph(std::vector<double> c1, std::vector<double> c2, double ma
                 ++pos;
             }
         }
-        // normalize columns to sum to 1
         // normalize columns to sum to 1
         double sum = x_.col(i).sum();
         x_.col(i).array() /= sum;
@@ -668,122 +666,6 @@ Rcpp::S4 spatial_graph(std::vector<double> c1, std::vector<double> c2, double ma
         colptrs[i + 1] = pos;
     }
     Rcpp::SparseMatrix m(vals, idx, colptrs, Dim);
-    return m.wrap();
-}
-
-//[[Rcpp::export]]
-Rcpp::S4 spatial_graph2(Rcpp::NumericVector x, Rcpp::NumericVector y, Rcpp::NumericMatrix& h, uint32_t radius, uint32_t k, double jaccard_cutoff = 0, bool verbose = true, size_t threads = 0) {
-    // x and y are integral coordinates in space
-    // h is a matrix giving sample embeddings in a reduced non-negative dimension (i.e. non-convolutional NMF)
-
-    if (h.rows() != h.cols() && h.rows() == x.size()) h = Rcpp::transpose(h);
-    if (h.cols() != x.size()) Rcpp::stop("cannot construct graph when dimensions of spatial coordinates are not the same as the number of columns in 'h'");
-
-    // maximum number of edges in graph possible for any given node
-    uint32_t n_max_edges = std::pow(radius * 2 + 1, 2);
-    uint32_t n = x.size();
-    if (verbose) Rprintf("maximum number of edges per node: %u\n", n_max_edges);
-
-    // allocate sufficient memory in sparse matrix structure
-    Rcpp::NumericVector res_x(n_max_edges * n);
-    Rcpp::IntegerVector res_i(n_max_edges * n);
-    Rcpp::IntegerVector res_p(n + 1);
-
-    // column pointers assume maximum number of edges used
-    for (size_t i = 1; i < res_p.size(); ++i)
-        res_p(i) = res_p(i - 1) + n_max_edges;
-
-    if (verbose) Rprintf("filtering %llu edges\n", n * n_max_edges);
-
-#ifdef _OPENMP
-#pragma omp parallel for num_threads(threads)
-#endif
-    for (size_t point1 = 0; point1 < n; ++point1) {
-        uint32_t pos = res_p[point1];
-        // calculate Jaccard overlap between h[, col] and all other columns within radius
-        for (size_t point2 = 0; point2 < n; ++point2) {
-            if (point1 == point2) {
-                res_x[pos] = 1;
-                res_i[pos] = point1;
-                ++pos;
-            } else {
-                // check if point2 is within bounding box of point1
-                if (std::abs(x[point1] - x[point2]) <= radius && std::abs(y[point1] - y[point2]) <= radius) {
-                    // now check if it is within circular position of point1
-                    // note previous check avoids expensive squaring operation if we can help it
-                    uint32_t d = std::floor(std::sqrt((x[point1] - x[point2]) * (x[point1] - x[point2]) + (y[point1] - y[point2]) * (y[point1] - y[point2])));
-                    if (d <= radius) {
-                        // calculate jaccard similarity between both points on the H matrix
-                        double pq = 0, p2 = 0, q2 = 0;
-                        for (size_t j = 0; j < h.rows(); ++j) {
-                            pq += h(j, point1) * h(j, point2);
-                            p2 += h(j, point1) * h(j, point1);
-                            q2 += h(j, point2) * h(j, point2);
-                        }
-                        pq = 1 - pq / (p2 + q2 - pq);
-                        if (pq > jaccard_cutoff) {
-                            res_x[pos] = pq;
-                            res_i[pos] = point2;
-                            ++pos;
-                        }
-                    }
-                }
-            }
-        }
-        // select top k points
-        // find number of non-zero values in the range and get minimum
-        // set minimum value to zero
-        uint32_t curr_k = 0;
-        for (pos = res_p[point1]; pos < res_p[point1 + 1]; ++pos)
-            if (res_x[pos] != 0) ++curr_k;
-
-        while (curr_k > k) {
-            curr_k = 0;
-            double min_val = DBL_MAX;
-            uint32_t min_pos = 0;
-            for (pos = res_p[point1]; pos < res_p[point1 + 1]; ++pos) {
-                if (res_x[pos] != 0 && res_x[pos] < min_val) {
-                    min_val = res_x[pos];
-                    min_pos = pos;
-                    ++curr_k;
-                }
-            }
-            res_x[min_pos] = 0;
-        }
-
-        // normalize column to sum to 1
-        double sum = 0;
-        for (pos = res_p[point1]; pos < res_p[point1 + 1]; ++pos)
-            sum += res_x[pos];
-        for (pos = res_p[point1]; pos < res_p[point1 + 1]; ++pos)
-            res_x[pos] /= sum;
-    }
-    // drop0's
-    uint32_t pos1 = 0, pos2 = 0;
-    for (uint32_t pos_p = 1; pos2 < res_x.size(); ++pos2) {
-        if (pos2 == res_p[pos_p]) {
-            res_p[pos_p] = pos1;
-            ++pos_p;
-        }
-        if (res_x[pos2] != 0) {
-            res_x[pos1] = res_x[pos2];
-            res_i[pos1] = res_i[pos2];
-            ++pos1;
-        }
-    }
-    // create deep copy, because Rcpp vectors don't have a .resize() function
-    Rcpp::NumericVector res_x2(pos1);
-    Rcpp::IntegerVector res_i2(pos1);
-    for (uint32_t i = 0; i < pos1; ++i) {
-        res_x2[i] = res_x[i];
-        res_i2[i] = res_i[i];
-    }
-    res_p[res_p.size() - 1] = pos1;
-
-    if (verbose) Rprintf("selected %llu edges\n", res_x2.size());
-
-    Rcpp::IntegerVector Dim(2, n);
-    Rcpp::SparseMatrix m(res_x2, res_i2, res_p, Dim);
     return m.wrap();
 }
 
