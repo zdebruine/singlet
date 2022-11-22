@@ -41,3 +41,31 @@ log_normalize <- function(A_, scale_factor, threads) {
     .Call(`_singlet_log_normalize`, A_, scale_factor, threads)
 }
 
+spatial_graph <- function(c1, c2, max_dist, max_k = 100L, threads = 0L) {
+    .Call(`_singlet_spatial_graph`, c1, c2, max_dist, max_k, threads)
+}
+
+c_LKNN <- function(m, coord_x, coord_y, k, radius, metric, similarity, max_dist, verbose, threads) {
+    .Call(`_singlet_c_LKNN`, m, coord_x, coord_y, k, radius, metric, similarity, max_dist, verbose, threads)
+}
+
+c_SNN <- function(G, min_similarity, threads) {
+    .Call(`_singlet_c_SNN`, G, min_similarity, threads)
+}
+
+c_SNN_par <- function(G, min_similarity, threads) {
+    .Call(`_singlet_c_SNN_par`, G, min_similarity, threads)
+}
+
+c_gcnmf <- function(A, At, G, tol, maxit, verbose, L1, L2, threads, w) {
+    .Call(`_singlet_c_gcnmf`, A, At, G, tol, maxit, verbose, L1, L2, threads, w)
+}
+
+c_differentiate_model <- function(h, G) {
+    .Call(`_singlet_c_differentiate_model`, h, G)
+}
+
+c_assign_cells_to_edge_clusters <- function(G, h_diff_clusters) {
+    .Call(`_singlet_c_assign_cells_to_edge_clusters`, G, h_diff_clusters)
+}
+
