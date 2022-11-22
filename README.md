@@ -2,6 +2,8 @@
 
 See the [pkgdown website](https://zdebruine.github.io/singlet/)!
 
+Singlet is in active development right now. Do not expect stable functionality yet. Coming soon!
+
 Singlet brings fast Non-negative Matrix Factorization (NMF) with automatic rank determination to the Seurat package for single-cell analysis.
 
 ## Install
