@@ -231,19 +231,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// c_SNN_par
-Rcpp::S4 c_SNN_par(Rcpp::SparseMatrix G, double min_similarity, size_t threads);
-RcppExport SEXP _singlet_c_SNN_par(SEXP GSEXP, SEXP min_similaritySEXP, SEXP threadsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::SparseMatrix >::type G(GSEXP);
-    Rcpp::traits::input_parameter< double >::type min_similarity(min_similaritySEXP);
-    Rcpp::traits::input_parameter< size_t >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(c_SNN_par(G, min_similarity, threads));
-    return rcpp_result_gen;
-END_RCPP
-}
 // c_gcnmf
 Rcpp::List c_gcnmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, Rcpp::SparseMatrix& G, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w);
 RcppExport SEXP _singlet_c_gcnmf(SEXP ASEXP, SEXP AtSEXP, SEXP GSEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP, SEXP wSEXP) {
@@ -303,7 +290,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_singlet_spatial_graph", (DL_FUNC) &_singlet_spatial_graph, 5},
     {"_singlet_c_LKNN", (DL_FUNC) &_singlet_c_LKNN, 10},
     {"_singlet_c_SNN", (DL_FUNC) &_singlet_c_SNN, 3},
-    {"_singlet_c_SNN_par", (DL_FUNC) &_singlet_c_SNN_par, 3},
     {"_singlet_c_gcnmf", (DL_FUNC) &_singlet_c_gcnmf, 10},
     {"_singlet_c_differentiate_model", (DL_FUNC) &_singlet_c_differentiate_model, 2},
     {"_singlet_c_assign_cells_to_edge_clusters", (DL_FUNC) &_singlet_c_assign_cells_to_edge_clusters, 2},

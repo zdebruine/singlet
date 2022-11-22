@@ -53,10 +53,6 @@ c_SNN <- function(G, min_similarity, threads) {
     .Call(`_singlet_c_SNN`, G, min_similarity, threads)
 }
 
-c_SNN_par <- function(G, min_similarity, threads) {
-    .Call(`_singlet_c_SNN_par`, G, min_similarity, threads)
-}
-
 c_gcnmf <- function(A, At, G, tol, maxit, verbose, L1, L2, threads, w) {
     .Call(`_singlet_c_gcnmf`, A, At, G, tol, maxit, verbose, L1, L2, threads, w)
 }
