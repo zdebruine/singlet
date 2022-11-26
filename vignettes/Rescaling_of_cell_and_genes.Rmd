@@ -32,36 +32,14 @@ pbmc3k <- pbmc3k %>% NormalizeData() %>% RunNMF(reps = 1)
 Since we are having technical issues with the package i would used the source code for these examples 
 
 ```{r}
-rescale_nmf <- function(object, features, lambda = 0.5, reduction.key = "nmf_rescaled"){
-  nmf_model <- object@reductions$nmf
-  is_w <- sum(features %in% rownames(nmf_model@feature.loadings))
-  is_h <- sum(features %in% rownames(nmf_model@cell.embeddings))
-  if(is_w > is_h){
-    # rescale w
-    w <- nmf_model@feature.loadings
-    h <- nmf_model@cell.embeddings
-    v <- colSums(w[which(rownames(w) %in% features), ])
-    v <- v / mean(v)
-    v <- lambda * v + (1 - lambda) * rep(1, length(v))
-    nmf_model@feature.loadings <- as.matrix(w %*% Matrix::Diagonal(x = v))
-    nmf_model@cell.embeddings <- as.matrix(h %*% Matrix::Diagonal(x = v))
-    object@reductions[[reduction.key]] <- nmf_model
-    object
-  } else {
-    w <- nmf_model@feature.loadings
-    h <- nmf_model@cell.embeddings
-    v <- colSums(h[which(rownames(h) %in% features), ])
-    v <- v / mean(v)
-    v <- lambda * v + (1 - lambda) * rep(1, length(v))
-    nmf_model@feature.loadings <- as.matrix(w %*% Matrix::Diagonal(x = v))
-    nmf_model@cell.embeddings <- as.matrix(h %*% Matrix::Diagonal(x = v))
-    object@reductions[[reduction.key]] <- nmf_model
-    object
-  }
-}
 
-pbmc3k <- RescaleNMF(pbmc3k,cell,"nmf",0.5)
+pbmc3k <- RescaleNMF(pbmc3k,features=cell,reduction="nmf",lambda=0.5,reduction.name="nmf_rescaled")
 
+model_reference <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@feature.loadings))
+
+model_query <- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@feature.loadings))
+
+plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_query, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
 
 ```
 
@@ -74,16 +52,14 @@ From the plots below, the first UMAP visualized the genes features after rescali
 set.seed(542)
 # Cell.embedding
 cell = c("AACCGCCTCTACGAA","AACCTACTGTGAGG","AACCAGTGATACCG","AACACGTGGAAAGT")
-cellem <- rescale_nmf(pbmc3k,cell,0.8,reduction.key = "nmf_rescaled")
 
+pbmc3k <- RescaleNMF(pbmc3k,features=cell,reduction="nmf",lambda=0.8,reduction.name="nmf_rescaled")
 
+model_reference <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@cell.embeddings))
 
-cell_model <- RunUMAP(cellem, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(cellem@reductions$nmf@feature.loadings))
+model_query <- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@cell.embeddings))
 
-pbmc3k_model <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@feature.loadings))
-
-
-plot_grid(DimPlot(pbmc3k_model, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(cell_model, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
+plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_query, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
 
 ```
 
@@ -91,18 +67,17 @@ Using threshold of about 0.2
 
 ```{r}
 set.seed(542)
+set.seed(542)
 # Cell.embedding
 cell = c("AACCGCCTCTACGAA","AACCTACTGTGAGG","AACCAGTGATACCG","AACACGTGGAAAGT")
-cellem <- rescale_nmf(pbmc3k,cell,0.2,reduction.key = "nmf_rescaled")
 
+pbmc3k <- RescaleNMF(pbmc3k,features=cell,reduction="nmf",lambda=0.2,reduction.name="nmf_rescaled")
 
+model_reference <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@cell.embeddings))
 
-cell_model <- RunUMAP(cellem, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(cellem@reductions$nmf@feature.loadings))
+model_query <- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@cell.embeddings))
 
-pbmc3k_model <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@feature.loadings))
-
-
-plot_grid(DimPlot(pbmc3k_model, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(cell_model, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
+plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_query, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
 
 ```
 
@@ -115,36 +90,32 @@ the H matrix from the reduction. Using threshold of 0.7.
 
 From the plots below, the first UMAP visualized the cell features after rescaling and the second UMAP is visualizing the cells features with rescaling.
 ```{r}
+# Feature Loading
+gene = c('AGRN','ACAP3','DVL1')
+pbmc3k <- RescaleNMF(pbmc3k,features=gene,reduction="nmf",lambda=0.7,reduction.name="nmf_rescaled")
 
-# Feature.loading 
-feat = c('AGRN','ACAP3','DVL1')
-scaall<- rescale_nmf(pbmc3k,feat,0.7,reduction.key = "nmf_rescaled")
-str(scaall)
+model_reference <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@feature.loadings))
 
+model_query <- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@feature.loadings))
 
-scaally <- RunUMAP(scaall, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(scaall@reductions$nmf@feature.loadings))
+plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_query, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
 
-pbmc3ki <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@feature.loadings))
-
-
-plot_grid(DimPlot(pbmc3ki, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(scaally, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
 
 ```
 
 Using threshold of 0.2
 ```{r}
 # Feature.loading 
-feat = c('AGRN','ACAP3','DVL1')
-scaall<- rescale_nmf(pbmc3k,feat,0.2,reduction.key = "nmf_rescaled")
-str(scaall)
+gene = c('AGRN','ACAP3','DVL1')
 
+pbmc3k <- RescaleNMF(pbmc3k,features=gene,reduction="nmf",lambda=0.2,reduction.name="nmf_rescaled")
 
-scaally <- RunUMAP(scaall, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(scaall@reductions$nmf@feature.loadings))
+model_reference <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@feature.loadings))
 
-pbmc3ki <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@feature.loadings))
+model_query <- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@feature.loadings))
 
+plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_query, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
 
-plot_grid(DimPlot(pbmc3ki, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(scaally, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
 ```
 
 
