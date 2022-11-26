@@ -12,7 +12,7 @@
 setGeneric("RescaleNMF", function(object,...) {
   standardGeneric("RescaleNMF")
 })
-setMethod("RescaleNMF", signature("Seurat"), function(object,features="AGRN",reduction="nmf",lambda=0.5,reduction.name="nmf_rescaled",...) { 
+setMethod("RescaleNMF", signature("Seurat"), function(object,features=c("AGRN","DVL1"),reduction="nmf",lambda=0.5,reduction.name="nmf_rescaled",...) { 
   nmf_model <- object@reductions[[reduction]]
   is_w <- sum(features %in% rownames(nmf_model@feature.loadings))
   is_h <- sum(features %in% rownames(nmf_model@cell.embeddings))

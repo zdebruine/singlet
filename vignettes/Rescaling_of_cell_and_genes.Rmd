@@ -59,6 +59,10 @@ rescale_nmf <- function(object, features, lambda = 0.5, reduction.key = "nmf_res
     object
   }
 }
+
+pbmc3k <- RescaleNMF(pbmc3k,cell,"nmf",0.5)
+
+
 ```
 
 ## Recaling of a gene features with different threshold (Lambda)
