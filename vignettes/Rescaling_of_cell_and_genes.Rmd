@@ -22,11 +22,31 @@ The library and object for rescaling can be found in the singlet package.
 
 ```{r}
 library(singlet)
+library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(cowplot)
+library(Seurat)
 pbmc3k <- get_pbmc3k_data()
 pbmc3k <- pbmc3k %>% NormalizeData() %>% RunNMF(reps = 1)
+```
+
+## Human Gene set from GOBP_cellular_response_to_interferon_beta
+A set of human genes from Gene Set Enrichment Analysis (GSEA) sourcing from Human_NCBI_Gene_ID was used for the study.
+
+```{r}
+#df<- read_tsv('gopb.tsv',col_names = TRUE)
+#dff <-df %>%
+
+ # separate_rows(STANDARD_NAME,sep =',')%>%
+ # separate_rows(GOBP_CANONICAL_WNT_SIGNALING_PATHWAY, sep = ',')%>%
+ # rename("Genes"="GOBP_CANONICAL_WNT_SIGNALING_PATHWAY")%>%
+ # select(Genes)
+#names(dff)<- NULL
+Features <- as.vector(dff[335:644,])
+Feat <- as.vector(dff[600:644,])
+# Using these features are giving me error, so i implemented the procrutes with some few cells from the pbmc3k dataset.
+
 ```
 
 
@@ -38,7 +58,6 @@ In this example we used four genes of interest with 0.8 threshold, and we assume
 From the plots below, the first UMAP visualized the genes features after rescaling and the second UMAP is visualizing the genes features with recaling.
 ```{r}
 set.seed(542)
-# Cell.embedding
 cell = c("AACCGCCTCTACGAA","AACCTACTGTGAGG","AACCAGTGATACCG","AACACGTGGAAAGT")
 
 pbmc3k <- RescaleNMF(pbmc3k,features=cell,reduction="nmf",lambda=0.8,reduction.name="nmf_rescaled")
@@ -49,9 +68,24 @@ model_query <- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "uma
 
 plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_query, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
 
+
 ```
 
-Using threshold of about 0.2
+
+
+
+
+```{r}
+model_procrustes <- procrustes(model_reference,model_query)
+
+plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_procrustes, reduction = "umap_nmf_procrustes", group.by = "cell_type"), ncol = 2)
+```
+
+## Implementing procrustes analysis
+
+Procrutes function is used to align the umap coordinate of the query object to the reference object for better view and understanding. I applying this function would recalculate the distance between the object in a way to match them on similar coordinates.
+
+## Applying the rescale Function using lambda of 0.2
 
 ```{r}
 set.seed(542)
@@ -69,44 +103,19 @@ plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type
 
 ```
 
+## Implementing procrustes analysis
 
+Applying the procrutes function on another rescaled object of lambda equal to 0.2
 
-## Recaling of a cell features with different threshold (Lambda)
-
-In this example , we would checking the relationship between some selected genes (V) and
-the H matrix from the reduction. Using threshold of 0.7.
-
-From the plots below, the first UMAP visualized the cell features after rescaling and the second UMAP is visualizing the cells features with rescaling.
 ```{r}
-# Feature Loading
-gene = c('AGRN','ACAP3','DVL1')
-pbmc3k <- RescaleNMF(pbmc3k,features=gene,reduction="nmf",lambda=0.7,reduction.name="nmf_rescaled")
+model_procrustes <- procrustes(model_reference,model_query)
 
-model_reference <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@feature.loadings))
+plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_procrustes, reduction = "umap_nmf_procrustes", group.by = "cell_type"), ncol = 2)
 
-model_query <- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@feature.loadings))
-
-plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_query, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
 
 
 ```
 
-Using threshold of 0.2
-```{r}
-# Feature.loading 
-gene = c('AGRN','ACAP3','DVL1')
 
-pbmc3k <- RescaleNMF(pbmc3k,features=gene,reduction="nmf",lambda=0.2,reduction.name="nmf_rescaled")
-
-model_reference <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@feature.loadings))
-
-model_query <- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@feature.loadings))
-
-plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_query, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
-
-model_query@reductions$umap_nmf_rescaled$
-
-
-```
 
 
