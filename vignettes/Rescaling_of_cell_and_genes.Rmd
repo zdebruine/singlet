@@ -4,7 +4,7 @@ author: "Benjamin Arthur"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Batch Integration with Linked NMF}
+  %\VignetteIndexEntry{Rescaling of cell and genes features}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -29,19 +29,7 @@ pbmc3k <- get_pbmc3k_data()
 pbmc3k <- pbmc3k %>% NormalizeData() %>% RunNMF(reps = 1)
 ```
 
-Since we are having technical issues with the package i would used the source code for these examples 
 
-```{r}
-
-pbmc3k <- RescaleNMF(pbmc3k,features=cell,reduction="nmf",lambda=0.5,reduction.name="nmf_rescaled")
-
-model_reference <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", dims = 1:ncol(pbmc3k@reductions$nmf@feature.loadings))
-
-model_query <- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@feature.loadings))
-
-plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_query, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
-
-```
 
 ## Recaling of a gene features with different threshold (Lambda)
 
@@ -115,6 +103,9 @@ model_reference <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf
 model_query <- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@feature.loadings))
 
 plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_query, reduction = "umap_nmf_rescaled", group.by = "cell_type"), ncol = 2)
+
+model_query@reductions$umap_nmf_rescaled$
+
 
 ```
 
