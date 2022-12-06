@@ -76,7 +76,7 @@ plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type
 
 
 ```{r}
-model_procrustes <- procrustes(model_reference,model_query)
+model_procrustes <- procrustesNMF(model_reference,model_query)
 
 plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_procrustes, reduction = "umap_nmf_procrustes", group.by = "cell_type"), ncol = 2)
 ```
@@ -108,7 +108,7 @@ plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type
 Applying the procrutes function on another rescaled object of lambda equal to 0.2
 
 ```{r}
-model_procrustes <- procrustes(model_reference,model_query)
+model_procrustes <- procrustesNMF(model_reference,model_query)
 
 plot_grid(DimPlot(model_reference, reduction = "umap_nmf", group.by = "cell_type"), DimPlot(model_procrustes, reduction = "umap_nmf_procrustes", group.by = "cell_type"), ncol = 2)
 

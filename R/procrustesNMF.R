@@ -10,7 +10,7 @@
 #' @export
 
 
-setGeneric("procrustesNMF", function(Object_X,Object_Y,...) {
+setGeneric("procrustesNMF", function(object_X,object_Y,...) {
   standardGeneric("procrustesNMF")
 })
 
