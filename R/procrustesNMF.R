@@ -4,6 +4,9 @@
 #' @param Object_Y is the query object, to be modified to have similiar coordinates.
 #' @param scale is used to scale the axes of UMAP coordinates of the Object_Y.
 #' @param symmetric to confirm the symmetric of the rotation.
+#' @param reduction_X reduction name for the umap reference object.
+#' @param reduction_Y query name for the umap reference object.
+#' @param reduction.name reduction name of the query object after the procrustes process.
 #' @export
 
 
@@ -11,11 +14,14 @@ setGeneric("procrustesNMF", function(Object_X,Object_Y,...) {
   standardGeneric("procrustesNMF")
 })
 
-setMethod("procrustesNMF", signature("Seurat"), function(Object_X, Object_Y, scale = TRUE, symmetric = FALSE,...) { 
-  X <- Object_X
-  Y <- Object_Y
-  X <- scores(X, display = scores, ...)
-  Y <- scores(Y, display = scores, ...)
+setMethod("procrustesNMF", signature("Seurat"), function (object_X, object_Y, scale = TRUE, reduction_X="umap_nmf",reduction_Y="umap_nmf_rescaled",
+                                                          symmetric = FALSE,reduction.name="umap_nmf_procrustes",...) { 
+  X_model <- object_X@reductions[[reduction_X]]
+  Y_model <- object_Y@reductions[[reduction_Y]]
+  X <- X_model@cell.embeddings
+  Y <- Y_model@cell.embeddings
+  #X <- scores(X, display = scores, ...)
+  #Y <- scores(Y, display = scores, ...)
   if (nrow(X) != nrow(Y))
     stop(gettextf("matrices have different number of rows: %d and %d",
                   nrow(X), nrow(Y)))
@@ -45,16 +51,9 @@ setMethod("procrustesNMF", signature("Seurat"), function(Object_X, Object_Y, sca
     c <- sum(sol$d)/ctrace(Y)
   }
   Yrot <- c * Y %*% A
-  ## Translation (b) needs scale (c) although Mardia et al. do not
-  ## have this. Reported by Christian Dudel.
-  b <- xmean - c * ymean %*% A
-  R2 <- ctrace(X) + c * c * ctrace(Y) - 2 * c * sum(sol$d)
-  reslt <- list(Yrot = Yrot, X = X, ss = R2, rotation = A,
-                translation = b, scale = c, xmean = xmean,
-                symmetric = symmetric, call = match.call())
-  reslt$svd <- sol
-  class(reslt) <- "procrustes"
-  reslt
+  
+  Y_model@cell.embeddings = as.matrix(Yrot)
+  object_Y@reductions[[reduction.name]] <- Y_model
+  object_Y
 })
-
 
