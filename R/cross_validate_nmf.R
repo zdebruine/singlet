@@ -33,6 +33,7 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
   } else {
     if (verbose > 0) cat("running with dense optimization\n")
     At <- t(A)
+    dense_mode <- TRUE
   }
 
   df <- expand.grid("k" = ranks, "rep" = 1:n_replicates)
