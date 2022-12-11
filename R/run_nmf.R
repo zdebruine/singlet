@@ -27,6 +27,7 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
   } else {
     if (verbose > 0) cat("running with dense optimization\n")
     At <- t(A)
+    dense_mode <- TRUE
   }
 
   w_init <- matrix(stats::runif(nrow(A) * rank), rank, nrow(A))
