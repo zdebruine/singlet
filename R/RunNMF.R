@@ -96,7 +96,7 @@ RunNMF.Seurat <- function(object,
   if (!is.null(k) && length(k) > 1) {
     # run cross-validation at specified ranks
     cv_data <- data.frame()
-    cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, L1, L2, threads, test.set.density, tol.overfit, trace.test.mse, 2)
+    cv_data <- cross_validate_nmf(A, k, reps, tol * 10, maxit, verbose, L1, L2, threads, test.set.density, tol.overfit, trace.test.mse)
     best_rank <- GetBestRank(cv_data, tol.overfit)
     if (verbose >= 1) {
       cat("best rank: ", best_rank, "\n")
