@@ -40,4 +40,17 @@ head(design)
 sparsedesign <- getModelMatrix("cell_type", covs, sparse=TRUE)
 head(sparsedesign)
 
+if (FALSE) {
+  # test Seurat and SCE support too
+  mm1 <- getModelMatrix("cell_type", pbmc3k)
+  mm2 <- getModelMatrix("cell_type", pbmc)
+  identical(mm1, mm2)
+  # [1] TRUE
+  fit1 <- getModelFit(mm2, pbmc3k)
+  fit2 <- getModelFit(mm1, pbmc)
+  identical(fit1, fit2)
+  # [1] TRUE
+  limma::topTable(fit1)
+}
+
 }

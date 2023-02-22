@@ -20,3 +20,13 @@ Continuing along with the theme of "stupid limma tricks", this function
 fits and shrinks a means model for a factor. The proportion of factors
 assumed to have a fold-change > 0 is 1%, and a robust fit is applied.
 }
+\examples{
+if (FALSE) { 
+  get_pbmc3k_data() \%>\% NormalizeData() -> pbmc3k
+  design <- model.matrix(~ 0 + cell_type, data=pbmc3k@meta.data)
+  fit <- getModelFit(design, pbmc3k) # toy fit on lognormcounts  
+  # Subsetting data to non-NA observations to match design matrix.
+  limma::topTable(fit)
+}
+
+}

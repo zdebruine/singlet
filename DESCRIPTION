@@ -1,8 +1,8 @@
 Package: singlet
 Type: Package
 Title: Non-negative Matrix Factorization for single-cell analysis
-Version: 0.99.1110
-Date: 2022-11-10
+Version: 0.99.20220222
+Date: 2023-02-22
 Author: Zach Debruine <debruinz@gvsu.edu>
 Maintainer: Zach Debruine <debruinz@gvsu.edu>
 Authors@R: c(person("Zach", "DeBruine", 
@@ -36,8 +36,6 @@ Imports:
     RcppML
 LinkingTo: 
     Rcpp
-VignetteBuilder: knitr
-RoxygenNote: 7.2.3
 Suggests: 
     rmarkdown, 
     devtools,
@@ -50,6 +48,8 @@ Suggests:
     Schiele,
     plotly,
     igvR
+VignetteBuilder: knitr
+RoxygenNote: 7.2.3
 Config/testthat/edition: 3
 URL: https://github.com/zdebruine/singlet
 LazyData: true
