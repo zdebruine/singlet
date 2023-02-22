@@ -29,7 +29,7 @@ RescaleSpatial(object, ...)
 RunGCNMF(object, ...)
 }
 \arguments{
-\item{object}{A Seurat object}
+\item{object}{A SingleCellExperiment}
 
 \item{...}{not implemented}
 
@@ -37,9 +37,9 @@ RunGCNMF(object, ...)
 
 \item{k}{rank of the factorization (no automatic rank determination for GCNMF. Use \code{\link{RunNMF}}). Alternatively, specify an initial \code{w} matrix of dimensions \code{m x k}, where \code{m} is the number of rows in the matrix to be factorized.}
 
-\item{split.by}{column name in \code{@meta.data} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.}
+\item{split.by}{column name in \code{colData} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.}
 
-\item{assay}{Assay to use, defaults to the default assay of the first object}
+\item{assay}{Assay to use, defaults to logcounts}
 
 \item{tol}{tolerance of the fit (correlation distance of the model across consecutive iterations). Cross-validation fits are 10x coarser than this tolerance.}
 
@@ -49,15 +49,15 @@ RunGCNMF(object, ...)
 
 \item{verbose}{print updates to console}
 
-\item{reduction.name}{Name to store resulting DimReduc object as}
+\item{reduction.name}{Name to store resulting DimReduc object as ("NMF")}
 
-\item{reduction.key}{Key for resulting DimReduc}
+\item{reduction.key}{Key for resulting DimReduc ("NMF")}
 
 \item{maxit}{maximum number of fitting iterations}
 
 \item{threads}{number of threads to use (0 = let OpenMP use all available threads)}
 
-\item{features}{if \code{NULL} use all features, if \code{var.features} use variable feature stored in the Assay object, if index array use those rows.}
+\item{features}{unused for this method}
 }
 \value{
 Returns a Seurat object with the GCNMF model stored in the reductions slot

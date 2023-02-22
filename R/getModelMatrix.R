@@ -26,6 +26,19 @@
 #' head(design)
 #' sparsedesign <- getModelMatrix("cell_type", covs, sparse=TRUE)
 #' head(sparsedesign)
+#' 
+#' if (FALSE) {
+#'   # test Seurat and SCE support too
+#'   mm1 <- getModelMatrix("cell_type", pbmc3k)
+#'   mm2 <- getModelMatrix("cell_type", pbmc)
+#'   identical(mm1, mm2)
+#'   # [1] TRUE
+#'   fit1 <- getModelFit(mm2, pbmc3k)
+#'   fit2 <- getModelFit(mm1, pbmc)
+#'   identical(fit1, fit2)
+#'   # [1] TRUE
+#'   limma::topTable(fit1)
+#' }
 #'
 #' @import Matrix
 #'
@@ -41,6 +54,10 @@ getModelMatrix <- function(field, meta.data=NULL, sparse=FALSE, ova=TRUE, ...) {
     } else { 
       stop("If meta.data is NULL, `field` must be a factor with > 1 levels.")
     }
+  } else if (is(meta.data, "Seurat")) {
+    meta.data <- meta.data@meta.data
+  } else if (is(meta.data, "SingleCellExperiment")) {
+    meta.data <- colData(meta.data)
   } else {
     stopifnot(field %in% names(meta.data))
   }
