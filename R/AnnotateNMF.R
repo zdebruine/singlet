@@ -25,9 +25,17 @@ AnnotateNMF <- function(object, ...) {
 #' @export
 #'
 AnnotateNMF.DimReduc <- function(object, meta.data = NULL, columns = NULL, designs = NULL, center = TRUE, scale = FALSE, max.levels = 200, ...) {
-  designs <- getDesigns(columns = columns, meta.data = meta.data, designs = designs, max.levels)
-  fits <- lapply(designs, getModelFit, object = object, center = center, scale = scale)
-  object@misc$annotations <- lapply(fits, getModelResults)
+  designs <- getDesigns(columns = columns,
+                        meta.data = meta.data, 
+                        designs = designs, 
+                        max.levels)
+  fits <- lapply(designs, 
+                 getModelFit, 
+                 object = object, 
+                 center = center, 
+                 scale = scale)
+  object@misc$annotations <- lapply(fits, 
+                                    getModelResults)
   return(object)
 }
 
