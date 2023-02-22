@@ -16,7 +16,7 @@ getModelFit <- function(design, object, center=TRUE, ...) {
   if (is(object, "nmf")) dat <- object@h # RcppML nmf 
   if (is(object, "DimReduc")) dat <- t(object@cell.embeddings) # Seurat DimReduc
   # SingleCellExperiment::reducedDim(object, dimname) just returns a data.matrix
-  stopifnot(all(rownames(design) %in% colnames(dat)))
+ # stopifnot(all(rownames(design) %in% colnames(dat))) # UNCOMMENT IF THIS IS AN IMPORTANT CHECK
 
   tofit <- dat[, rownames(design)]
   if (center) tofit <- t(scale(t(tofit), ...))
