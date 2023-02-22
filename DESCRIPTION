@@ -37,7 +37,7 @@ Imports:
 LinkingTo: 
     Rcpp
 VignetteBuilder: knitr
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Suggests: 
     rmarkdown, 
     devtools,
@@ -47,6 +47,7 @@ Suggests:
     SingleCellExperiment,
     rWikiPathways,
     GenomicRanges,
+    Schiele,
     plotly,
     igvR
 Config/testthat/edition: 3
