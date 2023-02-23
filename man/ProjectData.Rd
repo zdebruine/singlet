@@ -21,21 +21,21 @@
 ProjectData(object, ...)
 }
 \arguments{
-\item{object}{A Seurat object}
+\item{object}{A SingleCellExperiment}
 
 \item{w}{a factor model of the same number of rows as the assay to be projected in the current object, where columns correspond to factors}
 
-\item{split.by}{column name in \code{@meta.data} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.}
+\item{split.by}{column name in \code{colData} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.}
 
-\item{assay}{Assay to use, defaults to the default assay of the first object}
+\item{assay}{Assay to use, defaults to logcounts}
 
 \item{L1}{L1/LASSO penalty to increase sparsity of the model}
 
 \item{L2}{L2/Ridge-like penalty to increase angles between factors}
 
-\item{reduction.name}{Name to store resulting DimReduc object as}
+\item{reduction.name}{Name to store resulting DimReduc object as ("NMF")}
 
-\item{reduction.key}{Key for resulting DimReduc}
+\item{reduction.key}{Key for resulting DimReduc ("NMF")}
 
 \item{threads}{number of threads to use (0 = let OpenMP use all available threads)}
 
