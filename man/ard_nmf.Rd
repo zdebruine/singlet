@@ -7,7 +7,8 @@
 ard_nmf(
   A,
   k_init = 2,
-  n_replicates = 3,
+  k_max = 100,
+  n_replicates = 1,
   tol = 1e-05,
   cv_tol = 1e-04,
   maxit = 100,
@@ -16,15 +17,17 @@ ard_nmf(
   L2 = 0,
   threads = 0,
   test_density = 0.05,
-  learning_rate = 0.8,
-  tol_overfit = 1e-04,
-  trace_test_mse = 5
+  learning_rate = 1,
+  tol_overfit = 0.001,
+  trace_test_mse = 1
 )
 }
 \arguments{
-\item{A}{sparse matrix (ideally variance-stabilized) of data for genes x cells (rows x columns)}
+\item{A}{sparse matrix giving normalized counts for genes x cells (rows x columns), or a list of sparse matrices with equal number of rows and identical rownames}
 
 \item{k_init}{initial rank at which to begin search for local minimum. \code{k_init = 2} is a reasonable default, higher values can lead to swift convergence to a local minmum.}
+
+\item{k_max}{maximum rank to consider during automatic rank determination}
 
 \item{n_replicates}{number of random test sets}
 

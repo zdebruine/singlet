@@ -21,6 +21,14 @@ c_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w) {
     .Call(`_singlet_c_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w)
 }
 
+c_nmf_sparse_list <- function(A_, At_, tol, maxit, verbose, L1, L2, threads, w) {
+    .Call(`_singlet_c_nmf_sparse_list`, A_, At_, tol, maxit, verbose, L1, L2, threads, w)
+}
+
+c_mu_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w) {
+    .Call(`_singlet_c_mu_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w)
+}
+
 c_nmf_dense <- function(A, At, tol, maxit, verbose, L1, L2, threads, w) {
     .Call(`_singlet_c_nmf_dense`, A, At, tol, maxit, verbose, L1, L2, threads, w)
 }
@@ -31,6 +39,10 @@ c_linked_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w, link_h,
 
 c_ard_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse) {
     .Call(`_singlet_c_ard_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse)
+}
+
+c_ard_nmf_sparse_list <- function(A_, At_, tol, maxit, verbose, L1, L2, threads, w, rng_seed, inv_density, overfit_threshold, trace_test_mse) {
+    .Call(`_singlet_c_ard_nmf_sparse_list`, A_, At_, tol, maxit, verbose, L1, L2, threads, w, rng_seed, inv_density, overfit_threshold, trace_test_mse)
 }
 
 c_ard_nmf_dense <- function(A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse) {
