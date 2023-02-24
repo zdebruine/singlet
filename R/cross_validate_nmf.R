@@ -38,9 +38,17 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
     # generate a distributed transpose
     if(verbose > 0) cat("generating a distributed transpose of input matrix list\n")
     block_sizes <- floor(c(seq(1, nrow(A[[1]]), nrow(A[[1]]) /(length(A))), nrow(A[[1]]) + 1))
-    At <- lapply(1:length(A), function(i){
-      do.call(rbind, lapply(1:length(A), function(j) t(A[[j]][block_sizes[i]:(block_sizes[i+1] - 1), ])))
-    })
+    At <- list()
+    if(verbose > 0) pb <- txtProgressBar(min = 0, max = length(A))
+    for(i in 1:length(A)){
+      At[[i]] <- list()
+      for(j in 1:length(A)){
+        At[[i]][[j]] <- t(A[[j]][block_sizes[i]:(block_sizes[i+1] - 1), ])      
+      }
+      At[[i]] <- do.call(rbind, At[[i]])
+      if(verbose > 0) setTxtProgressBar(pb, i)
+    }
+    if(verbose > 0) close(pb)
     if (verbose > 0) cat("running with sparse optimization\n")
     w_init <- lapply(1:n_replicates, function(x) matrix(stats::runif(nrow(A[[1]]) * max(ranks)), max(ranks), nrow(A[[1]])))
     sparse_list <- TRUE
