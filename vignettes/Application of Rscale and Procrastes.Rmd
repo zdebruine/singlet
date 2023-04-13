@@ -1,0 +1,455 @@
+---
+title: "Metadata-guided"
+author: "Benjamin Arthur"
+date: "2023-01-17"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r,echo=FALSE, results='hide',message=FALSE,warning=FALSE}
+library(singlet)
+library(tidyverse)
+library(ggplot2)
+library(cowplot)
+library(Seurat)
+```
+
+## Load in the data.
+
+This vignette demonstrates some useful features for analyzing types of cells in a seurat object format.
+For demonstration and exploratory purposes, we will use pbmc3k object to perform this analysis.
+We used a set of genes (rdgene) from Gene Set enrichment analysis(GSEA) sourcing from Human_NCBI_Gene_ID. This dataset set is used in the rescaling process of the analysis.
+
+
+```{r echo=FALSE, results='hide',message=FALSE,warning=FALSE}
+
+rescale <- function(object,features=c("AGRN","DVL1"),reduction="nmf",lambda=0.5,reduction.name="nmf_rescaled",...) { 
+  nmf_model <- object@reductions[[reduction]]
+  is_w <- sum(features %in% rownames(nmf_model@feature.loadings))
+  is_h <- sum(features %in% rownames(nmf_model@cell.embeddings))
+  if(is_w > is_h){
+    
+    w <- nmf_model@feature.loadings
+    h <- nmf_model@cell.embeddings
+    #v <- colSums(abs(w[which(rownames(w) %in% features), ]))
+    #v <- v / mean(v)
+    
+    wo <- colSums(abs(w[which(rownames(w) %in% features), ]))
+    wi <- colSums(abs(w))
+    d  <- wo / wi
+    d  <- lambda*d + (1- lambda)* rep(1,length(d))
+    d  <- (d - mean(d))-1
+    
+    
+    
+    #v <- lambda * v + (1 - lambda) * rep(1, length(v))
+    nmf_model@feature.loadings <- as.matrix(w %*% Matrix::Diagonal(x=d))
+    nmf_model@cell.embeddings <- as.matrix(h %*% Matrix::Diagonal(x=d))
+    object@reductions[[reduction.name]] <- nmf_model
+    object 
+  } else {
+    w <- nmf_model@feature.loadings
+    h <- nmf_model@cell.embeddings
+    #v <- colSums(abs(h[which(rownames(h) %in% features), ]))
+    #v <- v / mean(v)
+    #v <- lambda * v + (1 - lambda) * rep(1, length(v))
+    ho <- colSums(abs(h[which(rownames(h) %in% features), ]))
+    hi <- colSums(abs(h))
+    d  <- ho / hi
+    d  <- lambda*d + (1- lambda)* rep(1,length(d))
+    d  <- (d - mean(d))-1
+    
+    nmf_model@feature.loadings <- as.matrix(w %*% Matrix::Diagonal(x=d))
+    nmf_model@cell.embeddings <- as.matrix(h %*% Matrix::Diagonal(x=d))
+    object@reductions[[reduction.name]] <- nmf_model
+    object 
+    }
+  }
+
+
+```
+
+## Dimensionality of the dataset
+
+Dimension reduction will be performed on the data, to transformed the high dimensional 
+space to a lower dimensional space of the highly variable genes, whiles retaining meaningful 
+properties of the original data. We used use PCA (Principal Component analysis) and NMF(Non-Negative Matrix Factorization) to perform this dimension transformation.
+To perform the transformation, we apply a global-scaling normalization method "LogNormalize" to normalize the gene expression measurement for each cell (learn.gencore.bio.nyu.edu).
+
+### Rescaling analysis and Procrustes analysis
+
+In machine learning to convert or transform features to have the same standard units, we 
+have to rescale so its easier to visualize and understand relationship between features. 
+In this work, we would be implementing a new scaling technique, using similar genes or cell 
+types the main multiplier for the standardization.
+
+The rescaling algorithm is implemented by firstly selecting cell type of interest or genes, 
+which is of interest to study.For example, selecting all Eukaryota and Metazoa gene types
+which are of interest for study and subsets of the main data. We calculate average of the genes
+with respect to the genes or cell type of interest, take a difference of one and multiple that 
+metric to the entire data, to give the genes of interest values that are easily represented in the UMAP.
+
+
+Uniform Manifold approximation(UMAP) is widely used in visualizing ancestral composition 
+of human genetic datasets, as well as searching for unique clusters of data . One of the challenges 
+of genomic data analysis is high dimensionality and its difficult to visual the relationship 
+between genes in a two dimensional plane, hence UMAP is a better alternative to identify unique 
+clusters of cell types and genomic data sets variables (Diaz-Papkovich et al).
+
+
+
+
+### PCA Dimension transformation.
+
+Before the PCA is implemented, we use the FindvariableGene function to calculate 
+the average expression and dispersion for each gene, places the genes of interest into bins and then calculates a Z-score for dispersion with each bin. Scaling is done to the data before the PCA is performed on the data.
+                                                    
+
+```{r, echo=FALSE, results='hide',message=FALSE,warning=FALSE}
+
+
+
+pbmc3k <- get_pbmc3k_data()
+pbmc3k<- pbmc3k %>% NormalizeData() %>% FindVariableFeatures( selection.method = "vst", nfeatures = 2000)%>%
+          ScaleData()%>% RunPCA()
+
+pbmc3k <- RunUMAP(pbmc3k, reduction = "pca", reduction.name = "umap_pca", dims = 1:ncol(pbmc3k@reductions$pca@cell.embeddings))
+
+df1<-cbind(pbmc3k@reductions$umap_pca@cell.embeddings,pbmc3k@meta.data)%>%
+  na.omit()
+Umap1<- ggplot(df1, aes(x=UMAP_1,y=UMAP_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "PCA Umap for cell embedding")
+
+index<- which(pbmc3k@meta.data$cell_type=="Memory CD4 T")
+cell <- row.names(pbmc3k@reductions$pca@cell.embeddings)[index]
+
+Umap1
+ggsave("Umap1.png") 
+#![Umap1](~/R/Visnmf/singlet/vignettes/Umap1.png)
+
+```
+ From the UMAP shows three clusters of cell types. For the first cluster we have  four cell types which are Naive CD4 T,Memory CD4 T ,CB8 T and NK. 
+
+### Rescaling of cell embedding using PCA using lambdas
+
+In machine learning to convert or transform features to have the same standard units, we 
+have to rescale so its easier to visualize and understand relationship between features. 
+In this work, we would be implementing a new scaling technique, using similar genes or cell 
+types the main multiplier for the standardization.
+
+This technique would be implemented on PCA and NMF reduction cell embedding and feature loadings and several lambda which is the threshold would be used to check its effects.
+
+```{r echo=FALSE, results='hide',message=FALSE,warning=FALSE}
+
+pbmc3k <-rescale(pbmc3k,features=cell,reduction="pca",lambda=0.25,reduction.name="pca_rescaled")
+
+pbmc3k<- RunUMAP(pbmc3k, reduction = "pca_rescaled", reduction.name = "umap_pca_rescaled", dims = 1:ncol(pbmc3k@reductions$pca_rescaled@cell.embeddings))
+
+pdf1<-cbind(pbmc3k@reductions$umap_pca_rescaled@cell.embeddings,pbmc3k@meta.data)%>%
+  na.omit()
+
+plotp1<- ggplot(pdf1, aes(x=umap_pca_rescaled_1,y=umap_pca_rescaled_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Rescaled PCA with 0.25 threshold")+theme(legend.position="none")
+
+
+
+pbmc3k <-rescale(pbmc3k,features=cell,reduction="pca",lambda=0.5,reduction.name="pca_rescaled")
+
+pbmc3k<- RunUMAP(pbmc3k, reduction = "pca_rescaled", reduction.name = "umap_pca_rescaled", dims = 1:ncol(pbmc3k@reductions$pca_rescaled@cell.embeddings))
+
+pdf2<-cbind(pbmc3k@reductions$umap_pca_rescaled@cell.embeddings,pbmc3k@meta.data)%>%
+  na.omit()
+
+plotp2<- ggplot(pdf2, aes(x=umap_pca_rescaled_1,y=umap_pca_rescaled_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Rescaled PCA with 0.5 threshold")+theme(legend.position="none")
+
+
+
+pbmc3k <-rescale(pbmc3k,features=cell,reduction="pca",lambda=0.75,reduction.name="pca_rescaled")
+
+pbmc3k<- RunUMAP(pbmc3k, reduction = "pca_rescaled", reduction.name = "umap_pca_rescaled", dims = 1:ncol(pbmc3k@reductions$pca_rescaled@cell.embeddings))
+
+pdf3<-cbind(pbmc3k@reductions$umap_pca_rescaled@cell.embeddings,pbmc3k@meta.data)%>%
+  na.omit()
+
+plotp3<- ggplot(pdf3, aes(x=umap_pca_rescaled_1,y=umap_pca_rescaled_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Rescaled PCA with 0.75 threshold")+theme(legend.position="none")
+
+
+pbmc3k <-rescale(pbmc3k,features=cell,reduction="pca",lambda=0.9,reduction.name="pca_rescaled")
+
+pbmc3k<- RunUMAP(pbmc3k, reduction = "pca_rescaled", reduction.name = "umap_pca_rescaled", dims = 1:ncol(pbmc3k@reductions$pca_rescaled@cell.embeddings))
+
+pdf4<-cbind(pbmc3k@reductions$umap_pca_rescaled@cell.embeddings,pbmc3k@meta.data)%>%
+  na.omit()
+
+plotp4<- ggplot(pdf4, aes(x=umap_pca_rescaled_1,y=umap_pca_rescaled_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Rescaled PCA with 0.9 threshold")+theme(legend.position="none")
+
+
+Umap2 <-plot_grid(plotp1,plotp2,plotp3,plotp4, ncol = 2)
+Umap2
+ggsave("Umap2.png")
+
+```
+
+The above grid plot shows different UMPA plot with four lambda which are 0.25,0.5,0.7 and 0.9. 
+There are different shapes and movements of the clusters at various lambda's but the lambda did
+not create new clusters but rather increased the area of cell types that have most relationship 
+or similarities with the cell Memory CD4 T
+
+
+### Procrustes 
+
+Procrustes analysis is performed on the UMAP coordinates for the rescale reduction of lambda 0.2 and
+0.5, to help rotate the coordinate matrix in the same direction as the reference UMAP.
+
+```{r echo=FALSE, results='hide',message=FALSE,warning=FALSE}
+pbmc3k <-rescale(pbmc3k,features=cell,reduction="pca",lambda=0.25,reduction.name="pca_rescaled")
+
+pbmc3k<- RunUMAP(pbmc3k, reduction = "pca_rescaled", reduction.name = "umap_pca_rescaled", dims = 1:ncol(pbmc3k@reductions$pca_rescaled@cell.embeddings))
+
+pbmc3k <- procrustesNMF(pbmc3k,reduction_X="umap_pca",reduction_Y="umap_pca_rescaled",
+              reduction.name="umap_pca_procrustes")
+
+
+reumap <- pbmc3k@reductions$umap_pca_rescaled@cell.embeddings
+proumap <- pbmc3k@reductions$umap_pca_procrustes@cell.embeddings
+umap<- as_tibble(pbmc3k@reductions$umap_pca@cell.embeddings) %>%
+       dplyr::transmute(umap1=UMAP_1,umap2=UMAP_2)
+  
+procc<-cbind(reumap,proumap,umap,pbmc3k@meta.data)%>%
+  na.omit()
+
+plot1<- ggplot(procc, aes(x=umap_pca_rescaled_1,y=umap_pca_rescaled_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Rescale PCA with 0.25 lambda")+theme(legend.position="none")
+
+
+plot2<- ggplot(procc, aes(x=UMAP_1,y=UMAP_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Procrustes PCA with 0.25 lambda")+theme(legend.position="none")
+
+plot3<- ggplot(procc, aes(x=umap1,y=umap2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Umap PCA with 0.25 lambda")+theme(legend.position="none")
+
+
+Umap3 <-plot_grid(plot3,plot1,plot2, ncol=2)
+Umap3 
+ggsave("Umap3.png")
+
+```
+
+The Procrustes function performed well in rotating the coordinated of the UMAP of the rescaled UMAP 
+to align with the reference UMAP.
+
+## NMF dimension transformation.
+
+ The NMF transformation is implemented on the pbmc3k data set to reduce the dimension of 
+ the data and also check relationship between 
+ cell types after plotting the UMAP.
+
+
+```{r echo=FALSE, results='hide',message=FALSE,warning=FALSE}
+pbmc3k <- get_pbmc3k_data()
+pbmc3k <- pbmc3k %>% NormalizeData() %>% RunNMF(reps = 1)
+
+pbmc3k <- RunUMAP(pbmc3k, reduction = "nmf", reduction.name = "umap_nmf", 
+                  dims = 1:ncol(pbmc3k@reductions$nmf@cell.embeddings))
+
+dfn1<-cbind(pbmc3k@reductions$umap_nmf@cell.embeddings,pbmc3k@meta.data)%>%
+  na.omit()
+Umap4<- ggplot(dfn1, aes(x=UMAP_1,y=UMAP_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "NMF Umap for cell embedding")
+Umap4
+ggsave("Umap4.png")
+```
+
+
+### NMF Rescale analysis on cell type of interest.
+
+ We perform similar rescales computation on NMF reductions with the lambda 0.2,0.5,0.75 and 0.9.
+There are many cell that comprises of different genes and we would take one particular cell
+type which is Memory CD4 T to influence the relationship of different genes that have the same cell type.
+
+```{r,echo=FALSE, results='hide',message=FALSE,warning=FALSE} 
+
+
+pbmc3k <- pbmc3k %>% NormalizeData() %>% RunNMF(reps = 1)
+
+pbmc3k <- rescale(pbmc3k,features=cell,reduction="nmf",lambda=0.25,reduction.name="nmf_rescaled")
+pbmc3k<- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", 
+                 dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@cell.embeddings))
+dfnr1<-cbind(pbmc3k@reductions$umap_nmf_rescaled@cell.embeddings,pbmc3k@meta.data)%>%
+  na.omit()
+plotnr1<- ggplot(dfnr1, aes(x=umap_nmf_rescaled_1,y=umap_nmf_rescaled_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Rescale NMF with 0.25 lambda")+theme(legend.position="none")
+
+
+pbmc3k <- rescale(pbmc3k,features=cell,reduction="nmf",lambda=0.5,reduction.name="nmf_rescaled")
+pbmc3k<- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", 
+                 dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@cell.embeddings))
+dfnr2<-cbind(pbmc3k@reductions$umap_nmf_rescaled@cell.embeddings,pbmc3k@meta.data)%>%
+  na.omit()
+plotnr2<- ggplot(dfnr2, aes(x=umap_nmf_rescaled_1,y=umap_nmf_rescaled_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Rescale NMF with 0.5 lambda")+theme(legend.position="none")
+
+
+pbmc3k <- rescale(pbmc3k,features=cell,reduction="nmf",lambda=0.75,reduction.name="nmf_rescaled")
+pbmc3k<- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", 
+                 dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@cell.embeddings))
+dfnr3<-cbind(pbmc3k@reductions$umap_nmf_rescaled@cell.embeddings,pbmc3k@meta.data)%>%
+  na.omit()
+plotnr3<- ggplot(dfnr3, aes(x=umap_nmf_rescaled_1,y=umap_nmf_rescaled_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Rescale NMF with 0.7 lambda")+theme(legend.position="none")
+
+
+pbmc3k <- rescale(pbmc3k,features=cell,reduction="nmf",lambda=0.9,reduction.name="nmf_rescaled")
+pbmc3k<- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", 
+                 dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@cell.embeddings))
+dfnr4<-cbind(pbmc3k@reductions$umap_nmf_rescaled@cell.embeddings,pbmc3k@meta.data)%>%
+  na.omit()
+plotnr4<- ggplot(dfnr4, aes(x=umap_nmf_rescaled_1,y=umap_nmf_rescaled_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Rescale NMF with 0.9 lambda")+theme(legend.position="none")
+
+
+Umap5<-plot_grid(plotnr1,plotnr2,plotnr3,plotnr4, ncol = 2)
+Umap5
+ggsave("Umap5.png")
+
+```
+
+### Procrustes
+
+We implement the procrustes method, to rotate the coordinate the rescaled UMAP to align with the reference UMAP.
+
+```{r echo=FALSE, results='hide',message=FALSE,warning=FALSE}
+
+
+pbmc3k <- pbmc3k %>% NormalizeData() %>% RunNMF(reps = 1)
+pbmc3k <-rescale(pbmc3k,features=cell,reduction="nmf",lambda=0.9,reduction.name="nmf_rescaled")
+
+pbmc3k<- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@cell.embeddings))
+
+pbmc3k <- procrustesNMF(pbmc3k,reduction_X="umap_nmf",reduction_Y="umap_nmf_rescaled",
+              reduction.name="umap_nmf_procrustes")
+
+
+reumap1 <- pbmc3k@reductions$umap_nmf_rescaled@cell.embeddings
+proumap1 <- pbmc3k@reductions$umap_nmf_procrustes@cell.embeddings
+umap1<- as_tibble(pbmc3k@reductions$umap_nmf@cell.embeddings) %>%
+       dplyr::transmute(umap1=UMAP_1,umap2=UMAP_2)
+  
+procc1<-cbind(reumap1,proumap1,umap1,pbmc3k@meta.data)%>%
+  na.omit()
+
+plot11<- ggplot(procc, aes(x=umap_pca_rescaled_1,y=umap_pca_rescaled_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Rescale PCA with 0.25 lambda")+theme(legend.position="none")
+
+
+plot22<- ggplot(procc, aes(x=UMAP_1,y=UMAP_2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Procrustes PCA with 0.25 lambda")+theme(legend.position="none")
+
+plot33<- ggplot(procc, aes(x=umap1,y=umap2,colour=cell_type))+geom_point()+
+  theme_classic()+ labs(title = "Umap PCA with 0.25 lambda")+theme(legend.position="none")
+
+
+Umap6<-plot_grid(plot33,plot11,plot22, ncol=2)
+Umap6
+ggsave("Umap6.png")
+
+```
+
+
+
+```{r warning=FALSE,message=FALSE}
+
+# Rescale function
+# rescale <- function(object,features=c("AGRN","DVL1"),reduction="nmf",lambda=0.5,reduction.name="nmf_rescaled",...) { 
+#   nmf_model <- object@reductions[[reduction]]
+#   is_w <- sum(features %in% rownames(nmf_model@feature.loadings))
+#   is_h <- sum(features %in% rownames(nmf_model@cell.embeddings))
+#   if(is_w > is_h){
+#     
+#     w <- nmf_model@feature.loadings
+#     h <- nmf_model@cell.embeddings
+#     #v <- colSums(abs(w[which(rownames(w) %in% features), ]))
+#     #v <- v / mean(v)
+#     
+#     wo <- colSums(abs(w[which(rownames(w) %in% features), ]))
+#     wi <- colSums(abs(w))
+#     d  <- wo / wi
+#     d  <- lambda*d + (1- lambda)* rep(1,length(d))
+#     d  <- (d - mean(d))-1
+#     
+#     
+#     
+#     #v <- lambda * v + (1 - lambda) * rep(1, length(v))
+#     nmf_model@feature.loadings <- as.matrix(w %*% Matrix::Diagonal(x=d))
+#     nmf_model@cell.embeddings <- as.matrix(h %*% Matrix::Diagonal(x=d))
+#     object@reductions[[reduction.name]] <- nmf_model
+#     object 
+#   } else {
+#     w <- nmf_model@feature.loadings
+#     h <- nmf_model@cell.embeddings
+#     #v <- colSums(abs(h[which(rownames(h) %in% features), ]))
+#     #v <- v / mean(v)
+#     #v <- lambda * v + (1 - lambda) * rep(1, length(v))
+#     ho <- colSums(abs(h[which(rownames(h) %in% features), ]))
+#     hi <- colSums(abs(h))
+#     d  <- ho / hi
+#     d  <- lambda*d + (1- lambda)* rep(1,length(d))
+#     d  <- (d - mean(d))-1
+#     
+#     nmf_model@feature.loadings <- as.matrix(w %*% Matrix::Diagonal(x=d))
+#     nmf_model@cell.embeddings <- as.matrix(h %*% Matrix::Diagonal(x=d))
+#     object@reductions[[reduction.name]] <- nmf_model
+#     object 
+#     }
+#   }
+# 
+# Selecting cell type of interest
+#index<- which(pbmc3k@meta.data$cell_type=="Memory CD4 T")
+#cell <- row.names(pbmc3k@reductions$pca@cell.embeddings)[index]
+# 
+
+# pbmc3k <- pbmc3k %>% NormalizeData() %>% RunNMF(reps = 1)
+# pbmc3k <-rescale(pbmc3k,features=cell,reduction="nmf",lambda=0.5,reduction.name="nmf_rescaled")
+# pbmc3k<- RunUMAP(pbmc3k, reduction = "nmf_rescaled", reduction.name = "umap_nmf_rescaled", 
+#                  dims = 1:ncol(pbmc3k@reductions$nmf_rescaled@cell.embeddings))
+# pbmc3k <- procrustesNMF(pbmc3k,reduction_X="umap_nmf",reduction_Y="umap_nmf_rescaled",
+#               reduction.name="umap_nmf_procrustes")
+# 
+# 
+# reumap1 <- pbmc3k@reductions$umap_nmf_rescaled@cell.embeddings
+# proumap1 <- pbmc3k@reductions$umap_nmf_procrustes@cell.embeddings
+# umap1<- as_tibble(pbmc3k@reductions$umap_nmf@cell.embeddings) %>%
+#        dplyr::transmute(umap1=UMAP_1,umap2=UMAP_2)
+#   
+# procc1<-cbind(reumap1,proumap1,umap1,pbmc3k@meta.data)%>%
+#   na.omit()
+# 
+# plot11<- ggplot(procc, aes(x=umap_pca_rescaled_1,y=umap_pca_rescaled_2,colour=cell_type))+geom_point()+
+#   theme_classic()+ labs(title = "Rescale PCA with 0.25 lambda")+theme(legend.position="none")
+# 
+# 
+# plot22<- ggplot(procc, aes(x=UMAP_1,y=UMAP_2,colour=cell_type))+geom_point()+
+#   theme_classic()+ labs(title = "Procrustes PCA with 0.25 lambda")+theme(legend.position="none")
+# 
+# plot33<- ggplot(procc, aes(x=umap1,y=umap2,colour=cell_type))+geom_point()+
+#   theme_classic()+ labs(title = "Umap PCA with 0.25 lambda")+theme(legend.position="none")
+
+```
+
+
+## Reference 
+
+Diaz-Papkovich A, Anderson-Trocmé L, Gravel S. A review of UMAP in population genetics. J Hum Genet. 2021 Jan;66(1):85-91. doi: 10.1038/s10038-020-00851-4. Epub 2020 Oct 14. PMID: 33057159; PMCID: PMC7728596.
+J.G.Gower International Encyclopedia of the Social & Behavioral Sciences.
+
+
