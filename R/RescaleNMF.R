@@ -8,7 +8,7 @@
 #' @param ... other unknown parameters can be added to then function.
 #' @export
 #' @examples 
-#' RescaleNMF(pbmc3k,c("AGRN","dvl1"),0.4)
+#' RescaleNMF(object=pbmc3k,features=c("AGRN","dvl1"),lambda=0.4)
 setGeneric("RescaleNMF", function(object,...) {
   standardGeneric("RescaleNMF")
 })
@@ -20,23 +20,39 @@ setMethod("RescaleNMF", signature("Seurat"), function(object,features=c("AGRN","
     
     w <- nmf_model@feature.loadings
     h <- nmf_model@cell.embeddings
-    v <- colSums(w[which(rownames(w) %in% features), ])
-    v <- v / mean(v)
-    v <- lambda * v + (1 - lambda) * rep(1, length(v))
-    nmf_model@feature.loadings <- as.matrix(w %*% Matrix::Diagonal(x=v))
-    nmf_model@cell.embeddings <- as.matrix(h %*% Matrix::Diagonal(x=v))
+    #v <- colSums(abs(w[which(rownames(w) %in% features), ]))
+    #v <- v / mean(v)
+    
+    wo <- colSums(abs(w[which(rownames(w) %in% features), ]))
+    wi <- colSums(abs(w))
+    d  <- wo / wi
+    d  <- lambda*d + (1- lambda)* rep(1,length(d))
+    d  <- (d - mean(d))+ 1
+    
+    #v <- lambda * v + (1 - lambda) * rep(1, length(v))
+    nmf_model@feature.loadings <- as.matrix(w %*% Matrix::Diagonal(x=d))
+    nmf_model@cell.embeddings <- as.matrix(h %*% Matrix::Diagonal(x=d))
     object@reductions[[reduction.name]] <- nmf_model
-    object 
+    object
+    
   } else {
+    
     w <- nmf_model@feature.loadings
     h <- nmf_model@cell.embeddings
-    v <- colSums(h[which(rownames(h) %in% features), ])
-    v <- v / mean(v)
-    v <- lambda * v + (1 - lambda) * rep(1, length(v))
-    nmf_model@feature.loadings <- as.matrix(w %*% Matrix::Diagonal(x=v))
-    nmf_model@cell.embeddings <- as.matrix(h %*% Matrix::Diagonal(x=v))
+    #v <- colSums(abs(h[which(rownames(h) %in% features), ]))
+    #v <- v / mean(v)
+    #v <- lambda * v + (1 - lambda) * rep(1, length(v))
+    ho <- colSums(abs(h[which(rownames(h) %in% features), ]))
+    hi <- colSums(abs(h))
+    d  <- ho / hi
+    d  <- lambda*d + (1- lambda)* rep(1,length(d))
+    d  <- (d - mean(d))+ 1
+    
+    nmf_model@feature.loadings <- as.matrix(w %*% Matrix::Diagonal(x=d))
+    nmf_model@cell.embeddings <- as.matrix(h %*% Matrix::Diagonal(x=d))
     object@reductions[[reduction.name]] <- nmf_model
     object 
+    
     }
   })
 
