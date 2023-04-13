@@ -1,23 +1,28 @@
 #' @title Rescaling of cell and gene features
 #'
-#' @param Object_X is the reference Object 
-#' @param Object_Y is the query object, to be modified to have similiar coordinates.
+#' @param Object is a seurat Object.
 #' @param scale is used to scale the axes of UMAP coordinates of the Object_Y.
 #' @param symmetric to confirm the symmetric of the rotation.
 #' @param reduction_X reduction name for the umap reference object.
 #' @param reduction_Y query name for the umap reference object.
 #' @param reduction.name reduction name of the query object after the procrustes process.
+#' @source {From the Vegan packaging https://github.com/vegandevs/vegan/tree/master/R}
 #' @export
 
 
-setGeneric("procrustesNMF", function(object_X,object_Y,...) {
+setGeneric("procrustesNMF", function(object,...) {
   standardGeneric("procrustesNMF")
 })
 
-setMethod("procrustesNMF", signature("Seurat"), function (object_X, object_Y, scale = TRUE, reduction_X="umap_nmf",reduction_Y="umap_nmf_rescaled",
-                                                          symmetric = FALSE,reduction.name="umap_nmf_procrustes",...) { 
-  X_model <- object_X@reductions[[reduction_X]]
-  Y_model <- object_Y@reductions[[reduction_Y]]
+setMethod("procrustesNMF",signature("Seurat"), function (object,
+                                                         scale = TRUE, 
+                                                         reduction_X="umap_nmf",
+                                                         reduction_Y="umap_nmf_rescaled",
+                                                          symmetric = FALSE,
+                                                         reduction.name="umap_nmf_procrustes",
+                                                         ...) { 
+  X_model <- object@reductions[[reduction_X]]
+  Y_model <- object@reductions[[reduction_Y]]
   X <- X_model@cell.embeddings
   Y <- Y_model@cell.embeddings
   #X <- scores(X, display = scores, ...)
@@ -51,9 +56,10 @@ setMethod("procrustesNMF", signature("Seurat"), function (object_X, object_Y, sc
     c <- sum(sol$d)/ctrace(Y)
   }
   Yrot <- c * Y %*% A
+  colnames(Yrot) <- c('UMAP_1','UMAP_2')
   
   Y_model@cell.embeddings = as.matrix(Yrot)
-  object_Y@reductions[[reduction.name]] <- Y_model
-  object_Y
+  object@reductions[[reduction.name]] <- Y_model
+  object
 })
 
