@@ -25,20 +25,50 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
     stop("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb")
   }
 
-  if (class(A)[[1]] != "matrix") {
+  if("list" %in% class(A)){
+    # check that number of rows is identical
+    if(var(sapply(A, nrow)) != 0) 
+      stop("number of rows in all provided 'A' matrices are not identical")
+    if(!all(sapply(A, function(x) class(x) == "dgCMatrix")))
+      stop("if providing a list, you must provide a list of all 'dgCMatrix' objects")
+    if(!is.null(rownames(A[[1]]))){
+      if(!all(sapply(A, function(x) all.equal(rownames(x), rownames(A[[1]]))))) stop("rownames of all dgCMatrix objects in list must be identical")
+    }
+    
+    # generate a distributed transpose
+    if(verbose > 0) cat("generating a distributed transpose of input matrix list\n")
+    block_sizes <- floor(c(seq(1, nrow(A[[1]]), nrow(A[[1]]) /(length(A))), nrow(A[[1]]) + 1))
+    At <- list()
+    if(verbose > 0) pb <- txtProgressBar(min = 0, max = length(A))
+    for(i in 1:length(A)){
+      At[[i]] <- list()
+      for(j in 1:length(A)){
+        At[[i]][[j]] <- t(A[[j]][block_sizes[i]:(block_sizes[i+1] - 1), ])      
+      }
+      At[[i]] <- do.call(rbind, At[[i]])
+      if(verbose > 0) setTxtProgressBar(pb, i)
+    }
+    if(verbose > 0) close(pb)
     if (verbose > 0) cat("running with sparse optimization\n")
-    A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
-    At <- Matrix::t(A)
-    dense_mode <- FALSE
+    w_init <- lapply(1:n_replicates, function(x) matrix(stats::runif(nrow(A[[1]]) * max(ranks)), max(ranks), nrow(A[[1]])))
+    sparse_list <- TRUE
   } else {
-    if (verbose > 0) cat("running with dense optimization\n")
-    At <- t(A)
-    dense_mode <- TRUE
+    if (class(A)[[1]] != "matrix") {
+      if (verbose > 0) cat("running with sparse optimization\n")
+      A <- as(as(as(A, "dMatrix"), "generalMatrix"), "CsparseMatrix")
+      At <- Matrix::t(A)
+      dense_mode <- FALSE
+    } else {
+      if (verbose > 0) cat("running with dense optimization\n")
+      At <- t(A)
+      dense_mode <- TRUE
+    }
+    w_init <- lapply(1:n_replicates, function(x) matrix(stats::runif(nrow(A) * max(ranks)), max(ranks), nrow(A)))
+    sparse_list <- FALSE
   }
-
+    
   df <- expand.grid("k" = ranks, "rep" = 1:n_replicates)
   df2 <- list()
-  w_init <- lapply(1:n_replicates, function(x) matrix(stats::runif(nrow(A) * max(ranks)), max(ranks), nrow(A)))
   df$test_error <- 0
   if (verbose == 1) {
     pb <- utils::txtProgressBar(min = 0, max = nrow(df), style = 3)
@@ -48,21 +78,26 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
     if (verbose > 1) {
       cat(paste0("k = ", df$k[[i]], ", rep = ", rep, " (", i, "/", nrow(df), "):\n"))
     }
-    if (dense_mode) {
-      model <- c_ard_nmf_dense(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
+    if(!sparse_list){
+      if (dense_mode) {
+        model <- c_ard_nmf_dense(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
+      } else {
+        model <- c_ard_nmf(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
+      }
     } else {
-      model <- c_ard_nmf(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
+      model <- c_ard_nmf_sparse_list(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
     }
     df$test_error[[i]] <- model$test_mse[[length(model$test_mse)]]
     df2[[length(df2) + 1]] <- data.frame("k" = df$k[[i]], "rep" = df$rep[[i]], "test_error" = model$test_mse, "iter" = model$iter, "tol" = model$tol)
     if (verbose == 1) utils::setTxtProgressBar(pb, i)
     if (verbose > 1) cat(paste0("test set error: ", sprintf(df$test_error[[i]], fmt = "%#.4e"), "\n\n"))
-
+    
     if (model$test_mse[[length(model$test_mse)]] / model$test_mse[[1]] > (1 + tol_overfit)) {
       if (verbose > 1) cat(paste0("overfitting detected, lower rank recommended\n"))
     }
   }
   if (verbose == 1) close(pb)
+
   df$rep <- factor(df$rep)
   class(df) <- c("cross_validate_nmf_data", "data.frame")
   df2 <- do.call(rbind, df2)

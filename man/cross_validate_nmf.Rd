@@ -24,13 +24,13 @@ cross_validate_nmf(
 \method{plot}{cross_validate_nmf_data}(x, detail = 2, tol.overfit = 1e-04, ...)
 }
 \arguments{
-\item{A}{sparse matrix (ideally variance-stabilized) of data for genes x cells (rows x columns)}
+\item{A}{sparse matrix giving normalized counts for genes x cells (rows x columns), or a list of sparse matrices with equal number of rows and identical rownames}
 
 \item{ranks}{a vector of ranks at which to fit a model and compute test set reconstruction error}
 
 \item{n_replicates}{number of random test sets}
 
-\item{tol}{tolerance of the fit (1e-5 for publication quality, 1e-3 for cross-validation)}
+\item{tol}{tolerance of the fit (1e-5 for publication quality, 1e-4 for cross-validation)}
 
 \item{maxit}{maximum number of iterations}
 

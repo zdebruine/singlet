@@ -18,7 +18,7 @@ run_linked_nmf(
 )
 }
 \arguments{
-\item{A}{sparse matrix (ideally variance-stabilized) of data for genes x cells (rows x columns)}
+\item{A}{sparse matrix giving normalized counts for genes x cells (rows x columns), or a list of sparse matrices with equal number of rows and identical rownames}
 
 \item{w}{initial matrix for 'w', usually taken from the result of \code{run_nmf}, of dimensions \code{nrow(A) x rank}.}
 
@@ -26,7 +26,7 @@ run_linked_nmf(
 
 \item{link_w}{matrix giving the linkage weight of dimensions \code{nrow(A) x rank}.}
 
-\item{tol}{tolerance of the fit (1e-5 for publication quality, 1e-3 for cross-validation)}
+\item{tol}{tolerance of the fit (1e-5 for publication quality, 1e-4 for cross-validation)}
 
 \item{maxit}{maximum number of iterations}
 

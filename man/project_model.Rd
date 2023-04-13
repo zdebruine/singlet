@@ -7,7 +7,7 @@
 project_model(A, w, L1 = 0.01, L2 = 0, threads = 0)
 }
 \arguments{
-\item{A}{sparse matrix (ideally variance-stabilized) of data for genes x cells (rows x columns)}
+\item{A}{sparse matrix giving normalized counts for genes x cells (rows x columns), or a list of sparse matrices with equal number of rows and identical rownames}
 
 \item{w}{matrix giving the factor model, of dimensions \code{nrow(A) x k}}
 
