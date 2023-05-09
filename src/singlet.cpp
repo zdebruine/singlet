@@ -855,29 +855,6 @@ Rcpp::List c_ard_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double
     return c_ard_nmf_base(A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse);
 }
 
-//[[Rcpp::export]]
-Rcpp::S4 log_normalize(Rcpp::SparseMatrix A_, const unsigned int scale_factor, const int threads) {
-    Rcpp::SparseMatrix A = A_.clone();
-
-#ifdef _OPENMP
-#pragma omp parallel for num_threads(threads)
-#endif
-    for (size_t i = 0; i < A.cols(); ++i) {
-        // calculate column sum
-        double sum = 0;
-        for (Rcpp::SparseMatrix::InnerIterator it(A, i); it; ++it)
-            sum += it.value();
-
-        // multiply by scale_factor
-        double norm = scale_factor / sum;
-
-        // log-transform
-        for (Rcpp::SparseMatrix::InnerIterator it(A, i); it; ++it)
-            it.value() = std::log1p(it.value() * norm);
-    }
-    return A.wrap();
-}
-
 // ---- CONVOLUTIONAL NMF FUNCTIONS
 
 //[[Rcpp::export]]
