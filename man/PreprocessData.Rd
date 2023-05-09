@@ -22,8 +22,8 @@ PreprocessData(object, scale.factor, ...)
 
 \item{assay}{assay in which the counts matrix resides}
 
-\item{...}{not implemented}
+\item{...}{arguments to \code{Seurat::LogNormalize}}
 }
 \description{
-Standard log-normalization equivalent to \code{Seurat::LogNormalize}, but faster and more memory-efficient
+Standard log-normalization equivalent to \code{Seurat::LogNormalize}
 }
