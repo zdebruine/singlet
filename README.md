@@ -8,6 +8,21 @@ Singlet brings fast Non-negative Matrix Factorization (NMF) with automatic rank 
 
 ## Install
 
+First install the development version of `RcppML`:
+
+```{R}
+devtools::install_github("zdebruine/RcppML")
+```
+
+Then install required dependencies, including `limma` and `fgsea`:
+
+```{R}
+BiocManager::install("fgsea")
+BiocManager::install("limma")
+```
+
+Now install `singlet`:
+
 ```{R}
 devtools::install_github("zdebruine/singlet")
 ```
