@@ -49,10 +49,6 @@ c_ard_nmf_dense <- function(A, At, tol, maxit, verbose, L1, L2, threads, w, seed
     .Call(`_singlet_c_ard_nmf_dense`, A, At, tol, maxit, verbose, L1, L2, threads, w, seed, inv_density, overfit_threshold, trace_test_mse)
 }
 
-log_normalize <- function(A_, scale_factor, threads) {
-    .Call(`_singlet_log_normalize`, A_, scale_factor, threads)
-}
-
 spatial_graph <- function(c1, c2, max_dist, max_k = 100L, threads = 0L) {
     .Call(`_singlet_spatial_graph`, c1, c2, max_dist, max_k, threads)
 }

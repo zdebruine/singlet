@@ -1,11 +1,11 @@
 #' Normalize count data
 #'
-#' Standard log-normalization equivalent to \code{Seurat::LogNormalize}, but faster and more memory-efficient
+#' Standard log-normalization equivalent to \code{Seurat::LogNormalize}
 #'
 #' @param object Seurat object
 #' @param assay assay in which the counts matrix resides
 #' @param scale.factor value by which to multiply all columns after unit normalization and before \code{log1p} transformation
-#' @param ... not implemented
+#' @param ... arguments to \code{Seurat::LogNormalize}
 #' @export
 #' @rdname PreprocessData
 #'
@@ -32,7 +32,7 @@ PreprocessData.Assay <- function(object, scale.factor = 10000, ...) {
 #' @rdname PreprocessData
 #' @export
 PreprocessData.dgCMatrix <- function(object, scale.factor = 10000, ...) {
-  m <- log_normalize(object, scale.factor, 0)
+  m <- Seurat::LogNormalize(object, scale.factor, ...)
   rownames(m) <- rownames(object)
   colnames(m) <- colnames(object)
   m

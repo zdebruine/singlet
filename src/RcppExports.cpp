@@ -231,19 +231,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// log_normalize
-Rcpp::S4 log_normalize(Rcpp::SparseMatrix A_, const unsigned int scale_factor, const int threads);
-RcppExport SEXP _singlet_log_normalize(SEXP A_SEXP, SEXP scale_factorSEXP, SEXP threadsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::SparseMatrix >::type A_(A_SEXP);
-    Rcpp::traits::input_parameter< const unsigned int >::type scale_factor(scale_factorSEXP);
-    Rcpp::traits::input_parameter< const int >::type threads(threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(log_normalize(A_, scale_factor, threads));
-    return rcpp_result_gen;
-END_RCPP
-}
 // spatial_graph
 Rcpp::S4 spatial_graph(std::vector<double> c1, std::vector<double> c2, double max_dist, size_t max_k, const size_t threads);
 RcppExport SEXP _singlet_spatial_graph(SEXP c1SEXP, SEXP c2SEXP, SEXP max_distSEXP, SEXP max_kSEXP, SEXP threadsSEXP) {
@@ -350,7 +337,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_singlet_c_ard_nmf", (DL_FUNC) &_singlet_c_ard_nmf, 13},
     {"_singlet_c_ard_nmf_sparse_list", (DL_FUNC) &_singlet_c_ard_nmf_sparse_list, 13},
     {"_singlet_c_ard_nmf_dense", (DL_FUNC) &_singlet_c_ard_nmf_dense, 13},
-    {"_singlet_log_normalize", (DL_FUNC) &_singlet_log_normalize, 3},
     {"_singlet_spatial_graph", (DL_FUNC) &_singlet_spatial_graph, 5},
     {"_singlet_c_LKNN", (DL_FUNC) &_singlet_c_LKNN, 10},
     {"_singlet_c_SNN", (DL_FUNC) &_singlet_c_SNN, 3},
