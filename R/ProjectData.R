@@ -9,7 +9,7 @@
 project_model <- function(A, w, L1 = 0.01, L2 = 0, threads = 0) {
   if (nrow(w) != nrow(A) & ncol(w) != nrow(A)) stop("'w' must share a common edge with the rows of 'A'")
 
-  c_project_model(A, w, L1, L2, threads)
+  singlet:::c_project_model(A, w, L1, L2, threads)
 }
 
 
@@ -78,6 +78,91 @@ ProjectData.Seurat <- function(object, w,
   object
 }
 
+
+#' Project data onto a factor model
+#'
+#' @description Non-negative Least Squares (NNLS) projection of assay data onto a factor model for transfer learning
+#'
+#' @inheritParams RunNMF.SingleCellExperiment
+#'
+#' @param w   factor loadings with nrow(w) equal to nrow(object)
+#' @param ... not implemented
+#'
+#' @details Use \code{set.seed()} to guarantee reproducibility!
+#'
+#' @aliases ProjectData
+#'
+#' @seealso \code{\link{RunLNMF}}, \code{\link{MetadataSummary}}
+#'
+#' @rdname ProjectData
+#'
+#' @return a SingleCellExperiment with projection stored in reducedDim(, "NNLS")
+#'
+#' @import scuttle
+#'
+#' @export
+ProjectData.SingleCellExperiment <- function(object, 
+                                             w,
+                                             split.by = NULL,
+                                             assay = "logcounts",
+                                             L1 = 0.01,
+                                             L2 = 0,
+                                             reduction.name = "NMF",
+                                             reduction.key = "NMF_",
+                                             threads = 0,
+                                             ...) {
+
+  # check if data exists and has been normalized
+  if (assay == "logcounts" && !assay %in% assayNames(object)) {
+    object <- logNormCounts(object)
+  }
+
+  # pull the data for projection 
+  A <- as(assay(object, assay), "CsparseMatrix")
+  rnames <- rownames(object)
+  cnames <- colnames(object)
+ 
+  # reweight? 
+  if (!is.null(split.by)) {
+    split.by <- as.integer(as.numeric(as.factor(colData(object)[,split.by])))-1
+    if (any(sapply(split.by, is.na))) stop("'split.by' cannot contain NAs")
+    A <- weight_by_split(A, split.by, length(unique(split.by)))
+  }
+  
+  # check if we can proceed 
+  stopifnot(assay %in% assayNames(object))
+  w <- w[which(rownames(w) %in% rownames(A)), ]
+  A <- A[which(rownames(A) %in% rownames(w)), ]
+ 
+  # project
+  nmf_model <- project_model(A, w, L1, L2, threads)
+  nmf_model$w <- w
+  rownames(nmf_model$h) <- 
+    colnames(nmf_model$w) <- 
+      paste0(reduction.key, 1:nrow(nmf_model$h))
+  rownames(nmf_model$w) <- rownames(A)
+  colnames(nmf_model$h) <- cnames
+  idx <- order(nmf_model$d, decreasing = TRUE)
+  nmf_model$h <- nmf_model$h[idx, ]
+  nmf_model$d <- nmf_model$d[idx]
+  nmf_model$w <- nmf_model$w[, idx]
+  
+  # store the results
+  lem <- LinearEmbeddingMatrix(sampleFactors = t(nmf_model$h),
+                               featureLoadings = nmf_model$w,
+                               metadata = list(d = nmf_model$d))
+  reducedDim(object, reduction.name) <- lem
+  object
+
+}
+
+
+#' @export
+#' @rdname ProjectData
+#'
+ProjectData <- function(object, ...) {
+  UseMethod("ProjectData")
+}
 
 #' @export
 #' @rdname ProjectData

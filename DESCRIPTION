@@ -1,8 +1,8 @@
 Package: singlet
 Type: Package
 Title: Non-negative Matrix Factorization for single-cell analysis
-Version: 0.99.21
-Date: 2023-05-09
+Version: 0.99.22
+Date: 2023-05-19
 Author: Zach Debruine <debruinz@gvsu.edu>
 Maintainer: Zach Debruine <debruinz@gvsu.edu>
 Authors@R: c(person("Zach", "DeBruine", 

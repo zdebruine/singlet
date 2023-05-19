@@ -29,7 +29,7 @@ RescaleSpatial(object, ...)
 RunGCNMF(object, ...)
 }
 \arguments{
-\item{object}{A SingleCellExperiment}
+\item{object}{A Seurat or SingleCellExperiment object}
 
 \item{...}{not implemented}
 

@@ -53,7 +53,7 @@ RunNMF(object, ...)
 )
 }
 \arguments{
-\item{object}{A SingleCellExperiment}
+\item{object}{A Seurat or SingleCellExperiment object}
 
 \item{split.by}{column name in \code{colData} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.}
 

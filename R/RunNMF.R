@@ -180,7 +180,7 @@ RunNMF <- function(object, ...) {
 #'
 #' @description Run Non-negative Matrix Factorization with rank determined by CV
 #'
-#' @param object A SingleCellExperiment
+#' @param object A Seurat or SingleCellExperiment object
 #' @param assay Assay to use, defaults to logcounts
 #' @param reduction.name Name to store resulting DimReduc object as ("NMF")
 #' @param reduction.key Key for resulting DimReduc ("NMF")

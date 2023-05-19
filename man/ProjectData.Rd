@@ -3,6 +3,7 @@
 \name{ProjectData.Seurat}
 \alias{ProjectData.Seurat}
 \alias{ProjectData}
+\alias{ProjectData.SingleCellExperiment}
 \title{Project data onto a factor model}
 \usage{
 \method{ProjectData}{Seurat}(
@@ -18,12 +19,27 @@
   ...
 )
 
+\method{ProjectData}{SingleCellExperiment}(
+  object,
+  w,
+  split.by = NULL,
+  assay = "logcounts",
+  L1 = 0.01,
+  L2 = 0,
+  reduction.name = "NMF",
+  reduction.key = "NMF_",
+  threads = 0,
+  ...
+)
+
+ProjectData(object, ...)
+
 ProjectData(object, ...)
 }
 \arguments{
-\item{object}{A SingleCellExperiment}
+\item{object}{A Seurat or SingleCellExperiment object}
 
-\item{w}{a factor model of the same number of rows as the assay to be projected in the current object, where columns correspond to factors}
+\item{w}{factor loadings with nrow(w) equal to nrow(object)}
 
 \item{split.by}{column name in \code{colData} giving a \code{factor} with multiple levels for splitting. Data will be weighted such that each level in the factor contributes equally to the NMF model.}
 
@@ -43,13 +59,21 @@ ProjectData(object, ...)
 }
 \value{
 Returns a Seurat object with the projection stored in the reductions slot
+
+a SingleCellExperiment with projection stored in reducedDim(, "NNLS")
 }
 \description{
+Non-negative Least Squares (NNLS) projection of assay data onto a factor model for transfer learning
+
 Non-negative Least Squares (NNLS) projection of assay data onto a factor model for transfer learning
 }
 \details{
 Use \code{set.seed()} to guarantee reproducibility!
+
+Use \code{set.seed()} to guarantee reproducibility!
 }
 \seealso{
+\code{\link{RunLNMF}}, \code{\link{MetadataSummary}}
+
 \code{\link{RunLNMF}}, \code{\link{MetadataSummary}}
 }
