@@ -16,6 +16,7 @@
   reduction.name = "nmf_projection",
   reduction.key = "NNLS_",
   threads = 0,
+  reorder = FALSE,
   ...
 )
 
@@ -29,10 +30,9 @@
   reduction.name = "NMF",
   reduction.key = "NMF_",
   threads = 0,
+  reorder = FALSE,
   ...
 )
-
-ProjectData(object, ...)
 
 ProjectData(object, ...)
 }
@@ -54,6 +54,8 @@ ProjectData(object, ...)
 \item{reduction.key}{Key for resulting DimReduc ("NMF")}
 
 \item{threads}{number of threads to use (0 = let OpenMP use all available threads)}
+
+\item{reorder}{reorder the factors of the projection by d? (FALSE)}
 
 \item{...}{not implemented}
 }
