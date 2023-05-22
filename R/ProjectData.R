@@ -145,7 +145,7 @@ ProjectData.SingleCellExperiment <- function(object,
   
   # check if we can proceed 
   stopifnot(assay %in% assayNames(object))
-  if (!all(rownames(x) %in% rownames(A)) | 
+  if (!all(rownames(object) %in% rownames(A)) | 
       !all(rownames(A) %in% rownames(w))) {
     warning("Some genes are missing from the data to be projected.")
   }
