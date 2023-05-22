@@ -27,7 +27,7 @@
   assay = "logcounts",
   L1 = 0.01,
   L2 = 0,
-  reduction.name = "NMF",
+  reduction.name = "NNLS",
   reduction.key = "NMF_",
   threads = 0,
   reorder = FALSE,
