@@ -37,7 +37,7 @@ RunLNMF(object, ...)
 )
 }
 \arguments{
-\item{object}{A SingleCellExperiment}
+\item{object}{A Seurat or SingleCellExperiment object}
 
 \item{split.by}{column name in \code{@meta.data} giving a \code{Factor} with multiple levels for splitting. Data will be weighted such that each group contributes equally to the LNMF model.}
 

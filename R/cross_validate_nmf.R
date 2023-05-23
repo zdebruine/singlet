@@ -15,8 +15,7 @@
 #' @importFrom utils txtProgressBar setTxtProgressBar
 #' @importFrom stats runif
 #'
-cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0,
-                               threads = 0, test_density = 0.05, tol_overfit = 1e-4, trace_test_mse = 5) {
+cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 100, verbose = 1, L1 = 0.01, L2 = 0, threads = 0, test_density = 0.05, tol_overfit = 1e-4, trace_test_mse = 5) {
   if (L1 >= 1) {
     stop("L1 penalty must be strictly in the range (0, 1]")
   }

@@ -1,6 +1,3 @@
-#define EIGEN_NO_DEBUG
-#define EIGEN_INITIALIZE_MATRICES_BY_ZERO
-
 //[[Rcpp::plugins(openmp)]]
 #ifdef _OPENMP
 #include <omp.h>

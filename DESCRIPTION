@@ -1,8 +1,8 @@
 Package: singlet
 Type: Package
 Title: Non-negative Matrix Factorization for single-cell analysis
-Version: 0.99.21
-Date: 2023-05-09
+Version: 0.99.26
+Date: 2023-05-22
 Author: Zach Debruine <debruinz@gvsu.edu>
 Maintainer: Zach Debruine <debruinz@gvsu.edu>
 Authors@R: c(person("Zach", "DeBruine", 
@@ -16,7 +16,7 @@ Authors@R: c(person("Zach", "DeBruine",
              person("Chan Zuckerberg Initiative", 
              role = c("fnd"), 
              comment = "https://chanzuckerberg.com/science/programs-resources/single-cell-biology/data-insights/efficient-data-structures-for-single-cell-data-integration/"))
-Description: Fast NMF with automatic rank-determination for dimension reduction of single-cell data using Seurat, RcppML nmf, or other suitable data structures.
+Description: Fast NMF with automatic rank-determination for dimension reduction of single-cell data using Seurat, RcppML nmf, SingleCellExperiments and similar.
 License: GPL (>= 2)
 Depends:
     Seurat,
