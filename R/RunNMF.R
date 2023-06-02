@@ -149,6 +149,7 @@ RunNMF.Seurat <- function(object,
     assay.used = assay,
     stdev = nmf_model$d,
     key = reduction.key,
+    global = FALSE,
     misc = list("cv_data" = cv_data)
   )
 
