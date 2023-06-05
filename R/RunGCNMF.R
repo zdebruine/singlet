@@ -83,6 +83,7 @@ RunGCNMF.Seurat <- function(object,
                                              feature.loadings = nmf_model$w,
                                              assay.used = assay,
                                              stdev = nmf_model$d,
+                                             global = FALSE,
                                              key = reduction.key)
 
   object
