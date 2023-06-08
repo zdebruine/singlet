@@ -111,8 +111,6 @@ ProjectData.Seurat <- function(object, w,
 #'
 #' @return a SingleCellExperiment with projection stored in reducedDim(, "NNLS")
 #'
-#' @import scuttle
-#'
 #' @export
 ProjectData.SingleCellExperiment <- function(object, 
                                              w,
@@ -128,7 +126,7 @@ ProjectData.SingleCellExperiment <- function(object,
 
   # check if data exists and has been normalized
   if (assay == "logcounts" && !assay %in% assayNames(object)) {
-    object <- logNormCounts(object)
+    object <- scuttle::logNormCounts(object)
   }
 
   # pull the data for projection 
