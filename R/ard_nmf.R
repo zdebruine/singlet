@@ -33,7 +33,9 @@ ard_nmf <- function(A, k_init = 2, k_max = 100, n_replicates = 1, tol = 1e-5, cv
                     tol_overfit = 1e-3, trace_test_mse = 1) {
   stopifnot("L1 penalty must be strictly in the range (0, 1]" = L1 < 1)
 
-  stopifnot("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb" = test_density < 0.2 & test_density > 0.01)
+  if(test_density > 0.02 | test_density < 0.01){
+     warning("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb")
+  }
 
   if("list" %in% class(A)){
     # check that number of rows is identical
