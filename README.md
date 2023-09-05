@@ -8,7 +8,7 @@ Singlet brings fast Non-negative Matrix Factorization (NMF) with automatic rank 
 
 ## Install
 
-First install the development version of `RcppML`:
+First install the development version of `RcppML`, note that the CRAN RcppML version will not work:
 
 ```{R}
 devtools::install_github("zdebruine/RcppML")
