@@ -30,3 +30,20 @@ setAs("list", "nmf",
         }
 
       })
+
+
+#' @exportMethod coerce
+#' @importClassesFrom RcppML nmf
+if (requireNamespace("SingleCellExperiment", quietly=TRUE)) {
+  setAs("nmf", "LinearEmbeddingMatrix", function(from) {
+    factorNames <- colnames(from@w)
+    sampleNames <- colnames(from@h) 
+    lem <- LinearEmbeddingMatrix(sampleFactors=t(from@h), 
+                                 featureLoadings=from@w,
+                                 factorData=DataFrame(d=from@d, 
+                                                      row.names=factorNames),
+                                 metadata=from@misc)
+    rownames(lem) <- sampleNames
+    return(lem)
+  })
+}
