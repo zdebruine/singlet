@@ -18,9 +18,14 @@ GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3, dro
   } else if (is(object, "nmf")) {
     df <- object@misc$gsea$padj
   }
-
+  
   # markers for each factor based on the proportion of signal in that factor
   df2 <- as.matrix(Diagonal(x = 1 / rowSums(df)) %*% df)
+
+  # see https://github.com/zdebruine/singlet/issues/26
+  # thanks to @earbebarnes
+  rownames(df2) <- rownames(df) #add row names to df2
+
   terms <- c()
   for (i in 1:ncol(df2)) {
     terms_i <- df[, i]

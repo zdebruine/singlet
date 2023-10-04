@@ -21,7 +21,7 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
   }
 
   if (test_density > 0.2 | test_density < 0.01) {
-    stop("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb")
+    warning("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb")
   }
 
   if("list" %in% class(A)){
