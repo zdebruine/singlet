@@ -47,3 +47,18 @@ if (requireNamespace("SingleCellExperiment", quietly=TRUE)) {
     return(lem)
   })
 }
+
+
+#' @exportMethod coerce
+#' @importClassesFrom RcppML nmf
+if (requireNamespace("SingleCellExperiment", quietly=TRUE)) {
+  setAs("LinearEmbeddingMatrix", "nmf", function(from) {
+    d <- factorData(from)$d
+    names(d) <- rownames(factorData(from))
+    new("nmf", 
+        w = featureLoadings(from), 
+        d = d,
+        h = t(sampleFactors(from)),
+        misc = metadata(from))
+  })
+}
