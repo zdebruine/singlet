@@ -8,9 +8,12 @@
 #' @return a named list of design matrices, if one was not provided
 #' @export
 getDesigns <- function(columns = NULL, meta.data = NULL, designs = NULL, max.levels = 200) {
+
   if (is.null(designs)) {
     stopifnot(any(!is.null(c(columns, meta.data))))
-    columns <- checkColumns(meta.data = meta.data, columns = columns, max.levels = max.levels)
+    columns <- checkColumns(meta.data = meta.data, 
+                            columns = columns, 
+                            max.levels = max.levels)
     designs <- lapply(columns, getModelMatrix, meta.data = meta.data)
   }
 
