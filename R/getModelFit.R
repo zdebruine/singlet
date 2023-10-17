@@ -25,12 +25,13 @@ getModelFit <- function(design, object, center=TRUE, ...) {
   dat <- object
   if (is(object, "nmf")) dat <- object@h # RcppML nmf 
   if (is(object, "Seurat")) dat <- object@assays$RNA@data
-  if (is(object, "DimReduc")) dat <- object@cell.embeddings 
+  if (is(object, "DimReduc")) dat <- t(object@cell.embeddings)
   if (is(object, "SingleCellExperiment")) dat <- logcounts(object)
   # SingleCellExperiment::reducedDim(object, dimname) just returns a data.matrix
+  if (nrow(dat) < nrow(design)) dat <- t(dat) # transpose reduced dims if needed
 
   # janky, but should be foolproof 
-  if (nrow(design) != ncol(object)) {
+  if (nrow(design) != nrow(dat)) {
     if (!all(rownames(design) %in% colnames(dat))) {
       message("Rows of the design matrix do not match columns of the object.")
       message("This usually means that there are NAs in the sample metadata.")
