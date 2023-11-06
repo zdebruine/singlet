@@ -55,7 +55,7 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
       w_init <- matrix(stats::runif(nrow(A[[1]]) * rank), rank, nrow(A[[1]]))
       model <- run_nmf_on_dgCMatrix_list(A, tol, maxit, verbose, threads, w_init)
       rn <- rownames(A[[1]])
-      cn <- rownames(At[[1]])
+      cn <- do.call(c, lapply(A, colnames))
     }
   } else {
     if (class(A)[[1]] != "matrix") {
