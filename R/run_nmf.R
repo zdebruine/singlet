@@ -10,44 +10,53 @@
 #' @param L1 L1/LASSO penalty to increase sparsity of model
 #' @param L2 L2/Ridge penalty to increase angles between factors
 #' @param threads number of threads for parallelization across CPUs, 0 = use all available threads
+#' @param distributed_method experimental. Either "R" or "Eigen". For development purposes.
 #' @rdname run_nmf
 #' @importFrom stats runif
 #' @export
 #'
-run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0) {
+run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0, distributed_method = "Eigen") {
   if (L1 >= 1) {
     stop("L1 penalty must be strictly in the range (0, 1]")
   }
-  
-  if("list" %in% class(A)){
+
+  if ("list" %in% class(A)) {
     # check that number of rows is identical
-    if(var(sapply(A, nrow)) != 0) 
-              stop("number of rows in all provided 'A' matrices are not identical")
-    if(!all(sapply(A, function(x) class(x) == "dgCMatrix")))
-              stop("if providing a list, you must provide a list of all 'dgCMatrix' objects")
-    if(!is.null(rownames(A[[1]]))){
-      if(!all(sapply(A, function(x) all.equal(rownames(x), rownames(A[[1]]))))) stop("rownames of all dgCMatrix objects in list must be identical")
+    if (var(sapply(A, nrow)) != 0) {
+      stop("number of rows in all provided 'A' matrices are not identical")
     }
-    
-    # generate a distributed transpose
-    if(verbose > 0) cat("generating a distributed transpose of input matrix list\n")
-    block_sizes <- floor(c(seq(1, nrow(A[[1]]), nrow(A[[1]]) /(length(A))), nrow(A[[1]]) + 1))
-    At <- list()
-    if(verbose > 0) pb <- txtProgressBar(min = 0, max = length(A))
-    for(i in 1:length(A)){
-      At[[i]] <- list()
-      for(j in 1:length(A)){
-        At[[i]][[j]] <- t(A[[j]][block_sizes[i]:(block_sizes[i+1] - 1), ])      
+    if (!all(sapply(A, function(x) class(x) == "dgCMatrix"))) {
+      stop("if providing a list, you must provide a list of all 'dgCMatrix' objects")
+    }
+    if (!is.null(rownames(A[[1]]))) {
+      if (!all(sapply(A, function(x) all.equal(rownames(x), rownames(A[[1]]))))) stop("rownames of all dgCMatrix objects in list must be identical")
+    }
+    if (distributed_method == "R") {
+      # generate a distributed transpose
+      if (verbose > 0) cat("generating a distributed transpose of input matrix list\n")
+      block_sizes <- floor(c(seq(1, nrow(A[[1]]), nrow(A[[1]]) / (length(A))), nrow(A[[1]]) + 1))
+      At <- list()
+      if (verbose > 0) pb <- txtProgressBar(min = 0, max = length(A))
+      for (i in 1:length(A)) {
+        At[[i]] <- list()
+        for (j in 1:length(A)) {
+          At[[i]][[j]] <- t(A[[j]][block_sizes[i]:(block_sizes[i + 1] - 1), ])
+        }
+        At[[i]] <- do.call(rbind, At[[i]])
+        if (verbose > 0) setTxtProgressBar(pb, i)
       }
-      At[[i]] <- do.call(rbind, At[[i]])
-      if(verbose > 0) setTxtProgressBar(pb, i)
+      if (verbose > 0) close(pb)
+      if (verbose > 0) cat("running with sparse optimization\n")
+      w_init <- matrix(stats::runif(nrow(A[[1]]) * rank), rank, nrow(A[[1]]))
+      model <- c_nmf_sparse_list(A, At, tol, maxit, verbose, L1, L2, threads, w_init)
+      rn <- rownames(A[[1]])
+      cn <- rownames(At[[1]])
+    } else {
+      w_init <- matrix(stats::runif(nrow(A[[1]]) * rank), rank, nrow(A[[1]]))
+      model <- run_nmf_on_dgCMatrix_list(A, tol, maxit, verbose, threads, w_init)
+      rn <- rownames(A[[1]])
+      cn <- rownames(At[[1]])
     }
-    if(verbose > 0) close(pb)
-    if (verbose > 0) cat("running with sparse optimization\n")
-    w_init <- matrix(stats::runif(nrow(A[[1]]) * rank), rank, nrow(A[[1]]))
-    model <- c_nmf_sparse_list(A, At, tol, maxit, verbose, L1, L2, threads, w_init)
-    rn <- rownames(A[[1]])
-    cn <- rownames(At[[1]])
   } else {
     if (class(A)[[1]] != "matrix") {
       if (verbose > 0) cat("running with sparse optimization\n")
@@ -59,7 +68,7 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
       At <- t(A)
       dense_mode <- TRUE
     }
-    
+
     w_init <- matrix(stats::runif(nrow(A) * rank), rank, nrow(A))
     if (dense_mode) {
       model <- c_nmf_dense(A, At, tol, maxit, verbose, L1, L2, threads, w_init)

@@ -25,6 +25,18 @@ c_nmf_sparse_list <- function(A_, At_, tol, maxit, verbose, L1, L2, threads, w) 
     .Call(`_singlet_c_nmf_sparse_list`, A_, At_, tol, maxit, verbose, L1, L2, threads, w)
 }
 
+cbind_Eigen <- function(A, B) {
+    .Call(`_singlet_cbind_Eigen`, A, B)
+}
+
+convert_dgCMatrix_to_SparseMatrix <- function(L, verbose = TRUE) {
+    .Call(`_singlet_convert_dgCMatrix_to_SparseMatrix`, L, verbose)
+}
+
+run_nmf_on_dgCMatrix_list <- function(A_, tol, maxit, verbose, threads, w) {
+    .Call(`_singlet_run_nmf_on_dgCMatrix_list`, A_, tol, maxit, verbose, threads, w)
+}
+
 c_mu_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w) {
     .Call(`_singlet_c_mu_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w)
 }

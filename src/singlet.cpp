@@ -1,8 +1,3 @@
-//[[Rcpp::plugins(openmp)]]
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
 #include <singlet.h>
 
 // xorshift64 Linear Congruential Generator
@@ -598,6 +593,144 @@ Rcpp::List c_nmf_sparse_list(Rcpp::List A_, Rcpp::List& At_, const double tol, c
         scale(h, d);
         Rcpp::checkUserInterrupt();
         predict(At, h, w, L1, L2, threads);
+        scale(w, d);
+        tol_ = cor(w, w_it);
+        if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
+        Rcpp::checkUserInterrupt();
+    }
+    return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
+}
+
+inline void predict(Eigen::SparseMatrix<double>& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
+    Eigen::MatrixXd a = AAt(w);
+    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads)
+#endif
+    for (size_t i = 0; i < h.cols(); ++i) {
+        // TO DO: check for empty column
+        Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
+        for (Eigen::SparseMatrix<double>::InnerIterator it(A, i); it; ++it)
+            b += it.value() * w.col(it.row());
+        b.array() -= L1;
+        nnls(a, b, h, i);
+    }
+}
+
+// NMF FUNCTIONS ---------------------------------------------------------------------------------------
+// no linking or masking
+
+// mega-kudos to the amazing Bing GPT-4 chat engine which got this entire function on the first try
+// A function that takes two Eigen::SparseMatrix objects as input and returns a new Eigen::SparseMatrix object that is the column-wise concatenation of the inputs
+//[[Rcpp::export]]
+Eigen::SparseMatrix<double> cbind_Eigen(const Eigen::SparseMatrix<double>& A, const Eigen::SparseMatrix<double>& B) {
+    // Check that the inputs have the same number of rows
+    assert(A.rows() == B.rows());
+    // Create a new sparse matrix with the same number of rows and the sum of the number of columns of the inputs
+    Eigen::SparseMatrix<double> C(A.rows(), A.cols() + B.cols());
+    // Reserve enough space for the non-zero elements
+    C.reserve(A.nonZeros() + B.nonZeros());
+    // Loop over the columns of the inputs
+    for (size_t c = 0; c < A.cols() + B.cols(); ++c) {
+        // Start a new column in the output matrix
+        C.startVec(c);
+        // If the current column belongs to the first input matrix
+        if (c < A.cols()) {
+            // Copy the non-zero elements from the first input matrix
+            for (Eigen::SparseMatrix<double>::InnerIterator it(A, c); it; ++it) {
+                C.insertBack(it.row(), c) = it.value();
+            }
+        }
+        // Otherwise, if the current column belongs to the second input matrix
+        else {
+            // Copy the non-zero elements from the second input matrix
+            for (Eigen::SparseMatrix<double>::InnerIterator it(B, c - A.cols()); it; ++it) {
+                C.insertBack(it.row(), c) = it.value();
+            }
+        }
+    }
+    // Finalize the output matrix
+    C.finalize();
+    // Return the output matrix
+    return C;
+}
+
+// A function that takes an Rcpp::List of dgCMatrix as input and returns a list of Eigen::SparseMatrix
+//[[Rcpp::export]]
+Eigen::SparseMatrix<double> convert_dgCMatrix_to_SparseMatrix(const Rcpp::List& L, const bool verbose = true) {
+    // Get the length of the input list
+    int n = L.size();
+    // Create an output list of the same length
+    Rcpp::List out(n);
+    // Loop over the elements of the input list
+    for (int i = 0; i < n; i++) {
+        // Get the current element as an S4 object
+        Rcpp::S4 mat = L[i];
+        // Get the i, x, and p vectors from the S4 object
+        Rcpp::IntegerVector i_vec = mat.slot("i");
+        Rcpp::NumericVector x_vec = mat.slot("x");
+        Rcpp::IntegerVector p_vec = mat.slot("p");
+        // Get the dimensions of the matrix from the S4 object
+        Rcpp::IntegerVector dim = mat.slot("Dim");
+        int rows = dim[0];
+        int cols = dim[1];
+        // Create an Eigen::SparseMatrix object with the same dimensions
+        Eigen::SparseMatrix<double> sp_mat(rows, cols);
+        // Reserve enough space for the non-zero elements
+        sp_mat.reserve(x_vec.size());
+        // Loop over the columns of the matrix
+        for (int j = 0; j < cols; j++) {
+            // Start a new column in the sparse matrix
+            sp_mat.startVec(j);
+            // Get the range of non-zero elements in the current column
+            int start = p_vec[j];
+            int end = p_vec[j + 1];
+            // Loop over the non-zero elements in the current column
+            for (int k = start; k < end; k++) {
+                // Insert the value and the row index in the sparse matrix
+                sp_mat.insertBack(i_vec[k], j) = x_vec[k];
+            }
+        }
+        // Finalize the sparse matrix
+        sp_mat.finalize();
+        // Store the sparse matrix in the output list
+        out[i] = sp_mat;
+    }
+    if (verbose) Rprintf("preparing to cbind matrices\n");
+
+    // recursively cbind Eigen::SparseMatrix objects in the list
+    if (verbose) Rprintf("cbinding matrix 2/%i\n", out.size());
+    Eigen::SparseMatrix<double> result = cbind_Eigen(out[0], out[1]);
+    if (verbose) Rprintf("   ncol = %i\n", result.cols());
+    for (size_t i = 2; i < out.size(); ++i) {
+        if (verbose) Rprintf("cbinding matrix %i/%i\n", i + 1, out.size());
+        result = cbind_Eigen(result, out[i]);
+        if (verbose) Rprintf("   ncol = %i\n", result.cols());
+    }
+    return result;
+}
+
+//[[Rcpp::export]]
+Rcpp::List run_nmf_on_dgCMatrix_list(Rcpp::List A_, const double tol, const uint16_t maxit, const bool verbose, const uint16_t threads, Eigen::MatrixXd w) {
+    Eigen::SparseMatrix<double> A = convert_dgCMatrix_to_SparseMatrix(A_);
+    Eigen::SparseMatrix<double> At = A.transpose();
+
+    if (w.cols() != A.rows()) Rcpp::stop("number of rows in 'w' and 'A' is incompatible!");
+    size_t m = A.rows(), n = At.rows();
+
+    Eigen::MatrixXd h = Eigen::MatrixXd::Zero(w.rows(), n);
+    Eigen::VectorXd d = Eigen::VectorXd::Ones(w.rows());
+    double tol_ = 1;
+    if (verbose)
+        Rprintf("\n%4s | %8s \n---------------\n", "iter", "tol");
+
+    // alternating least squares update loop
+    for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
+        Eigen::MatrixXd w_it = w;
+        predict(A, w, h, 0, 0, threads);
+        scale(h, d);
+        Rcpp::checkUserInterrupt();
+        predict(At, h, w, 0, 0, threads);
         scale(w, d);
         tol_ = cor(w, w_it);
         if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);

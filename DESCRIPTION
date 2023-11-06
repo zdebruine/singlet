@@ -1,7 +1,7 @@
 Package: singlet
 Type: Package
 Title: Non-negative Matrix Factorization for single-cell analysis
-Version: 0.99.36
+Version: 0.99.37
 Date: 2023-10-17
 Author: Zach Debruine <debruinz@gvsu.edu>
 Maintainer: Zach Debruine <debruinz@gvsu.edu>
@@ -21,7 +21,8 @@ License: GPL (>= 2)
 Depends:
     Seurat,
     RcppML,
-    dplyr
+    dplyr,
+    RcppEigen
 Imports:
     Matrix,
     methods,
@@ -35,7 +36,8 @@ Imports:
     msigdbr,
     RcppML
 LinkingTo: 
-    Rcpp
+    Rcpp,
+    RcppEigen
 Suggests: 
     rmarkdown, 
     devtools,
