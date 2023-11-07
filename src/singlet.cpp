@@ -623,10 +623,34 @@ inline void predict(Eigen::SparseMatrix<float>& A, const Eigen::MatrixXd& w, Eig
 // mega-kudos to the amazing Bing GPT-4 chat engine which got this entire function on the first try
 // A function that takes two Eigen::SparseMatrix objects as input and returns a new Eigen::SparseMatrix object that is the column-wise concatenation of the inputs
 
-inline void cbind_Eigen(Eigen::SparseMatrix<float>& A, const Eigen::SparseMatrix<float>& B) {
-    if (A.rows() != B.rows()) Rcpp::stop("number of rows in 'A' and 'B' must be identical!");
-    A.conservativeResize(A.rows(), A.cols() + B.cols());
-    A.rightCols(B.cols()) = B;
+//[[Rcpp::export]]
+Eigen::SparseMatrix<float> cbind_Eigen(const Eigen::SparseMatrix<float>& A, const Eigen::SparseMatrix<float>& B) {
+    // Check if the matrices have the same number of rows
+    if (A.rows() != B.rows()) Rcpp::stop("Number of rows in 'A' and 'B' must be identical!");
+
+    // Create a new matrix with the same number of rows and the sum of the columns
+    Eigen::SparseMatrix<float> C(A.rows(), A.cols() + B.cols());
+
+    // Reserve space for the non-zero elements
+    C.reserve(A.nonZeros() + B.nonZeros());
+
+    // Loop over the columns of A and B and insert them into C
+    for (int k = 0; k < A.outerSize(); ++k) {
+        C.startVec(k);
+        for (Eigen::SparseMatrix<float>::InnerIterator it(A, k); it; ++it) {
+            C.insertBack(it.row(), k) = it.value();
+        }
+    }
+    for (int k = 0; k < B.outerSize(); ++k) {
+        C.startVec(k + A.cols());
+        for (Eigen::SparseMatrix<float>::InnerIterator it(B, k); it; ++it) {
+            C.insertBack(it.row(), k + A.cols()) = it.value();
+        }
+    }
+    // Finalize the matrix
+    C.finalize();
+    // Return the result
+    return C;
 }
 
 // A function that takes an Rcpp::List of dgCMatrix as input and returns a list of Eigen::SparseMatrix
@@ -677,7 +701,7 @@ Eigen::SparseMatrix<float> convert_dgCMatrix_to_SparseMatrix(Rcpp::List& L, cons
         if (verbose) Rprintf("NEXT ITERATION: number of matrices left to cbind: %i\n", out.size());
         for (size_t mat1 = 0; mat1 < (out.size() - 1); ++mat1) {
             Rprintf("   cbinding matrix %i and %i\n", mat1, mat1 + 1);
-            cbind_Eigen(out[mat1], out[mat1 + 1]);
+            out[mat1] = cbind_Eigen(out[mat1], out[mat1 + 1]);
             Rprintf("   erasing cbinded matrix\n");
             out.erase(out.begin() + mat1 + 1);
             Rprintf("   resulting number of columns:  %i\n", out[mat1].cols());
