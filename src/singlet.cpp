@@ -674,10 +674,12 @@ Eigen::SparseMatrix<float> convert_dgCMatrix_to_SparseMatrix(Rcpp::List& L, cons
 
     // recursively cbind Eigen::SparseMatrix objects in the list
     while (out.size() > 1) {
-        if (verbose) Rprintf("number of matrices left to cbind: %i\n", out.size());
-#pragma omp parallel for
-        for (size_t mat1 = 0; mat1 < (out.size() - 1);mat1 += 2) 
+        if (verbose) Rprintf("NEXT ITERATION: number of matrices left to cbind: %i\n", out.size());
+        for (size_t mat1 = 0; mat1 < (out.size() - 1); mat1 += 2){
           cbind_Eigen(out[mat1], out[mat1 + 1]);
+          Rprintf("   cbinding matrix %i and %i\n", mat1, mat1 + 1);
+          Rprintf("   resulting number of columns:  %i\n", out[mat1].cols());
+        }
         for (size_t mat2 = 1; mat2 < out.size(); ++mat2) 
           out.erase(out.begin() + mat2);
     }

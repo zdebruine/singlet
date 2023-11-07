@@ -104,18 +104,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// convert_dgCMatrix_to_SparseMatrix
-Eigen::SparseMatrix<float> convert_dgCMatrix_to_SparseMatrix(Rcpp::List& L, const bool verbose);
-RcppExport SEXP _singlet_convert_dgCMatrix_to_SparseMatrix(SEXP LSEXP, SEXP verboseSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List& >::type L(LSEXP);
-    Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(convert_dgCMatrix_to_SparseMatrix(L, verbose));
-    return rcpp_result_gen;
-END_RCPP
-}
 // run_nmf_on_dgCMatrix_list
 Rcpp::List run_nmf_on_dgCMatrix_list(Rcpp::List A_, const double tol, const uint16_t maxit, const bool verbose, const uint16_t threads, Eigen::MatrixXd w);
 RcppExport SEXP _singlet_run_nmf_on_dgCMatrix_list(SEXP A_SEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP threadsSEXP, SEXP wSEXP) {
@@ -360,7 +348,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_singlet_c_project_model", (DL_FUNC) &_singlet_c_project_model, 5},
     {"_singlet_c_nmf", (DL_FUNC) &_singlet_c_nmf, 9},
     {"_singlet_c_nmf_sparse_list", (DL_FUNC) &_singlet_c_nmf_sparse_list, 9},
-    {"_singlet_convert_dgCMatrix_to_SparseMatrix", (DL_FUNC) &_singlet_convert_dgCMatrix_to_SparseMatrix, 2},
     {"_singlet_run_nmf_on_dgCMatrix_list", (DL_FUNC) &_singlet_run_nmf_on_dgCMatrix_list, 6},
     {"_singlet_c_mu_nmf", (DL_FUNC) &_singlet_c_mu_nmf, 9},
     {"_singlet_c_nmf_dense", (DL_FUNC) &_singlet_c_nmf_dense, 9},
