@@ -25,10 +25,6 @@ c_nmf_sparse_list <- function(A_, At_, tol, maxit, verbose, L1, L2, threads, w) 
     .Call(`_singlet_c_nmf_sparse_list`, A_, At_, tol, maxit, verbose, L1, L2, threads, w)
 }
 
-cbind_Eigen <- function(A, B) {
-    .Call(`_singlet_cbind_Eigen`, A, B)
-}
-
 convert_dgCMatrix_to_SparseMatrix <- function(L, verbose = TRUE) {
     .Call(`_singlet_convert_dgCMatrix_to_SparseMatrix`, L, verbose)
 }
