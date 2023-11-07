@@ -624,9 +624,9 @@ inline void predict(Eigen::SparseMatrix<float>& A, const Eigen::MatrixXd& w, Eig
 // A function that takes two Eigen::SparseMatrix objects as input and returns a new Eigen::SparseMatrix object that is the column-wise concatenation of the inputs
 
 inline void cbind_Eigen(Eigen::SparseMatrix<float>& A, const Eigen::SparseMatrix<float>& B) {
-  if(A.rows() != B.rows()) Rcpp::stop("number of rows in 'A' and 'B' must be identical!");
-  A.conservativeResize(A.rows(), A.cols() + B.cols());
-  A.rightCols(B.cols()) = B;
+    if (A.rows() != B.rows()) Rcpp::stop("number of rows in 'A' and 'B' must be identical!");
+    A.conservativeResize(A.rows(), A.cols() + B.cols());
+    A.rightCols(B.cols()) = B;
 }
 
 // A function that takes an Rcpp::List of dgCMatrix as input and returns a list of Eigen::SparseMatrix
@@ -675,13 +675,14 @@ Eigen::SparseMatrix<float> convert_dgCMatrix_to_SparseMatrix(Rcpp::List& L, cons
     // recursively cbind Eigen::SparseMatrix objects in the list
     while (out.size() > 1) {
         if (verbose) Rprintf("NEXT ITERATION: number of matrices left to cbind: %i\n", out.size());
-        for (size_t mat1 = 0; mat1 < (out.size() - 1); mat1 += 2){
-          cbind_Eigen(out[mat1], out[mat1 + 1]);
-          Rprintf("   cbinding matrix %i and %i\n", mat1, mat1 + 1);
-          Rprintf("   resulting number of columns:  %i\n", out[mat1].cols());
+        for (size_t mat1 = 0; mat1 < (out.size() - 1); ++mat1) {
+            Rprintf("   cbinding matrix %i and %i\n", mat1, mat1 + 1);
+            cbind_Eigen(out[mat1], out[mat1 + 1]);
+            Rprintf("   erasing cbinded matrix\n");
+            out.erase(out.begin() + mat1 + 1);
+            Rprintf("   resulting number of columns:  %i\n", out[mat1].cols());
+            Rprintf("   resulting number of nonzeros over INT_MAX:  %8.2e\n", out[mat1].nonZeros() / std::pow(2, 32));
         }
-        for (size_t mat2 = 1; mat2 < out.size(); ++mat2) 
-          out.erase(out.begin() + mat2);
     }
 
     // log normalize
