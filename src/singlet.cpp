@@ -601,7 +601,7 @@ Rcpp::List c_nmf_sparse_list(Rcpp::List A_, Rcpp::List& At_, const double tol, c
     return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
 }
 
-inline void predict(Eigen::SparseMatrix<double>& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
+inline void predict(Eigen::SparseMatrix<float>& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
     Eigen::MatrixXd a = AAt(w);
     if (L2 != 0) a.diagonal().array() *= (1 - L2);
 #ifdef _OPENMP
@@ -610,7 +610,7 @@ inline void predict(Eigen::SparseMatrix<double>& A, const Eigen::MatrixXd& w, Ei
     for (size_t i = 0; i < h.cols(); ++i) {
         // TO DO: check for empty column
         Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
-        for (Eigen::SparseMatrix<double>::InnerIterator it(A, i); it; ++it)
+        for (Eigen::SparseMatrix<float>::InnerIterator it(A, i); it; ++it)
             b += it.value() * w.col(it.row());
         b.array() -= L1;
         nnls(a, b, h, i);
@@ -623,11 +623,11 @@ inline void predict(Eigen::SparseMatrix<double>& A, const Eigen::MatrixXd& w, Ei
 // mega-kudos to the amazing Bing GPT-4 chat engine which got this entire function on the first try
 // A function that takes two Eigen::SparseMatrix objects as input and returns a new Eigen::SparseMatrix object that is the column-wise concatenation of the inputs
 //[[Rcpp::export]]
-Eigen::SparseMatrix<double> cbind_Eigen(const Eigen::SparseMatrix<double>& A, const Eigen::SparseMatrix<double>& B) {
+Eigen::SparseMatrix<float> cbind_Eigen(const Eigen::SparseMatrix<float>& A, const Eigen::SparseMatrix<float>& B) {
     // Check that the inputs have the same number of rows
     assert(A.rows() == B.rows());
     // Create a new sparse matrix with the same number of rows and the sum of the number of columns of the inputs
-    Eigen::SparseMatrix<double> C(A.rows(), A.cols() + B.cols());
+    Eigen::SparseMatrix<float> C(A.rows(), A.cols() + B.cols());
     // Reserve enough space for the non-zero elements
     C.reserve(A.nonZeros() + B.nonZeros());
     // Loop over the columns of the inputs
@@ -637,14 +637,14 @@ Eigen::SparseMatrix<double> cbind_Eigen(const Eigen::SparseMatrix<double>& A, co
         // If the current column belongs to the first input matrix
         if (c < A.cols()) {
             // Copy the non-zero elements from the first input matrix
-            for (Eigen::SparseMatrix<double>::InnerIterator it(A, c); it; ++it) {
+            for (Eigen::SparseMatrix<float>::InnerIterator it(A, c); it; ++it) {
                 C.insertBack(it.row(), c) = it.value();
             }
         }
         // Otherwise, if the current column belongs to the second input matrix
         else {
             // Copy the non-zero elements from the second input matrix
-            for (Eigen::SparseMatrix<double>::InnerIterator it(B, c - A.cols()); it; ++it) {
+            for (Eigen::SparseMatrix<float>::InnerIterator it(B, c - A.cols()); it; ++it) {
                 C.insertBack(it.row(), c) = it.value();
             }
         }
@@ -657,12 +657,14 @@ Eigen::SparseMatrix<double> cbind_Eigen(const Eigen::SparseMatrix<double>& A, co
 
 // A function that takes an Rcpp::List of dgCMatrix as input and returns a list of Eigen::SparseMatrix
 //[[Rcpp::export]]
-Eigen::SparseMatrix<double> convert_dgCMatrix_to_SparseMatrix(const Rcpp::List& L, const bool verbose = true) {
+Eigen::SparseMatrix<float> convert_dgCMatrix_to_SparseMatrix(Rcpp::List& L, const bool verbose = true) {
     // Get the length of the input list
     int n = L.size();
     // Create an output list of the same length
-    Rcpp::List out(n);
+    std::vector<Eigen::SparseMatrix<float>> out(n);
     // Loop over the elements of the input list
+    if (verbose) Rprintf("converting %i matrices to Eigen::SparseMatrix<float>\n", out.size());
+#pragma omp parallel for
     for (int i = 0; i < n; i++) {
         // Get the current element as an S4 object
         Rcpp::S4 mat = L[i];
@@ -675,45 +677,64 @@ Eigen::SparseMatrix<double> convert_dgCMatrix_to_SparseMatrix(const Rcpp::List& 
         int rows = dim[0];
         int cols = dim[1];
         // Create an Eigen::SparseMatrix object with the same dimensions
-        Eigen::SparseMatrix<double> sp_mat(rows, cols);
+        out[i] = Eigen::SparseMatrix<float>(rows, cols);
         // Reserve enough space for the non-zero elements
-        sp_mat.reserve(x_vec.size());
+        out[i].reserve(x_vec.size());
         // Loop over the columns of the matrix
         for (int j = 0; j < cols; j++) {
             // Start a new column in the sparse matrix
-            sp_mat.startVec(j);
+            out[i].startVec(j);
             // Get the range of non-zero elements in the current column
             int start = p_vec[j];
             int end = p_vec[j + 1];
             // Loop over the non-zero elements in the current column
             for (int k = start; k < end; k++) {
                 // Insert the value and the row index in the sparse matrix
-                sp_mat.insertBack(i_vec[k], j) = x_vec[k];
+                out[i].insertBack(i_vec[k], j) = x_vec[k];
             }
         }
-        // Finalize the sparse matrix
-        sp_mat.finalize();
-        // Store the sparse matrix in the output list
-        out[i] = sp_mat;
+        out[i].makeCompressed();
+        L[i] = R_NilValue;
     }
+
     if (verbose) Rprintf("preparing to cbind matrices\n");
 
     // recursively cbind Eigen::SparseMatrix objects in the list
-    if (verbose) Rprintf("cbinding matrix 2/%i\n", out.size());
-    Eigen::SparseMatrix<double> result = cbind_Eigen(out[0], out[1]);
-    if (verbose) Rprintf("   ncol = %i\n", result.cols());
-    for (size_t i = 2; i < out.size(); ++i) {
-        if (verbose) Rprintf("cbinding matrix %i/%i\n", i + 1, out.size());
-        result = cbind_Eigen(result, out[i]);
-        if (verbose) Rprintf("   ncol = %i\n", result.cols());
+    while (out.size() > 1) {
+        if (verbose) Rprintf("number of matrices left to cbind: %i\n", out.size());
+#pragma omp parallel for
+        for (size_t mat1 = 0; mat1 < (out.size() - 1);) {
+            out[mat1] = cbind_Eigen(out[mat1], out[mat1 + 1]);
+            mat1 += 2;
+        }
+        for (size_t mat2 = 1; mat2 < out.size(); ++mat2)
+            out.erase(out.begin() + mat2);
     }
-    return result;
+
+    // log normalize
+    Rprintf("log normalizing matrix\n");
+#pragma omp parallel for
+    for (size_t i = 0; i < out[0].cols(); ++i) {
+        // calculate column sum
+        float colsum = 0;
+        for (Eigen::SparseMatrix<float>::InnerIterator it(out[0], i); it; ++it)
+            colsum += it.value();
+
+        // calculate scaling_factor
+        float scaling_factor = 10000 / colsum;
+
+        // log1p(x / colsum * scaling factor)
+        for (Eigen::SparseMatrix<float>::InnerIterator it(out[0], i); it; ++it)
+            it.valueRef() = std::log1p(it.value() * scaling_factor);
+    }
+    out[0].makeCompressed();
+    return out[0];
 }
 
 //[[Rcpp::export]]
-Rcpp::List run_nmf_on_dgCMatrix_list(Rcpp::List A_, const double tol, const uint16_t maxit, const bool verbose, const uint16_t threads, Eigen::MatrixXd w) {
-    Eigen::SparseMatrix<double> A = convert_dgCMatrix_to_SparseMatrix(A_);
-    Eigen::SparseMatrix<double> At = A.transpose();
+Rcpp::List run_nmf_on_dgCMatrix_list(Rcpp::List& A_, const double tol, const uint16_t maxit, const bool verbose, const uint16_t threads, Eigen::MatrixXd w) {
+    Eigen::SparseMatrix<float> A = convert_dgCMatrix_to_SparseMatrix(A_);
+    Eigen::SparseMatrix<float> At = A.transpose();
 
     if (w.cols() != A.rows()) Rcpp::stop("number of rows in 'w' and 'A' is incompatible!");
     size_t m = A.rows(), n = At.rows();
