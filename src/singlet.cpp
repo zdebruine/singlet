@@ -601,7 +601,7 @@ Rcpp::List c_nmf_sparse_list(Rcpp::List A_, Rcpp::List& At_, const double tol, c
     return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
 }
 
-inline void predict(Eigen::SparseMatrix<float>& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
+inline void predict(Eigen::SparseMatrix<float, 0, std::ptrdiff_t>& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
     Eigen::MatrixXd a = AAt(w);
     if (L2 != 0) a.diagonal().array() *= (1 - L2);
 #ifdef _OPENMP
@@ -610,7 +610,7 @@ inline void predict(Eigen::SparseMatrix<float>& A, const Eigen::MatrixXd& w, Eig
     for (size_t i = 0; i < h.cols(); ++i) {
         // TO DO: check for empty column
         Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
-        for (Eigen::SparseMatrix<float>::InnerIterator it(A, i); it; ++it)
+        for (Eigen::SparseMatrix<float, 0, std::ptrdiff_t>::InnerIterator it(A, i); it; ++it)
             b += it.value() * w.col(it.row());
         b.array() -= L1;
         nnls(a, b, h, i);
@@ -623,27 +623,26 @@ inline void predict(Eigen::SparseMatrix<float>& A, const Eigen::MatrixXd& w, Eig
 // mega-kudos to the amazing Bing GPT-4 chat engine which got this entire function on the first try
 // A function that takes two Eigen::SparseMatrix objects as input and returns a new Eigen::SparseMatrix object that is the column-wise concatenation of the inputs
 
-//[[Rcpp::export]]
-Eigen::SparseMatrix<float> cbind_Eigen(const Eigen::SparseMatrix<float>& A, const Eigen::SparseMatrix<float>& B) {
+Eigen::SparseMatrix<float, 0, std::ptrdiff_t> cbind_Eigen(const Eigen::SparseMatrix<float, 0, std::ptrdiff_t>& A, const Eigen::SparseMatrix<float, 0, std::ptrdiff_t>& B) {
     // Check if the matrices have the same number of rows
     if (A.rows() != B.rows()) Rcpp::stop("Number of rows in 'A' and 'B' must be identical!");
 
     // Create a new matrix with the same number of rows and the sum of the columns
-    Eigen::SparseMatrix<float> C(A.rows(), A.cols() + B.cols());
+    Eigen::SparseMatrix<float, 0, std::ptrdiff_t> C(A.rows(), A.cols() + B.cols());
 
     // Reserve space for the non-zero elements
     C.reserve(A.nonZeros() + B.nonZeros());
 
     // Loop over the columns of A and B and insert them into C
-    for (int k = 0; k < A.outerSize(); ++k) {
+    for (size_t k = 0; k < A.outerSize(); ++k) {
         C.startVec(k);
-        for (Eigen::SparseMatrix<float>::InnerIterator it(A, k); it; ++it) {
+        for (Eigen::SparseMatrix<float, 0, std::ptrdiff_t>::InnerIterator it(A, k); it; ++it) {
             C.insertBack(it.row(), k) = it.value();
         }
     }
-    for (int k = 0; k < B.outerSize(); ++k) {
+    for (size_t k = 0; k < B.outerSize(); ++k) {
         C.startVec(k + A.cols());
-        for (Eigen::SparseMatrix<float>::InnerIterator it(B, k); it; ++it) {
+        for (Eigen::SparseMatrix<float, 0, std::ptrdiff_t>::InnerIterator it(B, k); it; ++it) {
             C.insertBack(it.row(), k + A.cols()) = it.value();
         }
     }
@@ -654,13 +653,13 @@ Eigen::SparseMatrix<float> cbind_Eigen(const Eigen::SparseMatrix<float>& A, cons
 }
 
 // A function that takes an Rcpp::List of dgCMatrix as input and returns a list of Eigen::SparseMatrix
-Eigen::SparseMatrix<float> convert_dgCMatrix_to_SparseMatrix(Rcpp::List& L, const bool verbose = true) {
+Eigen::SparseMatrix<float, 0, std::ptrdiff_t> convert_dgCMatrix_to_SparseMatrix(Rcpp::List& L, const bool verbose = true) {
     // Get the length of the input list
     int n = L.size();
     // Create an output list of the same length
-    std::vector<Eigen::SparseMatrix<float>> out(n);
+    std::vector<Eigen::SparseMatrix<float, 0, std::ptrdiff_t>> out(n);
     // Loop over the elements of the input list
-    if (verbose) Rprintf("converting %i matrices to Eigen::SparseMatrix<float>\n", out.size());
+    if (verbose) Rprintf("converting %i matrices to Eigen::SparseMatrix<float, 0, std::ptrdiff_t>\n", out.size());
 #pragma omp parallel for
     for (int i = 0; i < n; i++) {
         // Get the current element as an S4 object
@@ -674,7 +673,7 @@ Eigen::SparseMatrix<float> convert_dgCMatrix_to_SparseMatrix(Rcpp::List& L, cons
         int rows = dim[0];
         int cols = dim[1];
         // Create an Eigen::SparseMatrix object with the same dimensions
-        out[i] = Eigen::SparseMatrix<float>(rows, cols);
+        out[i] = Eigen::SparseMatrix<float, 0, std::ptrdiff_t>(rows, cols);
         // Reserve enough space for the non-zero elements
         out[i].reserve(x_vec.size());
         // Loop over the columns of the matrix
@@ -715,14 +714,14 @@ Eigen::SparseMatrix<float> convert_dgCMatrix_to_SparseMatrix(Rcpp::List& L, cons
     for (size_t i = 0; i < out[0].cols(); ++i) {
         // calculate column sum
         float colsum = 0;
-        for (Eigen::SparseMatrix<float>::InnerIterator it(out[0], i); it; ++it)
+        for (Eigen::SparseMatrix<float, 0, std::ptrdiff_t>::InnerIterator it(out[0], i); it; ++it)
             colsum += it.value();
 
         // calculate scaling_factor
         float scaling_factor = 10000 / colsum;
 
         // log1p(x / colsum * scaling factor)
-        for (Eigen::SparseMatrix<float>::InnerIterator it(out[0], i); it; ++it)
+        for (Eigen::SparseMatrix<float, 0, std::ptrdiff_t>::InnerIterator it(out[0], i); it; ++it)
             it.valueRef() = std::log1p(it.value() * scaling_factor);
     }
     out[0].makeCompressed();
@@ -731,8 +730,8 @@ Eigen::SparseMatrix<float> convert_dgCMatrix_to_SparseMatrix(Rcpp::List& L, cons
 
 //[[Rcpp::export]]
 Rcpp::List run_nmf_on_dgCMatrix_list(Rcpp::List A_, const double tol, const uint16_t maxit, const bool verbose, const uint16_t threads, Eigen::MatrixXd w) {
-    Eigen::SparseMatrix<float> A = convert_dgCMatrix_to_SparseMatrix(A_);
-    Eigen::SparseMatrix<float> At = A.transpose();
+    Eigen::SparseMatrix<float, 0, std::ptrdiff_t> A = convert_dgCMatrix_to_SparseMatrix(A_);
+    Eigen::SparseMatrix<float, 0, std::ptrdiff_t> At = A.transpose();
 
     if (w.cols() != A.rows()) Rcpp::stop("number of rows in 'w' and 'A' is incompatible!");
     size_t m = A.rows(), n = At.rows();
