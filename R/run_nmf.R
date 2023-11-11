@@ -40,9 +40,9 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
       for (i in 1:length(A)) {
         At[[i]] <- list()
         for (j in 1:length(A)) {
-          At[[i]][[j]] <- t(A[[j]][block_sizes[i]:(block_sizes[i + 1] - 1), ])
+          At[[i]][[j]] <- A[[j]][block_sizes[i]:(block_sizes[i + 1] - 1), ]
         }
-        At[[i]] <- do.call(rbind, At[[i]])
+        At[[i]] <- t(do.call(cbind, At[[i]]))
         if (verbose > 0) setTxtProgressBar(pb, i)
       }
       if (verbose > 0) close(pb)
