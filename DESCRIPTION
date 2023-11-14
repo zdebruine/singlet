@@ -34,7 +34,8 @@ Imports:
     utils,
     fgsea,
     msigdbr,
-    RcppML
+    RcppML,
+    statmod
 LinkingTo: 
     Rcpp,
     RcppEigen
