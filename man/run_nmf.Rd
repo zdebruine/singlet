@@ -13,7 +13,7 @@ run_nmf(
   L1 = 0.01,
   L2 = 0,
   threads = 0,
-  distributed_method = "Eigen"
+  compression_level = 3
 )
 }
 \arguments{
@@ -33,7 +33,7 @@ run_nmf(
 
 \item{threads}{number of threads for parallelization across CPUs, 0 = use all available threads}
 
-\item{distributed_method}{experimental. Either "R" or "Eigen". For development purposes.}
+\item{compression_level}{either 2 or 3, for VCSC or IVCSC, respectively. For development purposes.}
 }
 \description{
 Run NMF on a sparse matrix with automatic rank determination by cross-validation

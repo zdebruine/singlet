@@ -25,8 +25,8 @@ c_nmf_sparse_list <- function(A_, At_, tol, maxit, verbose, L1, L2, threads, w) 
     .Call(`_singlet_c_nmf_sparse_list`, A_, At_, tol, maxit, verbose, L1, L2, threads, w)
 }
 
-run_nmf_on_dgCMatrix_list <- function(A_, tol, maxit, verbose, threads, w) {
-    .Call(`_singlet_run_nmf_on_dgCMatrix_list`, A_, tol, maxit, verbose, threads, w)
+run_nmf_on_sparsematrix_list <- function(A_, tol, maxit, verbose, threads, w, use_vcsc = FALSE) {
+    .Call(`_singlet_run_nmf_on_sparsematrix_list`, A_, tol, maxit, verbose, threads, w, use_vcsc)
 }
 
 c_mu_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w) {
