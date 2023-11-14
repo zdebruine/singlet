@@ -104,6 +104,52 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// write_IVCSC
+bool write_IVCSC(Rcpp::List& L, const bool verbose);
+RcppExport SEXP _singlet_write_IVCSC(SEXP LSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List& >::type L(LSEXP);
+    Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(write_IVCSC(L, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
+// save_IVSparse
+bool save_IVSparse(Rcpp::List A_, bool verbose);
+RcppExport SEXP _singlet_save_IVSparse(SEXP A_SEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type A_(A_SEXP);
+    Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(save_IVSparse(A_, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
+// build_IVCSC2
+bool build_IVCSC2(Rcpp::List& L, const bool verbose);
+RcppExport SEXP _singlet_build_IVCSC2(SEXP LSEXP, SEXP verboseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List& >::type L(LSEXP);
+    Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
+    rcpp_result_gen = Rcpp::wrap(build_IVCSC2(L, verbose));
+    return rcpp_result_gen;
+END_RCPP
+}
+// read_IVSparse
+Eigen::SparseMatrix<float> read_IVSparse();
+RcppExport SEXP _singlet_read_IVSparse() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(read_IVSparse());
+    return rcpp_result_gen;
+END_RCPP
+}
 // run_nmf_on_sparsematrix_list
 Rcpp::List run_nmf_on_sparsematrix_list(Rcpp::List A_, const double tol, const uint16_t maxit, const bool verbose, const uint16_t threads, Eigen::MatrixXd w, bool use_vcsc);
 RcppExport SEXP _singlet_run_nmf_on_sparsematrix_list(SEXP A_SEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP threadsSEXP, SEXP wSEXP, SEXP use_vcscSEXP) {
@@ -349,6 +395,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_singlet_c_project_model", (DL_FUNC) &_singlet_c_project_model, 5},
     {"_singlet_c_nmf", (DL_FUNC) &_singlet_c_nmf, 9},
     {"_singlet_c_nmf_sparse_list", (DL_FUNC) &_singlet_c_nmf_sparse_list, 9},
+    {"_singlet_write_IVCSC", (DL_FUNC) &_singlet_write_IVCSC, 2},
+    {"_singlet_save_IVSparse", (DL_FUNC) &_singlet_save_IVSparse, 2},
+    {"_singlet_build_IVCSC2", (DL_FUNC) &_singlet_build_IVCSC2, 2},
+    {"_singlet_read_IVSparse", (DL_FUNC) &_singlet_read_IVSparse, 0},
     {"_singlet_run_nmf_on_sparsematrix_list", (DL_FUNC) &_singlet_run_nmf_on_sparsematrix_list, 7},
     {"_singlet_c_mu_nmf", (DL_FUNC) &_singlet_c_mu_nmf, 9},
     {"_singlet_c_nmf_dense", (DL_FUNC) &_singlet_c_nmf_dense, 9},

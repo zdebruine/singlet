@@ -25,6 +25,22 @@ c_nmf_sparse_list <- function(A_, At_, tol, maxit, verbose, L1, L2, threads, w) 
     .Call(`_singlet_c_nmf_sparse_list`, A_, At_, tol, maxit, verbose, L1, L2, threads, w)
 }
 
+write_IVCSC <- function(L, verbose = TRUE) {
+    .Call(`_singlet_write_IVCSC`, L, verbose)
+}
+
+save_IVSparse <- function(A_, verbose = TRUE) {
+    .Call(`_singlet_save_IVSparse`, A_, verbose)
+}
+
+build_IVCSC2 <- function(L, verbose = TRUE) {
+    .Call(`_singlet_build_IVCSC2`, L, verbose)
+}
+
+read_IVSparse <- function() {
+    .Call(`_singlet_read_IVSparse`)
+}
+
 run_nmf_on_sparsematrix_list <- function(A_, tol, maxit, verbose, threads, w, use_vcsc = FALSE) {
     .Call(`_singlet_run_nmf_on_sparsematrix_list`, A_, tol, maxit, verbose, threads, w, use_vcsc)
 }

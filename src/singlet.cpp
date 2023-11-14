@@ -697,8 +697,116 @@ IVCSC build_IVCSC(Rcpp::List& L, const bool verbose = true) {
 }
 
 //[[Rcpp::export]]
+bool write_IVCSC(Rcpp::List& L, const bool verbose = true) {
+  // Get the length of the input list
+  int n = L.size();
+  // Create an output list of the same length
+  std::vector<Eigen::SparseMatrix<float>> tmp(n);
+  // Loop over the elements of the input list
+  if (verbose) Rprintf("converting %i matrices to Eigen::SparseMatrix<float>\n", n);
+#pragma omp parallel for
+  for (int i = 0; i < n; i++) {
+    // Get the current element as an S4 object
+    Rcpp::S4 mat = L[i];
+    // Get the i, x, and p vectors from the S4 object
+    Rcpp::IntegerVector i_vec = mat.slot("i");
+    Rcpp::NumericVector x_vec = mat.slot("x");
+    Rcpp::IntegerVector p_vec = mat.slot("p");
+    // Get the dimensions of the matrix from the S4 object
+    Rcpp::IntegerVector dim = mat.slot("Dim");
+    int rows = dim[0];
+    int cols = dim[1];
+    // Create an Eigen::SparseMatrix object with the same dimensions
+    tmp[i] = Eigen::SparseMatrix<float>(rows, cols);
+    // Reserve enough space for the non-zero elements
+    tmp[i].reserve(x_vec.size());
+    // Loop over the columns of the matrix
+    for (int j = 0; j < cols; j++) {
+      // Start a new column in the sparse matrix
+      tmp[i].startVec(j);
+      // Get the range of non-zero elements in the current column
+      int start = p_vec[j];
+      int end = p_vec[j + 1];
+      // Loop over the non-zero elements in the current column
+      for (int k = start; k < end; k++) {
+        // Insert the value and the row index in the sparse matrix
+        tmp[i].insertBack(i_vec[k], j) = x_vec[k];
+      }
+    }
+    tmp[i].makeCompressed();
+    L[i] = R_NilValue;
+  }
+  
+  if (verbose) Rprintf("appending matrices to master IVCSC matrix\n");
+  
+  IVCSC out(tmp[0]);
+  for (size_t i = 1; i < tmp.size(); ++i) {
+    out.append(tmp[i]);
+    if (verbose) Rprintf("   appended matrix %i\n", i);
+    Rprintf("   resulting number of columns:  %i\n", out.cols());
+    Rprintf("   resulting size in Gb:  %5.2e\n", out.byteSize() / 1e9);
+  }
+  
+  Rprintf("writing IVSparse matrix\n");
+  out.write("IVSparse_matrix.ivsparse");
+  
+  Rprintf("transposing IVSparse matrix\n");
+  IVCSC out2 = out.transpose();  
+  
+  Rprintf("writing transposed IVSparse matrix\n");
+  out2.write("IVSparse_matrix_transpose.ivsparse\n");
+  Rprintf("done!");
+  return true;
+}
+
+
+//[[Rcpp::export]]
+bool save_IVSparse(Rcpp::List A_, bool verbose = true){
+  IVCSC A = build_IVCSC(A_, verbose);
+  if (verbose) Rprintf("writing to IVCSC_matrix.ivsparse\n");
+  A.write("IVCSC_matrix.ivsparse");
+  return true;
+}
+
+//[[Rcpp::export]]
+bool build_IVCSC2(Rcpp::List& L, const bool verbose = true) {
+  // Get the length of the input list
+  std::vector<IVCSC> tmp(L.size());
+  // Loop over the elements of the input list
+  if (verbose) Rprintf("converting %i matrices to IVCSC\n", L.size());
+#pragma omp parallel for
+  for (int i = 0; i < L.size(); i++) {
+    Eigen::SparseMatrix<float> tmp_i = Rcpp::as<Eigen::SparseMatrix<float>>(L[i]);
+    tmp[i] = IVCSC(tmp_i);
+    L[i] = R_NilValue;
+  }
+  
+  if (verbose) Rprintf("appending matrices to master IVCSC matrix\n");
+  
+  IVCSC out(tmp[0]);
+  for (size_t i = 1; i < tmp.size(); ++i) {
+    out.append(tmp[i]);
+    if (verbose) Rprintf("   appended matrix %i\n", i);
+    Rprintf("   resulting number of columns:  %i\n", out.cols());
+    Rprintf("   resulting size in Gb:  %5.2e\n", out.byteSize() / 1e9);
+  }
+  
+  out.write("IVCSC_matrix.ivsparse");
+  return true;
+}
+
+
+//[[Rcpp::export]]
+Eigen::SparseMatrix<float> read_IVSparse(){
+  IVCSC A("IVCSC_matrix.ivsparse");
+  Eigen::SparseMatrix<float> mat = A.toEigen();
+  return mat;
+}
+
+//[[Rcpp::export]]
 Rcpp::List run_nmf_on_sparsematrix_list(Rcpp::List A_, const double tol, const uint16_t maxit, const bool verbose, const uint16_t threads, Eigen::MatrixXd w, bool use_vcsc = false) {
     IVCSC A = build_IVCSC(A_, verbose);
+    if (verbose) Rprintf("saving IVSparse matrix\n");
     if (verbose) Rprintf("transposing IVCSC matrix\n");
     IVCSC At = A.transpose();
 

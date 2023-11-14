@@ -532,14 +532,14 @@ namespace IVSparse {
         FILE* fp = fopen(filename, "rb");
 
         #ifdef IVSPARSE_DEBUG
-        if (fp == nullptr) {
+        if (fp == NULL) {
             throw std::runtime_error("Error: Could not open file");
         }
         #endif
 
         // read the metadata
         metadata = new uint32_t[NUM_META_DATA];
-        if(fread(metadata, sizeof(uint32_t), NUM_META_DATA, fp) != 1) [[unlikely]] {
+        if(fread(metadata, sizeof(uint32_t), NUM_META_DATA, fp) == 0) [[unlikely]] {
             throw std::runtime_error("Error: Could not read file");
         }
 
@@ -580,7 +580,7 @@ namespace IVSparse {
             // get the size of the column
             uint64_t size;
 
-            if(fread(&size, sizeof(uint64_t), 1, fp) != 1) [[unlikely]] {
+            if(fread(&size, sizeof(uint64_t), 1, fp) == 0) [[unlikely]] {
                 throw std::runtime_error("Error: Could not read file");
             }
 
@@ -603,7 +603,7 @@ namespace IVSparse {
 
         // read the data
         for (size_t i = 0; i < outerDim; i++) {
-            if(fread(data[i], 1, (uint8_t*)endPointers[i] - (uint8_t*)data[i], fp) != 1) [[unlikely]] {
+            if(fread(data[i], 1, (uint8_t*)endPointers[i] - (uint8_t*)data[i], fp) == 0) [[unlikely]] {
                 throw std::runtime_error("Error: Could not read file");
             }
         }
