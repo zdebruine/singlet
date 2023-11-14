@@ -1,5 +1,8 @@
 #include <singlet.h>
 
+using IVCSC = IVSparse::SparseMatrix<float, uint64_t, 3, true>;
+using VCSC = IVSparse::SparseMatrix<float, uint64_t, 2, true>;
+
 // xorshift64 Linear Congruential Generator
 class rng {
    private:
@@ -601,7 +604,7 @@ Rcpp::List c_nmf_sparse_list(Rcpp::List A_, Rcpp::List& At_, const double tol, c
     return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
 }
 
-inline void predict(Eigen::SparseMatrix<float, 0, std::ptrdiff_t>& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
+inline void predict(IVCSC& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
     Eigen::MatrixXd a = AAt(w);
     if (L2 != 0) a.diagonal().array() *= (1 - L2);
 #ifdef _OPENMP
@@ -610,7 +613,23 @@ inline void predict(Eigen::SparseMatrix<float, 0, std::ptrdiff_t>& A, const Eige
     for (size_t i = 0; i < h.cols(); ++i) {
         // TO DO: check for empty column
         Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
-        for (Eigen::SparseMatrix<float, 0, std::ptrdiff_t>::InnerIterator it(A, i); it; ++it)
+        for (IVCSC::InnerIterator it(A, i); it; ++it)
+            b += it.value() * w.col(it.row());
+        b.array() -= L1;
+        nnls(a, b, h, i);
+    }
+}
+
+inline void predict(VCSC& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
+    Eigen::MatrixXd a = AAt(w);
+    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads)
+#endif
+    for (size_t i = 0; i < h.cols(); ++i) {
+        // TO DO: check for empty column
+        Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
+        for (VCSC::InnerIterator it(A, i); it; ++it)
             b += it.value() * w.col(it.row());
         b.array() -= L1;
         nnls(a, b, h, i);
@@ -623,43 +642,14 @@ inline void predict(Eigen::SparseMatrix<float, 0, std::ptrdiff_t>& A, const Eige
 // mega-kudos to the amazing Bing GPT-4 chat engine which got this entire function on the first try
 // A function that takes two Eigen::SparseMatrix objects as input and returns a new Eigen::SparseMatrix object that is the column-wise concatenation of the inputs
 
-Eigen::SparseMatrix<float, 0, std::ptrdiff_t> cbind_Eigen(const Eigen::SparseMatrix<float, 0, std::ptrdiff_t>& A, const Eigen::SparseMatrix<float, 0, std::ptrdiff_t>& B) {
-    // Check if the matrices have the same number of rows
-    if (A.rows() != B.rows()) Rcpp::stop("Number of rows in 'A' and 'B' must be identical!");
 
-    // Create a new matrix with the same number of rows and the sum of the columns
-    Eigen::SparseMatrix<float, 0, std::ptrdiff_t> C(A.rows(), A.cols() + B.cols());
-
-    // Reserve space for the non-zero elements
-    C.reserve(A.nonZeros() + B.nonZeros());
-
-    // Loop over the columns of A and B and insert them into C
-    for (size_t k = 0; k < A.outerSize(); ++k) {
-        C.startVec(k);
-        for (Eigen::SparseMatrix<float, 0, std::ptrdiff_t>::InnerIterator it(A, k); it; ++it) {
-            C.insertBack(it.row(), k) = it.value();
-        }
-    }
-    for (size_t k = 0; k < B.outerSize(); ++k) {
-        C.startVec(k + A.cols());
-        for (Eigen::SparseMatrix<float, 0, std::ptrdiff_t>::InnerIterator it(B, k); it; ++it) {
-            C.insertBack(it.row(), k + A.cols()) = it.value();
-        }
-    }
-    // Finalize the matrix
-    C.finalize();
-    // Return the result
-    return C;
-}
-
-// A function that takes an Rcpp::List of dgCMatrix as input and returns a list of Eigen::SparseMatrix
-Eigen::SparseMatrix<float, 0, std::ptrdiff_t> convert_dgCMatrix_to_SparseMatrix(Rcpp::List& L, const bool verbose = true) {
+IVCSC build_IVCSC(Rcpp::List& L, const bool verbose = true) {
     // Get the length of the input list
     int n = L.size();
     // Create an output list of the same length
-    std::vector<Eigen::SparseMatrix<float, 0, std::ptrdiff_t>> out(n);
+    std::vector<Eigen::SparseMatrix<float>> tmp(n);
     // Loop over the elements of the input list
-    if (verbose) Rprintf("converting %i matrices to Eigen::SparseMatrix<float, 0, std::ptrdiff_t>\n", out.size());
+    if (verbose) Rprintf("converting %i matrices to Eigen::SparseMatrix<float>\n", n);
 #pragma omp parallel for
     for (int i = 0; i < n; i++) {
         // Get the current element as an S4 object
@@ -673,65 +663,44 @@ Eigen::SparseMatrix<float, 0, std::ptrdiff_t> convert_dgCMatrix_to_SparseMatrix(
         int rows = dim[0];
         int cols = dim[1];
         // Create an Eigen::SparseMatrix object with the same dimensions
-        out[i] = Eigen::SparseMatrix<float, 0, std::ptrdiff_t>(rows, cols);
+        tmp[i] = Eigen::SparseMatrix<float>(rows, cols);
         // Reserve enough space for the non-zero elements
-        out[i].reserve(x_vec.size());
+        tmp[i].reserve(x_vec.size());
         // Loop over the columns of the matrix
         for (int j = 0; j < cols; j++) {
             // Start a new column in the sparse matrix
-            out[i].startVec(j);
+            tmp[i].startVec(j);
             // Get the range of non-zero elements in the current column
             int start = p_vec[j];
             int end = p_vec[j + 1];
             // Loop over the non-zero elements in the current column
             for (int k = start; k < end; k++) {
                 // Insert the value and the row index in the sparse matrix
-                out[i].insertBack(i_vec[k], j) = x_vec[k];
+                tmp[i].insertBack(i_vec[k], j) = x_vec[k];
             }
         }
-        out[i].makeCompressed();
+        tmp[i].makeCompressed();
         L[i] = R_NilValue;
     }
 
-    if (verbose) Rprintf("preparing to cbind matrices\n");
+    if (verbose) Rprintf("appending matrices to master IVCSC matrix\n");
 
-    // recursively cbind Eigen::SparseMatrix objects in the list
-    while (out.size() > 1) {
-        if (verbose) Rprintf("NEXT ITERATION: number of matrices left to cbind: %i\n", out.size());
-        for (size_t mat1 = 0; mat1 < (out.size() - 1); ++mat1) {
-            Rprintf("   cbinding matrix %i and %i\n", mat1, mat1 + 1);
-            out[mat1] = cbind_Eigen(out[mat1], out[mat1 + 1]);
-            Rprintf("   erasing cbinded matrix\n");
-            out.erase(out.begin() + mat1 + 1);
-            Rprintf("   resulting number of columns:  %i\n", out[mat1].cols());
-            Rprintf("   resulting number of nonzeros over INT_MAX:  %8.2e\n", out[mat1].nonZeros() / std::pow(2, 32));
-        }
+    IVCSC out(tmp[0]);
+    for (size_t i = 1; i < tmp.size(); ++i) {
+        out.append(tmp[i]);
+        if (verbose) Rprintf("   appended matrix %i\n", i);
+        Rprintf("   resulting number of columns:  %i\n", out.cols());
+        Rprintf("   resulting size in Gb:  %5.2e\n", out.byteSize() / 1e9);
     }
 
-    // log normalize
-    Rprintf("log normalizing matrix\n");
-#pragma omp parallel for
-    for (size_t i = 0; i < out[0].cols(); ++i) {
-        // calculate column sum
-        float colsum = 0;
-        for (Eigen::SparseMatrix<float, 0, std::ptrdiff_t>::InnerIterator it(out[0], i); it; ++it)
-            colsum += it.value();
-
-        // calculate scaling_factor
-        float scaling_factor = 10000 / colsum;
-
-        // log1p(x / colsum * scaling factor)
-        for (Eigen::SparseMatrix<float, 0, std::ptrdiff_t>::InnerIterator it(out[0], i); it; ++it)
-            it.valueRef() = std::log1p(it.value() * scaling_factor);
-    }
-    out[0].makeCompressed();
-    return out[0];
+    return out;
 }
 
 //[[Rcpp::export]]
-Rcpp::List run_nmf_on_dgCMatrix_list(Rcpp::List A_, const double tol, const uint16_t maxit, const bool verbose, const uint16_t threads, Eigen::MatrixXd w) {
-    Eigen::SparseMatrix<float, 0, std::ptrdiff_t> A = convert_dgCMatrix_to_SparseMatrix(A_);
-    Eigen::SparseMatrix<float, 0, std::ptrdiff_t> At = A.transpose();
+Rcpp::List run_nmf_on_sparsematrix_list(Rcpp::List A_, const double tol, const uint16_t maxit, const bool verbose, const uint16_t threads, Eigen::MatrixXd w, bool use_vcsc = false) {
+    IVCSC A = build_IVCSC(A_, verbose);
+    if (verbose) Rprintf("transposing IVCSC matrix\n");
+    IVCSC At = A.transpose();
 
     if (w.cols() != A.rows()) Rcpp::stop("number of rows in 'w' and 'A' is incompatible!");
     size_t m = A.rows(), n = At.rows();
@@ -743,16 +712,35 @@ Rcpp::List run_nmf_on_dgCMatrix_list(Rcpp::List A_, const double tol, const uint
         Rprintf("\n%4s | %8s \n---------------\n", "iter", "tol");
 
     // alternating least squares update loop
-    for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
-        Eigen::MatrixXd w_it = w;
-        predict(A, w, h, 0, 0, threads);
-        scale(h, d);
-        Rcpp::checkUserInterrupt();
-        predict(At, h, w, 0, 0, threads);
-        scale(w, d);
-        tol_ = cor(w, w_it);
-        if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
-        Rcpp::checkUserInterrupt();
+    if (use_vcsc) {
+        // convert ivcsc to vcsc
+        Rprintf("converting A to VCSC\n");
+        VCSC Avcsc(A);
+        Rprintf("converting At to VCSC\n");
+        VCSC Atvcsc(At);
+        for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
+            Eigen::MatrixXd w_it = w;
+            predict(Avcsc, w, h, 0, 0, threads);
+            scale(h, d);
+            Rcpp::checkUserInterrupt();
+            predict(Atvcsc, h, w, 0, 0, threads);
+            scale(w, d);
+            tol_ = cor(w, w_it);
+            if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
+            Rcpp::checkUserInterrupt();
+        }
+    } else {
+        for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
+            Eigen::MatrixXd w_it = w;
+            predict(A, w, h, 0, 0, threads);
+            scale(h, d);
+            Rcpp::checkUserInterrupt();
+            predict(At, h, w, 0, 0, threads);
+            scale(w, d);
+            tol_ = cor(w, w_it);
+            if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
+            Rcpp::checkUserInterrupt();
+        }
     }
     return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
 }

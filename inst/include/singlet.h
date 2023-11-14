@@ -20,6 +20,9 @@ class Exporter<Rcpp::SparseMatrix>;
 //[[Rcpp::depends(RcppEigen)]]
 #include <RcppEigen.h>
 
+// now pull in IVSparse after loading Eigen
+#include <IVSparse.h>
+
 // this class is provided for consistency with Eigen::SparseMatrix, but using
 // R objects (i.e. Rcpp::NumericVector, Rcpp::IntegerVector) that comprise Matrix::dgCMatrix in R.
 // R objects are pointers to underlying memory-mapped SEXP vectors, and are usable in C++ without any

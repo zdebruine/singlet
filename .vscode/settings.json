@@ -43,6 +43,23 @@
         "core": "cpp",
         "random": "cpp",
         "eigencore": "cpp",
-        "string_view": "cpp"
+        "string_view": "cpp",
+        "bit": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "cstddef": "cpp",
+        "map": "cpp",
+        "set": "cpp",
+        "string": "cpp",
+        "algorithm": "cpp",
+        "any": "cpp",
+        "iterator": "cpp",
+        "memory": "cpp",
+        "memory_resource": "cpp",
+        "system_error": "cpp",
+        "iomanip": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp"
     }
 }
