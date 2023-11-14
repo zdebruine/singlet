@@ -696,6 +696,12 @@ IVCSC build_IVCSC(Rcpp::List& L, const bool verbose = true) {
     return out;
 }
 
+//' Write an IVCSC matrix
+//' 
+//' @param L input dgCMatrix list
+//' @param verbose print outputs
+//' @export
+//' 
 //[[Rcpp::export]]
 bool write_IVCSC(Rcpp::List& L, const bool verbose = true) {
   // Get the length of the input list

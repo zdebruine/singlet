@@ -25,6 +25,12 @@ c_nmf_sparse_list <- function(A_, At_, tol, maxit, verbose, L1, L2, threads, w) 
     .Call(`_singlet_c_nmf_sparse_list`, A_, At_, tol, maxit, verbose, L1, L2, threads, w)
 }
 
+#' Write an IVCSC matrix
+#' 
+#' @param L input dgCMatrix list
+#' @param verbose print outputs
+#' @export
+#' 
 write_IVCSC <- function(L, verbose = TRUE) {
     .Call(`_singlet_write_IVCSC`, L, verbose)
 }
