@@ -13,6 +13,10 @@ rowwise_compress_dense <- function(A, n = 10L, threads = 0L) {
     .Call(`_singlet_rowwise_compress_dense`, A, n, threads)
 }
 
+Rcpp_predict <- function(A, w, L1, L2, threads) {
+    .Call(`_singlet_Rcpp_predict`, A, w, L1, L2, threads)
+}
+
 c_project_model <- function(A, w, L1, L2, threads) {
     .Call(`_singlet_c_project_model`, A, w, L1, L2, threads)
 }
@@ -26,11 +30,11 @@ c_nmf_sparse_list <- function(A_, At_, tol, maxit, verbose, L1, L2, threads, w) 
 }
 
 #' Write an IVCSC matrix
-#' 
+#'
 #' @param L input dgCMatrix list
 #' @param verbose print outputs
 #' @export
-#' 
+#'
 write_IVCSC <- function(L, verbose = TRUE) {
     .Call(`_singlet_write_IVCSC`, L, verbose)
 }
@@ -47,8 +51,8 @@ read_IVSparse <- function() {
     .Call(`_singlet_read_IVSparse`)
 }
 
-run_nmf_on_sparsematrix_list <- function(A_, tol, maxit, verbose, threads, w, use_vcsc = FALSE) {
-    .Call(`_singlet_run_nmf_on_sparsematrix_list`, A_, tol, maxit, verbose, threads, w, use_vcsc)
+run_nmf_on_sparsematrix_list <- function(A_, tol, maxit, verbose, threads, w, use_vcsc = FALSE, L1 = 0, L2 = 0) {
+    .Call(`_singlet_run_nmf_on_sparsematrix_list`, A_, tol, maxit, verbose, threads, w, use_vcsc, L1, L2)
 }
 
 c_mu_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w) {
