@@ -226,12 +226,14 @@ void scale(Eigen::MatrixXd& w, Eigen::VectorXd& d) {
 
 // NNLS SOLVER OF THE FORM ax=b ---------------------------------------------------------------------------------
 // optimized and modified from github.com/linxihui/NNLM "c_nnls" function
-inline void nnls(Eigen::MatrixXd& a, Eigen::VectorXd& b, Eigen::MatrixXd& x, const size_t col) {
+inline void nnls(Eigen::MatrixXd& a, Eigen::VectorXd& b, Eigen::MatrixXd& x, const size_t col, const double L1 = 0, const double L2 = 0) {
     double tol = 1;
     for (uint8_t it = 0; it < 100 && (tol / b.size()) > 1e-8; ++it) {
         tol = 0;
         for (size_t i = 0; i < x.rows(); ++i) {
             double diff = b(i) / a(i, i);
+            if (L1 != 0) diff -= L1;
+            if (L2 != 0) diff -= L2 * x(i, col);
             if (-diff > x(i, col)) {
                 if (x(i, col) != 0) {
                     b -= a.col(i) * -x(i, col);
@@ -252,7 +254,7 @@ inline void nnls(Eigen::MatrixXd& a, Eigen::VectorXd& b, Eigen::MatrixXd& x, con
 // update h given A and w
 inline void predict(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
     Eigen::MatrixXd a = AAt(w);
-    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+    // if (L2 != 0) a.diagonal().array() *= (1 - L2);
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads)
 #endif
@@ -261,29 +263,49 @@ inline void predict(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::Matri
         Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
         for (Rcpp::SparseMatrix::InnerIterator it(A, i); it; ++it)
             b += it.value() * w.col(it.row());
-        b.array() -= L1;
-        nnls(a, b, h, i);
+        // b.array() -= L1;
+        nnls(a, b, h, i, L1, L2);
     }
+}
+
+//[[Rcpp::export]]
+Eigen::MatrixXd Rcpp_predict(Rcpp::SparseMatrix A, Eigen::MatrixXd w, const double L1, const double L2, const int threads) {
+    if (w.rows() == A.rows() && w.cols() != A.rows()) w = w.transpose();
+    Eigen::MatrixXd a = AAt(w);
+    Eigen::MatrixXd h = Eigen::MatrixXd::Zero(w.rows(), A.cols());
+    // if (L2 != 0) a.diagonal().array() *= (1 - L2);
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads)
+#endif
+    for (size_t i = 0; i < h.cols(); ++i) {
+        if (A.p[i] == A.p[i + 1]) continue;
+        Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
+        for (Rcpp::SparseMatrix::InnerIterator it(A, i); it; ++it)
+            b += it.value() * w.col(it.row());
+        // b.array() -= L1;
+        nnls(a, b, h, i, L1, L2);
+    }
+    return h;
 }
 
 // update h given A and w
 inline void predict(Eigen::MatrixXd A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
     Eigen::MatrixXd a = AAt(w);
-    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+    // if (L2 != 0) a.diagonal().array() *= (1 - L2);
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads)
 #endif
     for (size_t i = 0; i < h.cols(); ++i) {
         Eigen::VectorXd b = w * A.col(i);
-        b.array() -= L1;
-        nnls(a, b, h, i);
+        // b.array() -= L1;
+        nnls(a, b, h, i, L1, L2);
     }
 }
 
 // update h given A and w
 inline void predict(std::vector<Rcpp::SparseMatrix> A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
     Eigen::MatrixXd a = AAt(w);
-    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+    // if (L2 != 0) a.diagonal().array() *= (1 - L2);
     size_t offset = 0;
     for (size_t chunk = 0; chunk < A.size(); ++chunk) {
 #ifdef _OPENMP
@@ -294,8 +316,8 @@ inline void predict(std::vector<Rcpp::SparseMatrix> A, const Eigen::MatrixXd& w,
             Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
             for (Rcpp::SparseMatrix::InnerIterator it(A[chunk], i); it; ++it)
                 b += it.value() * w.col(it.row());
-            b.array() -= L1;
-            nnls(a, b, h, i + offset);
+            // b.array() -= L1;
+            nnls(a, b, h, i + offset, L1, L2);
         }
         offset += A[chunk].cols();
     }
@@ -316,7 +338,7 @@ Rcpp::List c_project_model(Rcpp::SparseMatrix A, Eigen::MatrixXd w, const double
 inline void predict_link(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads,
                          const Eigen::MatrixXd& link_h) {
     Eigen::MatrixXd a = AAt(w);
-    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+    // if (L2 != 0) a.diagonal().array() *= (1 - L2);
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads)
 #endif
@@ -325,10 +347,10 @@ inline void predict_link(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::
         Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
         for (Rcpp::SparseMatrix::InnerIterator it(A, i); it; ++it)
             b += it.value() * w.col(it.row());
-        b.array() -= L1;
+        // b.array() -= L1;
         for (size_t j = 0; j < link_h.rows(); ++j)
             b[j] *= link_h(j, i);
-        nnls(a, b, h, i);
+        nnls(a, b, h, i, L1, L2);
     }
 }
 
@@ -356,12 +378,12 @@ inline void predict_mask(Rcpp::SparseMatrix A, rng seed, const uint64_t inv_dens
                 ++it;
             }
         }
-        b.array() -= L1;
+        // b.array() -= L1;
         Eigen::MatrixXd wsub = submat(w, idx);
         Eigen::MatrixXd asub = AAt(wsub);
         Eigen::MatrixXd a_i = a - asub;
-        if (L2 != 0) a_i.diagonal().array() *= (1 - L2);
-        nnls(a_i, b, h, i);
+        // if (L2 != 0) a_i.diagonal().array() *= (1 - L2);
+        nnls(a_i, b, h, i, L1, L2);
     }
 }
 
@@ -369,7 +391,7 @@ inline void predict_mask(Rcpp::SparseMatrix A, rng seed, const uint64_t inv_dens
 inline void predict_mask(std::vector<Rcpp::SparseMatrix>& A, rng seed, const uint64_t inv_density, const Eigen::MatrixXd& w,
                          Eigen::MatrixXd& h, const double L1, const double L2, const int threads, const bool mask_t) {
     Eigen::MatrixXd a = AAt(w);
-    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+    // if (L2 != 0) a.diagonal().array() *= (1 - L2);
     size_t offset = 0;
     for (size_t chunk = 0; chunk < A.size(); ++chunk) {
 #ifdef _OPENMP
@@ -391,12 +413,12 @@ inline void predict_mask(std::vector<Rcpp::SparseMatrix>& A, rng seed, const uin
                     ++it;
                 }
             }
-            b.array() -= L1;
+            // b.array() -= L1;
             Eigen::MatrixXd wsub = submat(w, idx);
             Eigen::MatrixXd asub = AAt(wsub);
             Eigen::MatrixXd a_i = a - asub;
-            if (L2 != 0) a_i.diagonal().array() *= (1 - L2);
-            nnls(a_i, b, h, i + offset);
+            // if (L2 != 0) a_i.diagonal().array() *= (1 - L2);
+            nnls(a_i, b, h, i + offset, L1, L2);
         }
         offset += A[chunk].cols();
     }
@@ -421,12 +443,12 @@ inline void predict_mask(const Eigen::MatrixXd& A, rng seed, const uint64_t inv_
                 b += A(j, i) * w.col(j);
             }
         }
-        b.array() -= L1;
+        // b.array() -= L1;
         Eigen::MatrixXd wsub = submat(w, idx);
         Eigen::MatrixXd asub = AAt(wsub);
         Eigen::MatrixXd a_i = a - asub;
-        if (L2 != 0) a_i.diagonal().array() *= (1 - L2);
-        nnls(a_i, b, h, i);
+        // if (L2 != 0) a_i.diagonal().array() *= (1 - L2);
+        nnls(a_i, b, h, i, L1, L2);
     }
 }
 
@@ -606,7 +628,7 @@ Rcpp::List c_nmf_sparse_list(Rcpp::List A_, Rcpp::List& At_, const double tol, c
 
 inline void predict(IVCSC& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
     Eigen::MatrixXd a = AAt(w);
-    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+    // if (L2 != 0) a.diagonal().array() *= (1 - L2);
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads)
 #endif
@@ -615,14 +637,14 @@ inline void predict(IVCSC& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, cons
         Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
         for (IVCSC::InnerIterator it(A, i); it; ++it)
             b += it.value() * w.col(it.row());
-        b.array() -= L1;
-        nnls(a, b, h, i);
+        // b.array() -= L1;
+        nnls(a, b, h, i, L1, L2);
     }
 }
 
 inline void predict(VCSC& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads) {
     Eigen::MatrixXd a = AAt(w);
-    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+    // if (L2 != 0) a.diagonal().array() *= (1 - L2);
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads)
 #endif
@@ -631,8 +653,8 @@ inline void predict(VCSC& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const
         Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
         for (VCSC::InnerIterator it(A, i); it; ++it)
             b += it.value() * w.col(it.row());
-        b.array() -= L1;
-        nnls(a, b, h, i);
+        // b.array() -= L1;
+        nnls(a, b, h, i, L1, L2);
     }
 }
 
@@ -641,7 +663,6 @@ inline void predict(VCSC& A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const
 
 // mega-kudos to the amazing Bing GPT-4 chat engine which got this entire function on the first try
 // A function that takes two Eigen::SparseMatrix objects as input and returns a new Eigen::SparseMatrix object that is the column-wise concatenation of the inputs
-
 
 IVCSC build_IVCSC(Rcpp::List& L, const bool verbose = true) {
     // Get the length of the input list
@@ -697,120 +718,118 @@ IVCSC build_IVCSC(Rcpp::List& L, const bool verbose = true) {
 }
 
 //' Write an IVCSC matrix
-//' 
+//'
 //' @param L input dgCMatrix list
 //' @param verbose print outputs
 //' @export
-//' 
+//'
 //[[Rcpp::export]]
 bool write_IVCSC(Rcpp::List& L, const bool verbose = true) {
-  // Get the length of the input list
-  int n = L.size();
-  // Create an output list of the same length
-  std::vector<Eigen::SparseMatrix<float>> tmp(n);
-  // Loop over the elements of the input list
-  if (verbose) Rprintf("converting %i matrices to Eigen::SparseMatrix<float>\n", n);
+    // Get the length of the input list
+    int n = L.size();
+    // Create an output list of the same length
+    std::vector<Eigen::SparseMatrix<float>> tmp(n);
+    // Loop over the elements of the input list
+    if (verbose) Rprintf("converting %i matrices to Eigen::SparseMatrix<float>\n", n);
 #pragma omp parallel for
-  for (int i = 0; i < n; i++) {
-    // Get the current element as an S4 object
-    Rcpp::S4 mat = L[i];
-    // Get the i, x, and p vectors from the S4 object
-    Rcpp::IntegerVector i_vec = mat.slot("i");
-    Rcpp::NumericVector x_vec = mat.slot("x");
-    Rcpp::IntegerVector p_vec = mat.slot("p");
-    // Get the dimensions of the matrix from the S4 object
-    Rcpp::IntegerVector dim = mat.slot("Dim");
-    int rows = dim[0];
-    int cols = dim[1];
-    // Create an Eigen::SparseMatrix object with the same dimensions
-    tmp[i] = Eigen::SparseMatrix<float>(rows, cols);
-    // Reserve enough space for the non-zero elements
-    tmp[i].reserve(x_vec.size());
-    // Loop over the columns of the matrix
-    for (int j = 0; j < cols; j++) {
-      // Start a new column in the sparse matrix
-      tmp[i].startVec(j);
-      // Get the range of non-zero elements in the current column
-      int start = p_vec[j];
-      int end = p_vec[j + 1];
-      // Loop over the non-zero elements in the current column
-      for (int k = start; k < end; k++) {
-        // Insert the value and the row index in the sparse matrix
-        tmp[i].insertBack(i_vec[k], j) = x_vec[k];
-      }
+    for (int i = 0; i < n; i++) {
+        // Get the current element as an S4 object
+        Rcpp::S4 mat = L[i];
+        // Get the i, x, and p vectors from the S4 object
+        Rcpp::IntegerVector i_vec = mat.slot("i");
+        Rcpp::NumericVector x_vec = mat.slot("x");
+        Rcpp::IntegerVector p_vec = mat.slot("p");
+        // Get the dimensions of the matrix from the S4 object
+        Rcpp::IntegerVector dim = mat.slot("Dim");
+        int rows = dim[0];
+        int cols = dim[1];
+        // Create an Eigen::SparseMatrix object with the same dimensions
+        tmp[i] = Eigen::SparseMatrix<float>(rows, cols);
+        // Reserve enough space for the non-zero elements
+        tmp[i].reserve(x_vec.size());
+        // Loop over the columns of the matrix
+        for (int j = 0; j < cols; j++) {
+            // Start a new column in the sparse matrix
+            tmp[i].startVec(j);
+            // Get the range of non-zero elements in the current column
+            int start = p_vec[j];
+            int end = p_vec[j + 1];
+            // Loop over the non-zero elements in the current column
+            for (int k = start; k < end; k++) {
+                // Insert the value and the row index in the sparse matrix
+                tmp[i].insertBack(i_vec[k], j) = x_vec[k];
+            }
+        }
+        tmp[i].makeCompressed();
+        L[i] = R_NilValue;
     }
-    tmp[i].makeCompressed();
-    L[i] = R_NilValue;
-  }
-  
-  if (verbose) Rprintf("appending matrices to master IVCSC matrix\n");
-  
-  IVCSC out(tmp[0]);
-  for (size_t i = 1; i < tmp.size(); ++i) {
-    out.append(tmp[i]);
-    if (verbose) Rprintf("   appended matrix %i\n", i);
-    Rprintf("   resulting number of columns:  %i\n", out.cols());
-    Rprintf("   resulting size in Gb:  %5.2e\n", out.byteSize() / 1e9);
-  }
-  
-  Rprintf("writing IVSparse matrix\n");
-  out.write("IVSparse_matrix.ivsparse");
-  
-  Rprintf("transposing IVSparse matrix\n");
-  IVCSC out2 = out.transpose();  
-  
-  Rprintf("writing transposed IVSparse matrix\n");
-  out2.write("IVSparse_matrix_transpose.ivsparse\n");
-  Rprintf("done!");
-  return true;
+
+    if (verbose) Rprintf("appending matrices to master IVCSC matrix\n");
+
+    IVCSC out(tmp[0]);
+    for (size_t i = 1; i < tmp.size(); ++i) {
+        out.append(tmp[i]);
+        if (verbose) Rprintf("   appended matrix %i\n", i);
+        Rprintf("   resulting number of columns:  %i\n", out.cols());
+        Rprintf("   resulting size in Gb:  %5.2e\n", out.byteSize() / 1e9);
+    }
+
+    Rprintf("writing IVSparse matrix\n");
+    out.write("IVSparse_matrix.ivsparse");
+
+    Rprintf("transposing IVSparse matrix\n");
+    IVCSC out2 = out.transpose();
+
+    Rprintf("writing transposed IVSparse matrix\n");
+    out2.write("IVSparse_matrix_transpose.ivsparse\n");
+    Rprintf("done!");
+    return true;
 }
 
-
 //[[Rcpp::export]]
-bool save_IVSparse(Rcpp::List A_, bool verbose = true){
-  IVCSC A = build_IVCSC(A_, verbose);
-  if (verbose) Rprintf("writing to IVCSC_matrix.ivsparse\n");
-  A.write("IVCSC_matrix.ivsparse");
-  return true;
+bool save_IVSparse(Rcpp::List A_, bool verbose = true) {
+    IVCSC A = build_IVCSC(A_, verbose);
+    if (verbose) Rprintf("writing to IVCSC_matrix.ivsparse\n");
+    A.write("IVCSC_matrix.ivsparse");
+    return true;
 }
 
 //[[Rcpp::export]]
 bool build_IVCSC2(Rcpp::List& L, const bool verbose = true) {
-  // Get the length of the input list
-  std::vector<IVCSC> tmp(L.size());
-  // Loop over the elements of the input list
-  if (verbose) Rprintf("converting %i matrices to IVCSC\n", L.size());
+    // Get the length of the input list
+    std::vector<IVCSC> tmp(L.size());
+    // Loop over the elements of the input list
+    if (verbose) Rprintf("converting %i matrices to IVCSC\n", L.size());
 #pragma omp parallel for
-  for (int i = 0; i < L.size(); i++) {
-    Eigen::SparseMatrix<float> tmp_i = Rcpp::as<Eigen::SparseMatrix<float>>(L[i]);
-    tmp[i] = IVCSC(tmp_i);
-    L[i] = R_NilValue;
-  }
-  
-  if (verbose) Rprintf("appending matrices to master IVCSC matrix\n");
-  
-  IVCSC out(tmp[0]);
-  for (size_t i = 1; i < tmp.size(); ++i) {
-    out.append(tmp[i]);
-    if (verbose) Rprintf("   appended matrix %i\n", i);
-    Rprintf("   resulting number of columns:  %i\n", out.cols());
-    Rprintf("   resulting size in Gb:  %5.2e\n", out.byteSize() / 1e9);
-  }
-  
-  out.write("IVCSC_matrix.ivsparse");
-  return true;
-}
+    for (int i = 0; i < L.size(); i++) {
+        Eigen::SparseMatrix<float> tmp_i = Rcpp::as<Eigen::SparseMatrix<float>>(L[i]);
+        tmp[i] = IVCSC(tmp_i);
+        L[i] = R_NilValue;
+    }
 
+    if (verbose) Rprintf("appending matrices to master IVCSC matrix\n");
 
-//[[Rcpp::export]]
-Eigen::SparseMatrix<float> read_IVSparse(){
-  IVCSC A("IVCSC_matrix.ivsparse");
-  Eigen::SparseMatrix<float> mat = A.toEigen();
-  return mat;
+    IVCSC out(tmp[0]);
+    for (size_t i = 1; i < tmp.size(); ++i) {
+        out.append(tmp[i]);
+        if (verbose) Rprintf("   appended matrix %i\n", i);
+        Rprintf("   resulting number of columns:  %i\n", out.cols());
+        Rprintf("   resulting size in Gb:  %5.2e\n", out.byteSize() / 1e9);
+    }
+
+    out.write("IVCSC_matrix.ivsparse");
+    return true;
 }
 
 //[[Rcpp::export]]
-Rcpp::List run_nmf_on_sparsematrix_list(Rcpp::List A_, const double tol, const uint16_t maxit, const bool verbose, const uint16_t threads, Eigen::MatrixXd w, bool use_vcsc = false) {
+Eigen::SparseMatrix<float> read_IVSparse() {
+    IVCSC A("IVCSC_matrix.ivsparse");
+    Eigen::SparseMatrix<float> mat = A.toEigen();
+    return mat;
+}
+
+//[[Rcpp::export]]
+Rcpp::List run_nmf_on_sparsematrix_list(Rcpp::List A_, const double tol, const uint16_t maxit, const bool verbose, const uint16_t threads, Eigen::MatrixXd w, bool use_vcsc = false, const double L1 = 0, const double L2 = 0) {
     IVCSC A = build_IVCSC(A_, verbose);
     if (verbose) Rprintf("saving IVSparse matrix\n");
     if (verbose) Rprintf("transposing IVCSC matrix\n");
@@ -834,10 +853,10 @@ Rcpp::List run_nmf_on_sparsematrix_list(Rcpp::List A_, const double tol, const u
         VCSC Atvcsc(At);
         for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
             Eigen::MatrixXd w_it = w;
-            predict(Avcsc, w, h, 0, 0, threads);
+            predict(Avcsc, w, h, L1, L2, threads);
             scale(h, d);
             Rcpp::checkUserInterrupt();
-            predict(Atvcsc, h, w, 0, 0, threads);
+            predict(Atvcsc, h, w, L1, L2, threads);
             scale(w, d);
             tol_ = cor(w, w_it);
             if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
@@ -846,10 +865,10 @@ Rcpp::List run_nmf_on_sparsematrix_list(Rcpp::List A_, const double tol, const u
     } else {
         for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
             Eigen::MatrixXd w_it = w;
-            predict(A, w, h, 0, 0, threads);
+            predict(A, w, h, L1, L2, threads);
             scale(h, d);
             Rcpp::checkUserInterrupt();
-            predict(At, h, w, 0, 0, threads);
+            predict(At, h, w, L1, L2, threads);
             scale(w, d);
             tol_ = cor(w, w_it);
             if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
@@ -1412,7 +1431,7 @@ Rcpp::S4 c_SNN(Rcpp::SparseMatrix G, double min_similarity, size_t threads) {
 // update h given A and w
 inline void gcnmf_update_h(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, Rcpp::SparseMatrix G, const double L1, const double L2, const int threads) {
     Eigen::MatrixXd a = AAt(w);
-    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+    // if (L2 != 0) a.diagonal().array() *= (1 - L2);
     // calculate b like in non-convolutional updates
     Eigen::MatrixXd b = Eigen::MatrixXd::Zero(h.rows(), A.cols());
 #ifdef _OPENMP
@@ -1429,15 +1448,15 @@ inline void gcnmf_update_h(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen
         Eigen::VectorXd b_ = Eigen::VectorXd::Zero(b.rows());
         for (Rcpp::SparseMatrix::InnerIterator it(G, j); it; ++it)
             b_ += it.value() * b.col(it.row());
-        b_.array() -= L1;
-        nnls(a, b_, h, j);
+        // b_.array() -= L1;
+        nnls(a, b_, h, j, L1, L2);
     }
 }
 
 // update w given A and h
 inline void gcnmf_update_w(Rcpp::SparseMatrix At, Eigen::MatrixXd& w, const Eigen::MatrixXd& h, Rcpp::SparseMatrix G, const double L1, const double L2, const int threads) {
     Eigen::MatrixXd a = AAt(h);
-    if (L2 != 0) a.diagonal().array() *= (1 - L2);
+    // if (L2 != 0) a.diagonal().array() *= (1 - L2);
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads)
@@ -1449,8 +1468,8 @@ inline void gcnmf_update_w(Rcpp::SparseMatrix At, Eigen::MatrixXd& w, const Eige
                 b += (it.value() * it2.value()) * h.col(it2.row());
             }
         }
-        b.array() -= L1;
-        nnls(a, b, w, j);
+        // b.array() -= L1;
+        nnls(a, b, w, j, L1, L2);
     }
 }
 
