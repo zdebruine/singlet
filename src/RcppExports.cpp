@@ -51,6 +51,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// calc_L1_matrix
+Eigen::MatrixXd calc_L1_matrix(const Eigen::MatrixXd& h, Rcpp::IntegerVector batch_id);
+RcppExport SEXP _singlet_calc_L1_matrix(SEXP hSEXP, SEXP batch_idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type h(hSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type batch_id(batch_idSEXP);
+    rcpp_result_gen = Rcpp::wrap(calc_L1_matrix(h, batch_id));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Rcpp_predict
 Eigen::MatrixXd Rcpp_predict(Rcpp::SparseMatrix A, Eigen::MatrixXd w, const double L1, const double L2, const int threads);
 RcppExport SEXP _singlet_Rcpp_predict(SEXP ASEXP, SEXP wSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP) {
@@ -82,8 +94,29 @@ BEGIN_RCPP
 END_RCPP
 }
 // c_nmf
-Rcpp::List c_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w);
-RcppExport SEXP _singlet_c_nmf(SEXP ASEXP, SEXP AtSEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP, SEXP wSEXP) {
+Rcpp::List c_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w);
+RcppExport SEXP _singlet_c_nmf(SEXP ASEXP, SEXP AtSEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1_wSEXP, SEXP L1_hSEXP, SEXP L2_wSEXP, SEXP L2_hSEXP, SEXP threadsSEXP, SEXP wSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::SparseMatrix& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< Rcpp::SparseMatrix& >::type At(AtSEXP);
+    Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< const uint16_t >::type maxit(maxitSEXP);
+    Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
+    Rcpp::traits::input_parameter< const double >::type L1_w(L1_wSEXP);
+    Rcpp::traits::input_parameter< const double >::type L1_h(L1_hSEXP);
+    Rcpp::traits::input_parameter< const double >::type L2_w(L2_wSEXP);
+    Rcpp::traits::input_parameter< const double >::type L2_h(L2_hSEXP);
+    Rcpp::traits::input_parameter< const uint16_t >::type threads(threadsSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type w(wSEXP);
+    rcpp_result_gen = Rcpp::wrap(c_nmf(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w));
+    return rcpp_result_gen;
+END_RCPP
+}
+// c_nmf_batch
+Rcpp::List c_nmf_batch(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, Rcpp::IntegerVector batch_id);
+RcppExport SEXP _singlet_c_nmf_batch(SEXP ASEXP, SEXP AtSEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP, SEXP wSEXP, SEXP batch_idSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -96,7 +129,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type L2(L2SEXP);
     Rcpp::traits::input_parameter< const uint16_t >::type threads(threadsSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type w(wSEXP);
-    rcpp_result_gen = Rcpp::wrap(c_nmf(A, At, tol, maxit, verbose, L1, L2, threads, w));
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type batch_id(batch_idSEXP);
+    rcpp_result_gen = Rcpp::wrap(c_nmf_batch(A, At, tol, maxit, verbose, L1, L2, threads, w, batch_id));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -204,8 +238,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // c_nmf_dense
-Rcpp::List c_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w);
-RcppExport SEXP _singlet_c_nmf_dense(SEXP ASEXP, SEXP AtSEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1SEXP, SEXP L2SEXP, SEXP threadsSEXP, SEXP wSEXP) {
+Rcpp::List c_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double tol, const uint16_t maxit, const bool verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w);
+RcppExport SEXP _singlet_c_nmf_dense(SEXP ASEXP, SEXP AtSEXP, SEXP tolSEXP, SEXP maxitSEXP, SEXP verboseSEXP, SEXP L1_wSEXP, SEXP L1_hSEXP, SEXP L2_wSEXP, SEXP L2_hSEXP, SEXP threadsSEXP, SEXP wSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -214,11 +248,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
     Rcpp::traits::input_parameter< const uint16_t >::type maxit(maxitSEXP);
     Rcpp::traits::input_parameter< const bool >::type verbose(verboseSEXP);
-    Rcpp::traits::input_parameter< const double >::type L1(L1SEXP);
-    Rcpp::traits::input_parameter< const double >::type L2(L2SEXP);
+    Rcpp::traits::input_parameter< const double >::type L1_w(L1_wSEXP);
+    Rcpp::traits::input_parameter< const double >::type L1_h(L1_hSEXP);
+    Rcpp::traits::input_parameter< const double >::type L2_w(L2_wSEXP);
+    Rcpp::traits::input_parameter< const double >::type L2_h(L2_hSEXP);
     Rcpp::traits::input_parameter< const uint16_t >::type threads(threadsSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type w(wSEXP);
-    rcpp_result_gen = Rcpp::wrap(c_nmf_dense(A, At, tol, maxit, verbose, L1, L2, threads, w));
+    rcpp_result_gen = Rcpp::wrap(c_nmf_dense(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -409,9 +445,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_singlet_weight_by_split", (DL_FUNC) &_singlet_weight_by_split, 3},
     {"_singlet_rowwise_compress_sparse", (DL_FUNC) &_singlet_rowwise_compress_sparse, 3},
     {"_singlet_rowwise_compress_dense", (DL_FUNC) &_singlet_rowwise_compress_dense, 3},
+    {"_singlet_calc_L1_matrix", (DL_FUNC) &_singlet_calc_L1_matrix, 2},
     {"_singlet_Rcpp_predict", (DL_FUNC) &_singlet_Rcpp_predict, 5},
     {"_singlet_c_project_model", (DL_FUNC) &_singlet_c_project_model, 5},
-    {"_singlet_c_nmf", (DL_FUNC) &_singlet_c_nmf, 9},
+    {"_singlet_c_nmf", (DL_FUNC) &_singlet_c_nmf, 11},
+    {"_singlet_c_nmf_batch", (DL_FUNC) &_singlet_c_nmf_batch, 10},
     {"_singlet_c_nmf_sparse_list", (DL_FUNC) &_singlet_c_nmf_sparse_list, 9},
     {"_singlet_write_IVCSC", (DL_FUNC) &_singlet_write_IVCSC, 2},
     {"_singlet_save_IVSparse", (DL_FUNC) &_singlet_save_IVSparse, 2},
@@ -419,7 +457,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_singlet_read_IVSparse", (DL_FUNC) &_singlet_read_IVSparse, 0},
     {"_singlet_run_nmf_on_sparsematrix_list", (DL_FUNC) &_singlet_run_nmf_on_sparsematrix_list, 9},
     {"_singlet_c_mu_nmf", (DL_FUNC) &_singlet_c_mu_nmf, 9},
-    {"_singlet_c_nmf_dense", (DL_FUNC) &_singlet_c_nmf_dense, 9},
+    {"_singlet_c_nmf_dense", (DL_FUNC) &_singlet_c_nmf_dense, 11},
     {"_singlet_c_linked_nmf", (DL_FUNC) &_singlet_c_linked_nmf, 11},
     {"_singlet_c_ard_nmf", (DL_FUNC) &_singlet_c_ard_nmf, 13},
     {"_singlet_c_ard_nmf_sparse_list", (DL_FUNC) &_singlet_c_ard_nmf_sparse_list, 13},

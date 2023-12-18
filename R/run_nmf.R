@@ -17,9 +17,6 @@
 #'
 run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0, compression_level = 3) {
   use_vcsc <- compression_level == 2
-  if (L1 >= 1) {
-    stop("L1 penalty must be strictly in the range (0, 1]")
-  }
 
   if ("list" %in% class(A)) {
     # check that number of rows is identical
@@ -47,12 +44,19 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
       At <- t(A)
       dense_mode <- TRUE
     }
+    
+    if(length(L1) != 2){
+      L1 <- c(L1[[1]], L1[[1]])
+    }
+    if(length(L2) != 2){
+      L2 <- c(L2[[1]], L2[[1]])
+    }
 
     w_init <- matrix(stats::runif(nrow(A) * rank), rank, nrow(A))
     if (dense_mode) {
-      model <- c_nmf_dense(A, At, tol, maxit, verbose, L1, L2, threads, w_init)
+      model <- c_nmf_dense(A, At, tol, maxit, verbose, L1[[1]], L1[[2]], L2[[1]], L2[[2]], threads, w_init)
     } else {
-      model <- c_nmf(A, At, tol, maxit, verbose, L1, L2, threads, w_init)
+      model <- c_nmf(A, At, tol, maxit, verbose, L1[[1]], L1[[2]], L2[[1]], L2[[2]], threads, w_init)
     }
     rn <- rownames(A)
     cn <- colnames(A)

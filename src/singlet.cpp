@@ -226,14 +226,14 @@ void scale(Eigen::MatrixXd& w, Eigen::VectorXd& d) {
 
 // NNLS SOLVER OF THE FORM ax=b ---------------------------------------------------------------------------------
 // optimized and modified from github.com/linxihui/NNLM "c_nnls" function
-inline void nnls(Eigen::MatrixXd& a, Eigen::VectorXd& b, Eigen::MatrixXd& x, const size_t col, const double L1 = 0, const double L2 = 0) {
+inline void nnls(Eigen::MatrixXd& a, Eigen::VectorXd& b, Eigen::MatrixXd& x, const size_t col,const double L1 = 0, const double L2 = 0) {
     double tol = 1;
     for (uint8_t it = 0; it < 100 && (tol / b.size()) > 1e-8; ++it) {
         tol = 0;
         for (size_t i = 0; i < x.rows(); ++i) {
             double diff = b(i) / a(i, i);
             if (L1 != 0) diff -= L1;
-            if (L2 != 0) diff -= L2 * x(i, col);
+            if (L2 != 0) diff += L2 * x(i, col);
             if (-diff > x(i, col)) {
                 if (x(i, col) != 0) {
                     b -= a.col(i) * -x(i, col);
@@ -246,6 +246,84 @@ inline void nnls(Eigen::MatrixXd& a, Eigen::VectorXd& b, Eigen::MatrixXd& x, con
                 tol += std::abs(diff / (x(i, col) + 1e-15));
             }
         }
+    }
+}
+
+// NNLS SOLVER OF THE FORM ax=b ---------------------------------------------------------------------------------
+// optimized and modified from github.com/linxihui/NNLM "c_nnls" function
+inline void nnls_L1_matrix(Eigen::MatrixXd& a, Eigen::VectorXd& b, Eigen::MatrixXd& x, const size_t col, const Eigen::MatrixXd& L1_matrix, const double L1 = 0, const double L2 = 0) {
+    double tol = 1;
+    for (uint8_t it = 0; it < 100 && (tol / b.size()) > 1e-8; ++it) {
+        tol = 0;
+        for (size_t i = 0; i < x.rows(); ++i) {
+            double diff = b(i) / a(i, i);
+            diff -= L1_matrix(i, col);
+            if (L1 != 0) diff -= L1;
+            if (L2 != 0) diff += L2 * x(i, col);
+            if (-diff > x(i, col)) {
+                if (x(i, col) != 0) {
+                    b -= a.col(i) * -x(i, col);
+                    tol = 1;
+                    x(i, col) = 0;
+                }
+            } else if (diff != 0) {
+                x(i, col) += diff;
+                b -= a.col(i) * diff;
+                tol += std::abs(diff / (x(i, col) + 1e-15));
+            }
+        }
+    }
+}
+
+// batch_id is a vector with values between 1 and n_batch_ids, the result of
+//  as.numeric(as.factor(metadata_item_vector))
+//[[Rcpp::export]]
+Eigen::MatrixXd calc_L1_matrix(const Eigen::MatrixXd& h, Rcpp::IntegerVector batch_id) {
+    const size_t n_batch_ids = Rcpp::max(batch_id);
+    if (batch_id.size() != h.cols()) Rcpp::stop("batch_id vector must be of the same length as the number of columns in the NMF 'h' matrix");
+    Eigen::MatrixXd L1_matrix(h.rows(), n_batch_ids);
+
+    // calculate the mean factor loading for each batch
+    for (size_t i = 1; i < n_batch_ids; ++i) {
+        size_t n_samples_in_batch = 0;
+        for (size_t j = 0; j < batch_id.size(); ++j) {
+            if (batch_id[j] == i) {
+                L1_matrix.col(i).array() += h.col(j).array();
+                ++n_samples_in_batch;
+            }
+        }
+        L1_matrix.col(i).array() /= n_samples_in_batch;
+    }
+
+    // calculate the difference in the mean factor loading for each batch vs. all other batches
+    for (size_t i = 0; i < L1_matrix.cols(); ++i) {
+        Eigen::VectorXd mean_other_batches = Eigen::VectorXd::Zero(L1_matrix.rows());
+        for (size_t j = 0; j < L1_matrix.cols(); ++j) {
+            if (j != i) {
+                mean_other_batches.array() += L1_matrix.col(j).array();
+            }
+        }
+        mean_other_batches /= (L1_matrix.cols() - 1);
+        L1_matrix.col(i) -= mean_other_batches;
+    }
+
+    return L1_matrix;
+}
+
+// update h given A and w, balanced for batch identity
+inline void predict_L1_matrix(Rcpp::SparseMatrix A, const Eigen::MatrixXd& w, Eigen::MatrixXd& h, const double L1, const double L2, const int threads, Rcpp::IntegerVector batch_id) {
+    Eigen::MatrixXd a = AAt(w);
+    // calculate difference between mean loading of in-batch factor vs. out-of-batch factors
+    Eigen::MatrixXd L1_matrix = calc_L1_matrix(h, batch_id);
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads)
+#endif
+    for (size_t i = 0; i < h.cols(); ++i) {
+        if (A.p[i] == A.p[i + 1]) continue;
+        Eigen::VectorXd b = Eigen::VectorXd::Zero(h.rows());
+        for (Rcpp::SparseMatrix::InnerIterator it(A, i); it; ++it)
+            b += it.value() * w.col(it.row());
+        nnls_L1_matrix(a, b, h, i, L1_matrix, L1, L2);
     }
 }
 
@@ -558,7 +636,7 @@ inline double mse_test(const Eigen::MatrixXd& A, const Eigen::MatrixXd& w, Eigen
 // NMF FUNCTIONS ---------------------------------------------------------------------------------------
 // no linking or masking
 template <class Matrix>
-Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w) {
+Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w) {
     Eigen::MatrixXd h = Eigen::MatrixXd::Zero(w.rows(), A.cols());
     Eigen::VectorXd d = Eigen::VectorXd::Ones(w.rows());
     double tol_ = 1;
@@ -569,7 +647,45 @@ Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t ma
     for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
         Eigen::MatrixXd w_it = w;
         // update h
-        predict(A, w, h, L1, L2, threads);
+        predict(A, w, h, L1_h, L2_h, threads);
+        scale(h, d);
+        Rcpp::checkUserInterrupt();
+        // update w
+        predict(At, h, w, L1_w, L2_w, threads);
+        scale(w, d);
+
+        // calculate tolerance of the model fit to detect convergence
+        // correlation between "w" across consecutive iterations
+        tol_ = cor(w, w_it);
+
+        if (verbose)
+            Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
+        Rcpp::checkUserInterrupt();
+    }
+    return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
+}
+
+//[[Rcpp::export]]
+Rcpp::List c_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose,
+                 const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w) {
+    return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w);
+}
+
+// L1 MATRIX-BASED BATCH CORRECTION (EXPERIMENTAL)
+
+template <class Matrix>
+Rcpp::List c_nmf_base_batch(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, Rcpp::IntegerVector batch_id) {
+    Eigen::MatrixXd h = Eigen::MatrixXd::Zero(w.rows(), A.cols());
+    Eigen::VectorXd d = Eigen::VectorXd::Ones(w.rows());
+    double tol_ = 1;
+    if (verbose)
+        Rprintf("\n%4s | %8s \n---------------\n", "iter", "tol");
+
+    // alternating least squares update loop
+    for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
+        Eigen::MatrixXd w_it = w;
+        // update h
+        predict_L1_matrix(A, w, h, L1, L2, threads, batch_id);
         scale(h, d);
         Rcpp::checkUserInterrupt();
         // update w
@@ -588,9 +704,9 @@ Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t ma
 }
 
 //[[Rcpp::export]]
-Rcpp::List c_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose,
-                 const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w) {
-    return c_nmf_base(A, At, tol, maxit, verbose, L1, L2, threads, w);
+Rcpp::List c_nmf_batch(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose,
+                       const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, Rcpp::IntegerVector batch_id) {
+    return c_nmf_base_batch(A, At, tol, maxit, verbose, L1, L2, threads, w, batch_id);
 }
 
 // NMF FUNCTIONS ---------------------------------------------------------------------------------------
@@ -933,8 +1049,8 @@ Rcpp::List c_mu_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double 
 }
 
 //[[Rcpp::export]]
-Rcpp::List c_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double tol, const uint16_t maxit, const bool verbose, const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w) {
-    return c_nmf_base(A, At, tol, maxit, verbose, L1, L2, threads, w);
+Rcpp::List c_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double tol, const uint16_t maxit, const bool verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w) {
+    return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w);
 }
 
 // NMF FUNCTION ---------------------------------------------------------------------------------------

@@ -13,6 +13,10 @@ rowwise_compress_dense <- function(A, n = 10L, threads = 0L) {
     .Call(`_singlet_rowwise_compress_dense`, A, n, threads)
 }
 
+calc_L1_matrix <- function(h, batch_id) {
+    .Call(`_singlet_calc_L1_matrix`, h, batch_id)
+}
+
 Rcpp_predict <- function(A, w, L1, L2, threads) {
     .Call(`_singlet_Rcpp_predict`, A, w, L1, L2, threads)
 }
@@ -21,8 +25,12 @@ c_project_model <- function(A, w, L1, L2, threads) {
     .Call(`_singlet_c_project_model`, A, w, L1, L2, threads)
 }
 
-c_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w) {
-    .Call(`_singlet_c_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w)
+c_nmf <- function(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w) {
+    .Call(`_singlet_c_nmf`, A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w)
+}
+
+c_nmf_batch <- function(A, At, tol, maxit, verbose, L1, L2, threads, w, batch_id) {
+    .Call(`_singlet_c_nmf_batch`, A, At, tol, maxit, verbose, L1, L2, threads, w, batch_id)
 }
 
 c_nmf_sparse_list <- function(A_, At_, tol, maxit, verbose, L1, L2, threads, w) {
@@ -59,8 +67,8 @@ c_mu_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w) {
     .Call(`_singlet_c_mu_nmf`, A, At, tol, maxit, verbose, L1, L2, threads, w)
 }
 
-c_nmf_dense <- function(A, At, tol, maxit, verbose, L1, L2, threads, w) {
-    .Call(`_singlet_c_nmf_dense`, A, At, tol, maxit, verbose, L1, L2, threads, w)
+c_nmf_dense <- function(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w) {
+    .Call(`_singlet_c_nmf_dense`, A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w)
 }
 
 c_linked_nmf <- function(A, At, tol, maxit, verbose, L1, L2, threads, w, link_h, link_w) {
