@@ -79,12 +79,12 @@ cross_validate_nmf <- function(A, ranks, n_replicates = 3, tol = 1e-4, maxit = 1
     }
     if(!sparse_list){
       if (dense_mode) {
-        model <- c_ard_nmf_dense(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
+        model <- c_ard_nmf_dense(A, At, tol, maxit, verbose > 1, L1, L2, threads = threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
       } else {
-        model <- c_ard_nmf(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
+        model <- c_ard_nmf(A, At, tol, maxit, verbose > 1, L1, L2, threads = threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
       }
     } else {
-      model <- c_ard_nmf_sparse_list(A, At, tol, maxit, verbose > 1, L1, L2, threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
+      model <- c_ard_nmf_sparse_list(A, At, tol, maxit, verbose > 1, L1, L2, threads = threads, w_init[[rep]][1:df$k[[i]], ], abs(.Random.seed[[3 + rep]]), round(1 / test_density), tol_overfit, trace_test_mse)
     }
     df$test_error[[i]] <- model$test_mse[[length(model$test_mse)]]
     df2[[length(df2) + 1]] <- data.frame("k" = df$k[[i]], "rep" = df$rep[[i]], "test_error" = model$test_mse, "iter" = model$iter, "tol" = model$tol)
