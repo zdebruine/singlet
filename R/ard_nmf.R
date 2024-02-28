@@ -38,11 +38,9 @@ ard_nmf <- function(A, k_init = 2, k_max = 100, k_min = 2, n_replicates = 1, tol
     warning("'test_density' should not be greater than 0.2 or less than 0.01, as a general rule of thumb")
   }
 
+  if (is.null(k_init) || is.na(k_init) || k_init < k_min) k_init <- k_min
+  
   if (k_min < 2) stop("k_min cannot be less than 2")
-
-  if (k_init < k_min) stop("k_init cannot be less than k_min")
-
-  if (k_init > k_max) stop("k_init cannot be greater than k_max")
 
   if ("list" %in% class(A)) {
     # check that number of rows is identical
@@ -94,7 +92,6 @@ ard_nmf <- function(A, k_init = 2, k_max = 100, k_min = 2, n_replicates = 1, tol
   test_seed <- abs(.Random.seed[[3]])
   df <- data.frame("k" = integer(), "rep" = integer(), "test_error" = double(), "iter" = integer(), "tol" = double(), "overfit_score" = double())
   class(df) <- c("cross_validate_nmf_data", "data.frame")
-  if (is.null(k_init) || is.na(k_init) || k_init < k_min) k_init <- k_min
   for (curr_rep in 1:n_replicates) {
     if (verbose >= 1 && n_replicates > 1) cat("\nREPLICATE ", curr_rep, "/", n_replicates, "\n")
 
