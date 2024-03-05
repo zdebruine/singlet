@@ -66,6 +66,10 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
   model$d <- model$d[sort_index]
   model$w <- t(model$w)[, sort_index]
   model$h <- model$h[sort_index, ]
+  if (rank == 1) {
+    model$w <- matrix(model$w, ncol=1)
+    model$h <- matrix(model$h, nrow=1)
+  }
   rownames(model$w) <- rn
   colnames(model$h) <- cn
   colnames(model$w) <- rownames(model$h) <- paste0("NMF_", 1:ncol(model$w))
