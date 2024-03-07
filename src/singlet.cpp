@@ -226,7 +226,7 @@ void scale(Eigen::MatrixXd& w, Eigen::VectorXd& d) {
 
 // NNLS SOLVER OF THE FORM ax=b ---------------------------------------------------------------------------------
 // optimized and modified from github.com/linxihui/NNLM "c_nnls" function
-inline void nnls(Eigen::MatrixXd& a, Eigen::VectorXd& b, Eigen::MatrixXd& x, const size_t col,const double L1 = 0, const double L2 = 0) {
+inline void nnls(Eigen::MatrixXd& a, Eigen::VectorXd& b, Eigen::MatrixXd& x, const size_t col, const double L1 = 0, const double L2 = 0) {
     double tol = 1;
     for (uint8_t it = 0; it < 100 && (tol / b.size()) > 1e-8; ++it) {
         tol = 0;
@@ -668,8 +668,7 @@ Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t ma
 //[[Rcpp::export]]
 Rcpp::List c_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose,
                  const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w) {
-
-      return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w);
+    return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w);
 }
 
 // L1 MATRIX-BASED BATCH CORRECTION (EXPERIMENTAL)
@@ -1233,7 +1232,127 @@ Rcpp::List c_ard_nmf_sparse_list(Rcpp::List A_, Rcpp::List At_, const double tol
         Rcpp::Named("tol") = fit_tol,
         Rcpp::Named("score_overfit") = score_overfit);
 }
+/*
+Eigen::VectorXf RandomNormal(int k) {
+    Eigen::ArrayXf u = Eigen::ArrayXf::Random(k);
+    Eigen::ArrayXf v = Eigen::ArrayXf::Random(k);
+    u = (u + 1.0) * 0.5;
+    v = (v + 1.0) * 0.5;
+    Eigen::ArrayXf commonFactor = (u.log() * -2.0).sqrt();
+    Eigen::VectorXf x = commonFactor * (v * M_PI * 2.0).cos();
+    return x;
+}
 
+//[[Rcpp::export]]
+Rcpp::List train_vae(Eigen::MatrixXf& A,
+                     int epochs = 100,
+                     bool verbose = true,
+                     float test_split = 0.2,
+                     float learning_rate = 0.01,
+                     float beta1 = 0.9,
+                     float beta2 = 0.999,
+                     int batch_size = 32) {
+    // Data preprocessing (split into train and test set)
+
+    const int m = A.rows();
+    const int k = 128;
+    const int k_outer = std::pow(k, 2);
+
+    // Initialize weights and biases
+    // Encoder
+    Eigen::MatrixXf W1 = Eigen::MatrixXf::Random(k_outer, m);
+    Eigen::VectorXf b1 = Eigen::VectorXf::Random(k_outer);
+    Eigen::MatrixXf W2 = Eigen::MatrixXf::Random(k, k_outer);
+    Eigen::VectorXf b2 = Eigen::VectorXf::Random(k);
+
+    // Reparameterization weights
+    Eigen::MatrixXf W_mu = Eigen::MatrixXf::Random(k, k);
+    Eigen::MatrixXf W_sigma = Eigen::MatrixXf::Random(k, k);
+
+    // Optionally initialize biases for mu and sigma channels
+    Eigen::VectorXf b_mu = Eigen::VectorXf::Random(k);
+    Eigen::VectorXf b_sigma = Eigen::VectorXf::Random(k);
+
+    // Decoder
+    Eigen::MatrixXf W3 = Eigen::MatrixXf::Random(k_outer, k);
+    Eigen::VectorXf b3 = Eigen::VectorXf::Random(k_outer);
+    Eigen::MatrixXf W4 = Eigen::MatrixXf::Random(m, k_outer);
+    Eigen::VectorXf b4 = Eigen::VectorXf::Random(m);
+
+    // Placeholder for fit data logging
+    std::vector<int> epochs_log;
+    std::vector<float> train_mse_log, test_mse_log, train_kl_log, test_kl_log;
+
+    for (int epoch = 0; epoch < epochs; ++epoch) {
+        // Data shuffling and batching
+
+        // forward pass
+        // ...encoder
+        Eigen::VectorXf h1 = A.col(i) * W1 + b1;
+        h1 = h1.cwiseMax(0);  // ReLU
+        Eigen::VectorXf h2 = h1 * W2 + b2;
+        h1 = h2.cwiseMax(0);  // ReLU
+
+        // ...reparameterization
+        Eigen::VectorXf mu = h2 * W_mu + b_mu;
+        Eigen::VectorXf sigma = h2 * W_sigma + b_sigma;
+        Eigen::VectorXf eps = RandomNormal(k);
+        Eigen::VectorXf Zstar = mu + sigma.array() * eps.array();
+
+        // ...decoder
+        Eigen::VectorXf h3 = Zstar * W3 + b3;
+        h3 = h3.cwiseMax(0); // ReLU
+        Eigen::VectorXf h4 = Zstar * W4 + b4;
+        h4 = h4.cwiseMax(0); // ReLU
+
+        // calculate gradient of mean squared error
+        Eigen::VectorXf err_grad = A.col(i) - h4;
+
+        // backpropagate
+        // ...decoder
+
+        // ...reparameterization and KL loss
+
+        // ...encoder
+
+        // update weights and biases
+
+        // Logging
+        epochs_log.push_back(epoch);
+        // Use real calculations for logs
+        train_mse_log.push_back(0);  // Placeholder for actual MSE calculation
+        test_mse_log.push_back(0);   // Placeholder
+        train_kl_log.push_back(0);   // Placeholder for actual KL divergence
+        test_kl_log.push_back(0);    // Placeholder
+
+        if (verbose) {
+            Rprintf("Epoch %d: Train MSE = %f, Test MSE = %f, Train KL = %f, Test KL = %f\n",
+                    epoch, train_mse_log.back(), test_mse_log.back(), train_kl_log.back(), test_kl_log.back());
+        }
+    }
+
+    // Constructing Rcpp DataFrame for fit data
+    Rcpp::DataFrame fit_data = DataFrame::create(Rcpp::Named("Epoch") = epochs_log,
+                                                 Rcpp::Named("Train MSE") = train_mse_log,
+                                                 Rcpp::Named("Test MSE") = test_mse_log,
+                                                 Rcpp::Named("Train KL") = train_kl_log,
+                                                 Rcpp::Named("Test KL") = test_kl_log);
+
+    return Rcpp::List::create(Rcpp::Named("W1") = W1,
+                              Rcpp::Named("b1") = b1,
+                              Rcpp::Named("W2") = W2,
+                              Rcpp::Named("b2") = b2,
+                              Rcpp::Named("W_mu") = W_mu,
+                              Rcpp::Named("b_mu") = b_mu,
+                              Rcpp::Named("W_sigma") = W_sigma,
+                              Rcpp::Named("b_sigma") = b_sigma,
+                              Rcpp::Named("W3") = W3,
+                              Rcpp::Named("b3") = b3,
+                              Rcpp::Named("W4") = W4,
+                              Rcpp::Named("b4") = b4,
+                              Rcpp::Named("fit_data") = fit_data);
+}
+*/
 //[[Rcpp::export]]
 Rcpp::List c_ard_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double tol, const uint16_t maxit, const bool verbose,
                            const double L1, const double L2, const uint16_t threads, Eigen::MatrixXd w, const uint64_t seed,

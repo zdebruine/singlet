@@ -170,6 +170,7 @@ RunLNMF.Seurat <- function(object,
     assay.used = assay,
     stdev = as.vector(lnmf_model$d),
     key = reduction.key,
+    global = FALSE,
     misc = list("link_matrix" = link_h)
   )
   object
