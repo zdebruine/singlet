@@ -636,12 +636,20 @@ inline double mse_test(const Eigen::MatrixXd& A, const Eigen::MatrixXd& w, Eigen
 // NMF FUNCTIONS ---------------------------------------------------------------------------------------
 // no linking or masking
 template <class Matrix>
-Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w) {
+Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w, const int method) {
     Eigen::MatrixXd h = Eigen::MatrixXd::Zero(w.rows(), A.cols());
     Eigen::VectorXd d = Eigen::VectorXd::Ones(w.rows());
-    double tol_ = 1;
+    double tol_ = 1; //rel_err
     if (verbose)
         Rprintf("\n%4s | %8s \n---------------\n", "iter", "tol");
+    
+    std::vector<double> kl_error;
+    double kl_error_last;
+
+    if (method == 1) {
+        kl_error = std::vector<double>(maxit, ((A.array() + TINY_NUM) * (A.array() + TINY_NUM).log() - A.array()).mean());
+        kl_error_last = 1e99;  // last kl error
+    }
 
     // alternating least squares update loop
     for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
@@ -667,8 +675,8 @@ Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t ma
 
 //[[Rcpp::export]]
 Rcpp::List c_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose,
-                 const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w) {
-    return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w);
+                 const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w, const int method) {
+    return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w, method);
 }
 
 // L1 MATRIX-BASED BATCH CORRECTION (EXPERIMENTAL)
@@ -1049,8 +1057,8 @@ Rcpp::List c_mu_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double 
 }
 
 //[[Rcpp::export]]
-Rcpp::List c_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double tol, const uint16_t maxit, const bool verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w) {
-    return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w);
+Rcpp::List c_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double tol, const uint16_t maxit, const bool verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w, const int method) {
+    return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w, method);
 }
 
 // NMF FUNCTION ---------------------------------------------------------------------------------------

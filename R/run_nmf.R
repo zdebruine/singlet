@@ -15,7 +15,7 @@
 #' @importFrom stats runif
 #' @export
 #'
-run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0, compression_level = 3) {
+run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0, compression_level = 3, method = "nnls") {
   use_vcsc <- compression_level == 2
 
   if ("list" %in% class(A)) {
@@ -52,11 +52,20 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
       L2 <- c(L2[[1]], L2[[1]])
     }
 
+    method_num <- 0
+    if (method == "nnls") {
+      method_num <- 0
+    } else if (method == "scd") {
+      method_num <- 1
+    } else {
+      stop("method must be one of 'nnls' or 'scd'.")
+    }
+
     w_init <- matrix(stats::runif(nrow(A) * rank), rank, nrow(A))
     if (dense_mode) {
-      model <- c_nmf_dense(A, At, tol, maxit, verbose, L1[[1]], L1[[2]], L2[[1]], L2[[2]], threads, w_init)
+      model <- c_nmf_dense(A, At, tol, maxit, verbose, L1[[1]], L1[[2]], L2[[1]], L2[[2]], threads, w_init, method_num)
     } else {
-      model <- c_nmf(A, At, tol, maxit, verbose, L1[[1]], L1[[2]], L2[[1]], L2[[2]], threads, w_init)
+      model <- c_nmf(A, At, tol, maxit, verbose, L1[[1]], L1[[2]], L2[[1]], L2[[2]], threads, w_init, method_num)
     }
     rn <- rownames(A)
     cn <- colnames(A)
