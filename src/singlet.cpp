@@ -275,6 +275,76 @@ inline void nnls_L1_matrix(Eigen::MatrixXd& a, Eigen::VectorXd& b, Eigen::Matrix
     }
 }
 
+// KL Sequential Coordinate Descent (KL-SCD) ----------------------------------------------------------------
+int scd_kl_update(Eigen::Ref<Eigen::VectorXd> Hj, const Eigen::MatrixXd& Wt, const Eigen::VectorXd& Aj, const Eigen::VectorXd& sumW, const double L1_w, const double L2_w, const double rel_tol) {
+
+    // Problem:  Aj = W * Hj
+    // Method: Sequentially minimize KL distance using quadratic approximation
+    // Wt = W^T
+    // sumW = column sum of W
+    // mask: skip updating
+    // beta: a vector of 3, for L2, angle, L1 regularization
+
+    double sumHj = Hj.sum();
+    Eigen::VectorXd Ajt = Wt * Hj;
+    Eigen::VectorXd mu;
+    double tmp;
+    double rel_err = 1 + rel_tol;
+
+    unsigned int t = 0;
+    for (; t < 100 && rel_err / Hj.rows() > rel_tol; t++) {
+        rel_err = 0;
+        for (uint k = 0; k < Wt.cols(); k++) {
+
+            // mu = Wt.row(k).transpose().cwiseQuotient((Ajt.array() + 1e-15).matrix());
+            mu = Wt.col(k).array() / (Ajt.array() + 1e-15);
+            double b = Aj.dot(mu) - sumW(k);
+            mu.array().square();
+            double a = Aj.dot(mu); //+ L2_w;
+            b += a * Hj(k); //- L1_w; //- beta(1) * (sumHj - Hj(k));
+            b /= (a + 1e-15);
+            if (b < 0) {
+                rel_err = 1;
+                Ajt -= Hj(k) * Wt.col(k);
+                sumHj -= Hj(k);
+                Hj(k) = 0;
+            }
+            else if (b != Hj(k)) {
+                double diff = b - Hj(k);
+                Ajt += diff * Wt.col(k);
+                rel_err += std::abs(diff) / (Hj(k) + 1e-15);
+                sumHj += diff;
+                Hj(k) = b;
+            }
+        }
+    }
+    return int(t);
+}
+
+void add_penalty(const unsigned int& i_e, std::vector<double> terr, const Eigen::MatrixXd W, const Eigen::MatrixXd H, const double L1_w, const double L1_h, const double L2_w, const double L2_h) {
+    uint N_non_missing = W.rows() * W.cols();
+
+    // add penalty term back to the loss function (terr)
+    // if (L2_w != alpha(1)) {
+    terr[i_e] += 0.5 * (L2_w /*- alpha(1)*/) * (W.cwiseProduct(W)).sum() / N_non_missing;
+    // }
+    // if (L2_h != beta(1)) {
+    terr[i_e] += 0.5 * (L2_h /*- beta(1)*/) * (H.cwiseProduct(H)).sum() / N_non_missing;
+    // }
+    // if (alpha(1) != 0) {
+    //     terr[i_e] += 0.5 * alpha(1) * (W * W.transpose()).sum() / N_non_missing;
+    // }
+    // if (beta(1) != 0) {
+    //     terr[i_e] += 0.5 * beta(1) * (H * H.transpose()).sum() / N_non_missing;
+    // }
+    if (L1_w != 0) {
+        terr[i_e] += L1_w * W.sum() / N_non_missing;
+    }
+    if (L1_h != 0) {
+        terr[i_e] += L1_h * H.sum() / N_non_missing;
+    }
+}
+
 // batch_id is a vector with values between 1 and n_batch_ids, the result of
 //  as.numeric(as.factor(metadata_item_vector))
 //[[Rcpp::export]]
@@ -398,6 +468,22 @@ inline void predict(std::vector<Rcpp::SparseMatrix> A, const Eigen::MatrixXd& w,
             nnls(a, b, h, i + offset, L1, L2);
         }
         offset += A[chunk].cols();
+    }
+}
+
+inline void kl_update(Eigen::MatrixXd& H, const Eigen::MatrixXd& Wt, const Eigen::MatrixXd A, const double L1, const double L2, const int threads) {
+    unsigned int max_iter = 100;
+    double rel_tol = 1e-4;
+    Eigen::VectorXd sumW = Wt.rowwise().sum();
+    Eigen::MatrixXd W = Wt.transpose();
+
+    #ifdef _OPENMP
+    #pragma omp parallel for num_threads(threads)
+    #endif
+    for (long int j = 0; j < A.cols(); ++j) {
+
+        scd_kl_update(H.col(j), W, A.col(j), sumW, L1, L2, rel_tol);
+
     }
 }
 
@@ -636,47 +722,86 @@ inline double mse_test(const Eigen::MatrixXd& A, const Eigen::MatrixXd& w, Eigen
 // NMF FUNCTIONS ---------------------------------------------------------------------------------------
 // no linking or masking
 template <class Matrix>
-Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w, const int method) {
+Rcpp::List c_nmf_base(Matrix& A, Matrix& At, const double tol, const uint16_t maxit, const bool verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w) {
     Eigen::MatrixXd h = Eigen::MatrixXd::Zero(w.rows(), A.cols());
     Eigen::VectorXd d = Eigen::VectorXd::Ones(w.rows());
     double tol_ = 1; //rel_err
     if (verbose)
         Rprintf("\n%4s | %8s \n---------------\n", "iter", "tol");
-    
-    std::vector<double> kl_error;
-    double kl_error_last;
-
-    if (method == 1) {
-        kl_error = std::vector<double>(maxit, ((A.array() + TINY_NUM) * (A.array() + TINY_NUM).log() - A.array()).mean());
-        kl_error_last = 1e99;  // last kl error
-    }
 
     // alternating least squares update loop
     for (uint16_t iter_ = 0; iter_ < maxit && tol_ > tol; ++iter_) {
-        Eigen::MatrixXd w_it = w;
-        // update h
-        predict(A, w, h, L1_h, L2_h, threads);
-        scale(h, d);
-        Rcpp::checkUserInterrupt();
-        // update w
-        predict(At, h, w, L1_w, L2_w, threads);
-        scale(w, d);
+      Eigen::MatrixXd w_it = w;
 
-        // calculate tolerance of the model fit to detect convergence
-        // correlation between "w" across consecutive iterations
-        tol_ = cor(w, w_it);
+      // update h
+      predict(A, w, h, L1_h, L2_h, threads);
+      scale(h, d);
+      Rcpp::checkUserInterrupt();
 
-        if (verbose)
-            Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
-        Rcpp::checkUserInterrupt();
+      // update w
+      predict(At, h, w, L1_w, L2_w, threads);
+      scale(w, d);
+
+      // calculate tolerance of the model fit to detect convergence
+      // correlation between "w" across consecutive iterations
+      tol_ = cor(w, w_it);
+
+      if (verbose) Rprintf("%4d | %8.2e\n", iter_ + 1, tol_);
+      Rcpp::checkUserInterrupt();
     }
     return Rcpp::List::create(Rcpp::Named("w") = w, Rcpp::Named("d") = d, Rcpp::Named("h") = h);
+}
+
+Rcpp::List c_kl_nmf_base(const Eigen::MatrixXd& A, const Eigen::MatrixXd& At, const double tol, int maxit, int verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const unsigned int threads, Eigen::MatrixXd W) {
+    
+    if (verbose) Rprintf("Iter     KL Err   / Relative Change \n");
+
+    // initialize random W and H
+    // Eigen::MatrixXd W = Eigen::MatrixXd::Random(k, A.rows()); // These **both** should be initialized 
+    Eigen::MatrixXd H = Eigen::MatrixXd::Random(W.rows(), A.cols()); // with random values. See paper under Eq. 6
+    Eigen::VectorXd d = Eigen::VectorXd::Ones(W.rows());
+
+    // Eigen::MatrixXd W_last = H;
+
+    const double rel_tol = 1e-4;
+    double rel_err = rel_tol + 1;
+    double klerror_last = 1e99; // last kl error
+    std::vector<double> kl_error(maxit, ((A.array() + 1e-15) * (A.array() + 1e-15).log() - A.array()).mean());
+    if (verbose) Rprintf("KL Error: %f\n", kl_error[0]);
+
+    for (uint16_t iter_ = 0; iter_ < maxit && rel_err > rel_tol; ++iter_) {
+        // W_last = W;
+
+        // update h
+        kl_update(H, W, A, L1_h, L2_h, threads);
+        scale(H, d);
+        Rcpp::checkUserInterrupt();
+
+        // update w
+        kl_update(W, H, At, L1_w, L2_w, threads);
+
+        scale(W, d);
+        Eigen::MatrixXd A_hat = W.transpose() * d.asDiagonal() * H;
+
+        kl_error[iter_] += ((-(A.array() + 1e-15) * (A_hat.array() + 1e-15).log()).array() + A_hat.array()).mean();
+        add_penalty(iter_, kl_error, W, H, L1_w, L2_w, L1_h, L2_h);
+
+        //print kl error
+        rel_err = std::fabs((klerror_last - kl_error[iter_]) / (klerror_last + kl_error[iter_] + 1e-15));
+        klerror_last = kl_error[iter_];
+
+        if (verbose) Rprintf("%4ld | %10f / %10f\n", iter_, kl_error[iter_], rel_err);
+        
+        Rcpp::checkUserInterrupt();
+    }
+
+    return Rcpp::List::create(Rcpp::Named("w") = W, Rcpp::Named("d") = d, Rcpp::Named("h") = H);
 }
 
 //[[Rcpp::export]]
 Rcpp::List c_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double tol, const uint16_t maxit, const bool verbose,
                  const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w, const int method) {
-    return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w, method);
+    return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w);
 }
 
 // L1 MATRIX-BASED BATCH CORRECTION (EXPERIMENTAL)
@@ -1058,7 +1183,13 @@ Rcpp::List c_mu_nmf(Rcpp::SparseMatrix& A, Rcpp::SparseMatrix& At, const double 
 
 //[[Rcpp::export]]
 Rcpp::List c_nmf_dense(Eigen::MatrixXd& A, Eigen::MatrixXd& At, const double tol, const uint16_t maxit, const bool verbose, const double L1_w, const double L1_h, const double L2_w, const double L2_h, const uint16_t threads, Eigen::MatrixXd w, const int method) {
-    return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w, method);
+    if (method == 0) {
+        return c_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w);
+    } else if (method == 1) {
+        return c_kl_nmf_base(A, At, tol, maxit, verbose, L1_w, L1_h, L2_w, L2_h, threads, w);
+    } else {
+        Rcpp::stop("unkwnown method");
+    }
 }
 
 // NMF FUNCTION ---------------------------------------------------------------------------------------

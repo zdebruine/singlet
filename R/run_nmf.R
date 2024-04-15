@@ -11,6 +11,7 @@
 #' @param L2 L2/Ridge penalty to increase angles between factors
 #' @param threads number of threads for parallelization across CPUs, 0 = use all available threads
 #' @param compression_level either 2 or 3, for VCSC or IVCSC, respectively. For development purposes.
+#' @param method optimization method, either "nnls" or "scd" For development purposes.
 #' @rdname run_nmf
 #' @importFrom stats runif
 #' @export
@@ -65,7 +66,7 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
     if (dense_mode) {
       model <- c_nmf_dense(A, At, tol, maxit, verbose, L1[[1]], L1[[2]], L2[[1]], L2[[2]], threads, w_init, method_num)
     } else {
-      model <- c_nmf(A, At, tol, maxit, verbose, L1[[1]], L1[[2]], L2[[1]], L2[[2]], threads, w_init, method_num)
+      model <- c_nmf(A, At, tol, maxit, verbose, L1[[1]], L1[[2]], L2[[1]], L2[[2]], threads, w_init)
     }
     rn <- rownames(A)
     cn <- colnames(A)

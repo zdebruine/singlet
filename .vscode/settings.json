@@ -1,6 +1,8 @@
 {
     "files.associations": {
+        "*.erb": "erb",
         "*.rmd": "markdown",
+        "*.Rmd": "rmd",
         "array": "cpp",
         "initializer_list": "cpp",
         "atomic": "cpp",
@@ -60,6 +62,14 @@
         "iomanip": "cpp",
         "numbers": "cpp",
         "semaphore": "cpp",
-        "stop_token": "cpp"
+        "stop_token": "cpp",
+        "bitset": "cpp",
+        "condition_variable": "cpp",
+        "optional": "cpp",
+        "mutex": "cpp",
+        "shared_mutex": "cpp",
+        "cfenv": "cpp",
+        "cinttypes": "cpp",
+        "__nullptr": "cpp"
     }
 }
