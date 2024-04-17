@@ -11,12 +11,12 @@
 #' @param L2 L2/Ridge penalty to increase angles between factors
 #' @param threads number of threads for parallelization across CPUs, 0 = use all available threads
 #' @param compression_level either 2 or 3, for VCSC or IVCSC, respectively. For development purposes.
-#' @param method optimization method, either "nnls" or "scd" For development purposes.
+#' @param method optimization metric, either "mse" or "kl" For development purposes.
 #' @rdname run_nmf
 #' @importFrom stats runif
 #' @export
 #'
-run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0, compression_level = 3, method = "nnls") {
+run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0, compression_level = 3, method = "mse") {
   use_vcsc <- compression_level == 2
 
   if ("list" %in% class(A)) {
@@ -54,9 +54,9 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
     }
 
     method_num <- 0
-    if (method == "nnls") {
+    if (method == "mse") {
       method_num <- 0
-    } else if (method == "scd") {
+    } else if (method == "kl") {
       method_num <- 1
     } else {
       stop("method must be one of 'nnls' or 'scd'.")
