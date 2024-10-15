@@ -8,6 +8,7 @@ ard_nmf(
   A,
   k_init = 2,
   k_max = 100,
+  k_min = 2,
   n_replicates = 1,
   tol = 1e-05,
   cv_tol = 1e-04,
@@ -28,6 +29,8 @@ ard_nmf(
 \item{k_init}{initial rank at which to begin search for local minimum. \code{k_init = 2} is a reasonable default, higher values can lead to swift convergence to a local minmum.}
 
 \item{k_max}{maximum rank to consider during automatic rank determination}
+
+\item{k_min}{minimum rank to consider during automatic rank determination (cannot be less than 2)}
 
 \item{n_replicates}{number of random test sets}
 

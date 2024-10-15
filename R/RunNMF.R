@@ -88,6 +88,11 @@ RunNMF.Seurat <- function(object,
     if (any(sapply(split.by, is.na))) {
       stop("'split.by' cannot contain NA values")
     }
+    # we need to force A to clone itself by doing an in-place operation
+    A@x <- A@x + 1
+    A@x <- A@x - 1
+
+    # now do the Rcpp weight_by_split function
     A <- weight_by_split(A, split.by, length(unique(split.by)))
   }
   At <- Matrix::t(A)
@@ -96,20 +101,22 @@ RunNMF.Seurat <- function(object,
   if (!is.null(k) && length(k) > 1) {
     # run cross-validation at specified ranks
     cv_data <- data.frame()
-   
-    # we ought to harmonize arg names here 
-    cv_data <- cross_validate_nmf(A = A, 
-                                  ranks = k, 
-                                  n_replicates = reps, 
-                                  tol = tol * 10, 
-                                  maxit = maxit, 
-                                  verbose = verbose, 
-                                  L1 = L1, 
-                                  L2 = L2, 
-                                  threads = threads, 
-                                  test_density = test.set.density, 
-                                  tol_overfit = tol.overfit, 
-                                  trace_test_mse = trace.test.mse)
+
+    # we ought to harmonize arg names here
+    cv_data <- cross_validate_nmf(
+      A = A,
+      ranks = k,
+      n_replicates = reps,
+      tol = tol * 10,
+      maxit = maxit,
+      verbose = verbose,
+      L1 = L1,
+      L2 = L2,
+      threads = threads,
+      test_density = test.set.density,
+      tol_overfit = tol.overfit,
+      trace_test_mse = trace.test.mse
+    )
     best_rank <- GetBestRank(cv_data, tol.overfit)
     if (verbose >= 1) {
       cat("best rank: ", best_rank, "\n")
@@ -121,6 +128,8 @@ RunNMF.Seurat <- function(object,
     nmf_model <- ard_nmf(
       A = A,
       k_init = k,
+      k_max = 1e4,
+      k_min = 2,
       n_replicates = reps,
       tol = tol,
       maxit = maxit,
@@ -229,7 +238,6 @@ RunNMF.SingleCellExperiment <- function(object,
                                         threads = 0,
                                         features = NULL,
                                         ...) {
- 
   # check
   requireNamespace("SingleCellExperiment")
 
@@ -242,7 +250,7 @@ RunNMF.SingleCellExperiment <- function(object,
   A <- assays(object)[[assay]]
 
   if (!is.null(split.by)) {
-    split.by <- as.integer(as.numeric(as.factor(colData(object)[[split.by]])))-1
+    split.by <- as.integer(as.numeric(as.factor(colData(object)[[split.by]]))) - 1
     if (any(sapply(split.by, is.na))) stop("'split.by' can't contain NA values")
     A <- weight_by_split(A, split.by, length(unique(split.by)))
   }
@@ -251,21 +259,22 @@ RunNMF.SingleCellExperiment <- function(object,
   seed.use <- abs(.Random.seed[[3]])
 
   if (!is.null(k) && length(k) > 1) {
-
     # run cross-validation at specified ranks
     cv_data <- data.frame()
-    cv_data <- cross_validate_nmf(A = A, 
-                                  ranks = k, 
-                                  n_replicates = reps, 
-                                  tol = tol * 10, 
-                                  maxit = maxit, 
-                                  verbose = verbose, 
-                                  L1 = L1, 
-                                  L2 = L2, 
-                                  threads = threads, 
-                                  test_density = test.set.density, 
-                                  tol_overfit = tol.overfit, 
-                                  trace_test_mse = trace.test.mse)
+    cv_data <- cross_validate_nmf(
+      A = A,
+      ranks = k,
+      n_replicates = reps,
+      tol = tol * 10,
+      maxit = maxit,
+      verbose = verbose,
+      L1 = L1,
+      L2 = L2,
+      threads = threads,
+      test_density = test.set.density,
+      tol_overfit = tol.overfit,
+      trace_test_mse = trace.test.mse
+    )
     best_rank <- GetBestRank(cv_data, tol.overfit)
 
     if (verbose >= 1) {
@@ -274,13 +283,13 @@ RunNMF.SingleCellExperiment <- function(object,
 
     cat("\nfitting final model:\n")
     nmf_model <- run_nmf(A, best_rank, tol, maxit, verbose > 1, L1, L2, threads)
-
   } else if (is.null(k)) {
-
     # run automatic rank determination cross-validation
     nmf_model <- ard_nmf(
       A = A,
       k_init = k,
+      k_max = 1e4,
+      k_min = 2,
       n_replicates = reps,
       tol = tol,
       maxit = maxit,
@@ -295,21 +304,16 @@ RunNMF.SingleCellExperiment <- function(object,
     )
 
     cv_data <- nmf_model$cv_data
-
   } else if (length(k) == 1) {
-
     nmf_model <- run_nmf(A, k, tol, maxit, verbose > 1, L1, L2, threads)
     cv_data <- list()
-
   } else {
-
     stop("value for 'k' was invalid")
-
   }
 
-  rownames(nmf_model$h) <- 
-    colnames(nmf_model$w) <- 
-      paste0(reduction.key, seq_len(nrow(nmf_model$h)))
+  rownames(nmf_model$h) <-
+    colnames(nmf_model$w) <-
+    paste0(reduction.key, seq_len(nrow(nmf_model$h)))
   rownames(nmf_model$w) <- rownames(object)
   colnames(nmf_model$h) <- colnames(object)
   requireNamespace("SummarizedExperiment")
@@ -317,7 +321,6 @@ RunNMF.SingleCellExperiment <- function(object,
   metadata(object)[["cv_data"]] <- nmf_model$cv_data
   SingleCellExperiment::reducedDim(object, reduction.name) <- t(nmf_model$h)
   object
-
 }
 
 

@@ -12,7 +12,8 @@ run_nmf(
   verbose = TRUE,
   L1 = 0.01,
   L2 = 0,
-  threads = 0
+  threads = 0,
+  compression_level = 3
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ run_nmf(
 \item{L2}{L2/Ridge penalty to increase angles between factors}
 
 \item{threads}{number of threads for parallelization across CPUs, 0 = use all available threads}
+
+\item{compression_level}{either 2 or 3, for VCSC or IVCSC, respectively. For development purposes.}
 }
 \description{
 Run NMF on a sparse matrix with automatic rank determination by cross-validation

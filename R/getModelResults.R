@@ -30,19 +30,12 @@ getModelResults <- function(fit, noneg=TRUE, noint=TRUE) {
   names(fcp)[1:2] <- c("factor", "group")
   fcp$df <- fit$df.total[fcp$factor]
   fcp$p_raw <- with(fcp, pt(t, df, lower=FALSE))
-  fcp$p <- NA_real_
-    
-  # to avoid correcting tests we don't care about,
-  # drop (Intercept), negative lods, and p-values
-  # (unless requested otherwise) before adjusting
-  if (noint) fcp <- subset(fcp, group != "(Intercept)")
+  fcp$p <- p.adjust(fcp$p_raw, method="fdr")
+
+  # better might be to fit without an intercept term 
   if (noneg) fcp <- subset(fcp, sign(lods) > 0)
-  if (nrow(fcp) == 0) {
-    message("No associations after filtering.")
-  } else { 
-    # compute BH-adjusted p-values *after* filtration
-    fcp$p <- p.adjust(fcp$p_raw, method="fdr")
-  }
+  if (noint) fcp <- subset(fcp, group != "(Intercept)")
+  if (length(fcp) == 0) message("No associations after filtering.")
   names(fcp) <- sub("^lods$", "fc", names(fcp))
   return(fcp[, c("group", "factor", "fc", "p")])
 

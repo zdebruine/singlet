@@ -10,44 +10,29 @@
 #' @param L1 L1/LASSO penalty to increase sparsity of model
 #' @param L2 L2/Ridge penalty to increase angles between factors
 #' @param threads number of threads for parallelization across CPUs, 0 = use all available threads
+#' @param compression_level either 2 or 3, for VCSC or IVCSC, respectively. For development purposes.
 #' @rdname run_nmf
 #' @importFrom stats runif
 #' @export
 #'
-run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0) {
-  if (L1 >= 1) {
-    stop("L1 penalty must be strictly in the range (0, 1]")
-  }
-  
-  if("list" %in% class(A)){
+run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01, L2 = 0, threads = 0, compression_level = 3) {
+  use_vcsc <- compression_level == 2
+
+  if ("list" %in% class(A)) {
     # check that number of rows is identical
-    if(var(sapply(A, nrow)) != 0) 
-              stop("number of rows in all provided 'A' matrices are not identical")
-    if(!all(sapply(A, function(x) class(x) == "dgCMatrix")))
-              stop("if providing a list, you must provide a list of all 'dgCMatrix' objects")
-    if(!is.null(rownames(A[[1]]))){
-      if(!all(sapply(A, function(x) all.equal(rownames(x), rownames(A[[1]]))))) stop("rownames of all dgCMatrix objects in list must be identical")
+    if (var(sapply(A, nrow)) != 0) {
+      stop("number of rows in all provided 'A' matrices are not identical")
     }
-    
-    # generate a distributed transpose
-    if(verbose > 0) cat("generating a distributed transpose of input matrix list\n")
-    block_sizes <- floor(c(seq(1, nrow(A[[1]]), nrow(A[[1]]) /(length(A))), nrow(A[[1]]) + 1))
-    At <- list()
-    if(verbose > 0) pb <- txtProgressBar(min = 0, max = length(A))
-    for(i in 1:length(A)){
-      At[[i]] <- list()
-      for(j in 1:length(A)){
-        At[[i]][[j]] <- t(A[[j]][block_sizes[i]:(block_sizes[i+1] - 1), ])      
-      }
-      At[[i]] <- do.call(rbind, At[[i]])
-      if(verbose > 0) setTxtProgressBar(pb, i)
+    if (!all(sapply(A, function(x) class(x) == "dgCMatrix"))) {
+      stop("if providing a list, you must provide a list of all 'dgCMatrix' objects")
     }
-    if(verbose > 0) close(pb)
-    if (verbose > 0) cat("running with sparse optimization\n")
+    if (!is.null(rownames(A[[1]]))) {
+      if (!all(sapply(A, function(x) all.equal(rownames(x), rownames(A[[1]]))))) stop("rownames of all dgCMatrix objects in list must be identical")
+    }
     w_init <- matrix(stats::runif(nrow(A[[1]]) * rank), rank, nrow(A[[1]]))
-    model <- c_nmf_sparse_list(A, At, tol, maxit, verbose, L1, L2, threads, w_init)
+    model <- run_nmf_on_sparsematrix_list(A, tol, maxit, verbose, threads, w_init, use_vcsc)
     rn <- rownames(A[[1]])
-    cn <- rownames(At[[1]])
+    cn <- do.call(c, lapply(A, colnames))
   } else {
     if (class(A)[[1]] != "matrix") {
       if (verbose > 0) cat("running with sparse optimization\n")
@@ -60,11 +45,18 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
       dense_mode <- TRUE
     }
     
+    if(length(L1) != 2){
+      L1 <- c(L1[[1]], L1[[1]])
+    }
+    if(length(L2) != 2){
+      L2 <- c(L2[[1]], L2[[1]])
+    }
+
     w_init <- matrix(stats::runif(nrow(A) * rank), rank, nrow(A))
     if (dense_mode) {
-      model <- c_nmf_dense(A, At, tol, maxit, verbose, L1, L2, threads, w_init)
+      model <- c_nmf_dense(A, At, tol, maxit, verbose, L1[[1]], L1[[2]], L2[[1]], L2[[2]], threads, w_init)
     } else {
-      model <- c_nmf(A, At, tol, maxit, verbose, L1, L2, threads, w_init)
+      model <- c_nmf(A, At, tol, maxit, verbose, L1[[1]], L1[[2]], L2[[1]], L2[[2]], threads, w_init)
     }
     rn <- rownames(A)
     cn <- colnames(A)
@@ -74,8 +66,42 @@ run_nmf <- function(A, rank, tol = 1e-4, maxit = 100, verbose = TRUE, L1 = 0.01,
   model$d <- model$d[sort_index]
   model$w <- t(model$w)[, sort_index]
   model$h <- model$h[sort_index, ]
+  if (rank == 1) {
+    model$w <- matrix(model$w, ncol=1)
+    model$h <- matrix(model$h, nrow=1)
+  }
   rownames(model$w) <- rn
   colnames(model$h) <- cn
   colnames(model$w) <- rownames(model$h) <- paste0("NMF_", 1:ncol(model$w))
   model
+}
+
+distributed_transpose <- function(A){
+  library(Matrix)
+  setwd("/active/debruinz_project/debruinz/CellCensusNMF")
+  A <- lapply(paste0("../../CellCensus/R/chunk", 1:100, "_counts.rds"), readRDS)
+  block_sizes <- floor(c(seq(1, nrow(A[[1]]), nrow(A[[1]]) / (length(A))), nrow(A[[1]]) + 1))
+  for (i in 1:length(block_sizes)) {
+    cat("CHUNK", i, "/100\n")
+    At <- list()
+    pb <- txtProgressBar(min = 0, max = length(A), style = 3)
+    for (j in 1:length(A)) {
+      At[[j]] <- t(A[[j]][block_sizes[i]:(block_sizes[i + 1] - 1), ])
+      setTxtProgressBar(pb, j)
+    }
+    cat("   rbinding\n")
+    At <- do.call(rbind, At)
+    cat("   saving\n")
+    saveRDS(At, paste0("chunk", i, "_transpose_counts.rds"))
+  }
+}
+
+split_into_chunks <- function(A, n_chunks){
+  breakpoints <- seq(1, ncol(A), floor(ncol(A) / n_chunks))
+  breakpoints[length(breakpoints) + 1] <- ncol(A)
+  result <- list()
+  for(i in 1:n_chunks){
+    result[[i]] <- A[,breakpoints[i]:breakpoints[i + 1]]
+  }
+  result
 }
