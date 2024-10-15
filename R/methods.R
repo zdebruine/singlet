@@ -71,6 +71,8 @@ setReplaceMethod("$", "nmf",
 # make seurat objects behave vaguely like reasonable data structures 
 # if SingleCellExperiment has been loaded, since otherwise who knows
 if (requireNamespace("Seurat") & requireNamespace("SingleCellExperiment")) {
+  require("Seurat")
+  require("SingleCellExperiment")
   setMethod("assay", "Seurat", function(x, i, withDimnames = TRUE, ...) x@assays[[i]])
   setMethod("assays", "Seurat", function(x, withDimnames = TRUE, ...) x@assays)
   setMethod("assayNames", "Seurat", function(x, ...) names(x@assays))
