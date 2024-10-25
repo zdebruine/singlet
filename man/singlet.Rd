@@ -31,6 +31,14 @@ Singlet is all about extremely fast NMF for single-cell dimensional reduction an
 
 See the vignettes to get started.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/zdebruine/singlet}
+  \item Report bugs at \url{https://github.com/zdebruine/singlet/issues}
+}
+
+}
 \author{
 Zach DeBruine
 }

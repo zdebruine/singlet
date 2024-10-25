@@ -23,8 +23,6 @@
 #' 
 #' @useDynLib singlet, .registration = TRUE
 #'
-#' @docType package
-#'
 #' @name singlet
 #'
 #' @author Zach DeBruine
@@ -44,4 +42,4 @@
 #'
 #' @md
 #'
-NULL
+"_PACKAGE"
