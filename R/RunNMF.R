@@ -63,11 +63,11 @@ RunNMF.Seurat <- function(object,
   }
 
   # check if data has been normalized
-  v <- object@assays[[assay]]@data@x
+  v <- object@assays[[assay]]$data@x
   if (sum(as.integer(v)) == sum(v)) {
     object <- PreprocessData(object, assay = assay)
   }
-  A <- object@assays[[assay]]@data
+  A <- object@assays[[assay]]$data
 
   if (!is.null(features)) {
     if (features[[1]] == "var.features") {
