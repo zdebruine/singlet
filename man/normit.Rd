@@ -28,7 +28,10 @@ plot(density(y), main="normit-transformed")
 par(mfrow=c(1,1))
 
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> f1e9f10 (normit documentation fixed)
 \seealso{
 normitAll for matrices or other rectangular shaped things
 }
