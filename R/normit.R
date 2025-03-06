@@ -6,8 +6,7 @@
 #' 
 #' @seealso     normitAll for matrices or other rectangular shaped things
 #'
-#' @example
-#'
+#' @examples
 #' par(mfrow=c(1,2))
 #'
 #' x <- rgamma(n=10000, shape=3, scale=5)

@@ -6,6 +6,7 @@
 \usage{
 RunGSEA(
   object,
+  ID = "gene_symbol",
   reduction = "nmf",
   species = "Homo sapiens",
   category = "C5",
@@ -19,6 +20,8 @@ RunGSEA(
 }
 \arguments{
 \item{object}{a Seurat or RcppML::nmf object}
+
+\item{ID}{gene ID format (i.e. "gene_symbol", "ensembl_gene")}
 
 \item{reduction}{dimensional reduction to use (if Seurat)}
 
