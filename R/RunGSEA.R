@@ -3,6 +3,7 @@
 #' Run GSEA to identify gene sets that are enriched within NMF factors.
 #'
 #' @param object a Seurat or RcppML::nmf object
+#' @param ID gene ID format (i.e. "gene_symbol", "ensembl_gene")
 #' @param reduction dimensional reduction to use (if Seurat)
 #' @param species species for which to load gene sets
 #' @param category msigdbr gene set category (i.e. "H", "C5", etc.)
@@ -20,7 +21,7 @@
 #'
 #' @export
 #'
-RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", category = "C5",
+RunGSEA <- function(object, ID = "gene_symbol", reduction = "nmf", species = "Homo sapiens", category = "C5",
                     min.size = 10, max.size = 500, dims = NULL,
                     verbose = TRUE, padj.sig = 0.01, ...) {
 
@@ -28,7 +29,7 @@ RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", categor
   gene_sets <- msigdbr(species = species, category = category, ...)
 
   if (verbose) cat("filtering pathways\n")
-  pathways <- split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
+  pathways <- split(x = gene_sets[[ID]], f = gene_sets$gs_name)
   pathways <- pathways[lapply(pathways, length) > min.size]
 
   if (verbose) cat("filtering genes in pathways to those in reduction\n")
