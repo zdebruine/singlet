@@ -55,7 +55,7 @@ RunGSEA <- function(object, ID = "gene_symbol", reduction = "nmf", species = "Ho
   for (i in 1:ncol(w)) {
     ranks <- sort(w[, i])
     results[[i]] <- suppressWarnings(fgseaMultilevel(
-      pathways, ranks,
+      pathways, ranks+rnorm(length(ranks), sd=0.001),
       minSize = min.size, maxSize = max.size, scoreType = "pos"
     ))
     utils::setTxtProgressBar(pb, i)
