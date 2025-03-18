@@ -55,6 +55,7 @@ RunGSEA <- function(object, ID = "gene_symbol", reduction = "nmf", species = "Ho
   results <- list()
   for (i in 1:ncol(w)) {
     ranks <- sort(w[, i])
+
     if (add.noise){
       results[[i]] <- suppressWarnings(fgseaMultilevel(
         pathways, ranks+rnorm(length(ranks), sd=0.001),
