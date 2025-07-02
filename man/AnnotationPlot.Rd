@@ -17,6 +17,7 @@ AnnotationPlot(object, ...)
   reduction = "nmf",
   dropEmpty = TRUE,
   annotation.name = "annotations",
+  cluster_by = "std",
   ...
 )
 
@@ -25,6 +26,7 @@ AnnotationPlot(object, ...)
   plot.field = NULL,
   dropEmpty = TRUE,
   annotation.name = "annotations",
+  cluster_by = "std",
   ...
 )
 
@@ -33,12 +35,13 @@ AnnotationPlot(object, ...)
   plot.field = NULL,
   dropEmpty = TRUE,
   annotation.name = "annotations",
+  cluster_by = "std",
   ...
 )
 
-\method{AnnotationPlot}{list}(object, plot.field, dropEmpty = TRUE, ...)
+\method{AnnotationPlot}{list}(object, plot.field, dropEmpty = TRUE, cluster_by = "std", ...)
 
-\method{AnnotationPlot}{data.frame}(object, plot.field, dropEmpty = TRUE, ...)
+\method{AnnotationPlot}{data.frame}(object, plot.field, dropEmpty = TRUE, cluster_by = "std", ...)
 }
 \arguments{
 \item{object}{a compatible object (Seurat, DimReduc, nmf, data.frame)}

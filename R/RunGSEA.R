@@ -77,7 +77,6 @@ RunGSEA <- function(object, ID = "gene_symbol", reduction = "nmf", species = "Ho
     if(remove.zeros.per.factor){
       ranks = ranks[ranks != 0]
 
-
     }
     
     
@@ -108,14 +107,14 @@ RunGSEA <- function(object, ID = "gene_symbol", reduction = "nmf", species = "Ho
 
   idx <- which(apply(padj, 1, function(x) min(x) < padj.sig))
 
-  if (!is.null(dims)) {
-    dims <- paste0(reduction, dims)
-  } else if (is(object, "Seurat")) {
-    dims <- paste0(reduction, 1:ncol(object@reductions[[reduction]]))
-  } else if (is(object, "nmf")) {
-    dims <- paste0("nmf", 1:ncol(w))
-  }
-  colnames(pval) <- colnames(padj) <- colnames(es) <- colnames(nes) <- dims
+  # if (!is.null(dims)) {
+  #   dims <- paste0(reduction, dims)
+  # } else if (is(object, "Seurat")) {
+  #   dims <- paste0(reduction, 1:ncol(object@reductions[[reduction]]))
+  # } else if (is(object, "nmf")) {
+  #   dims <- paste0("nmf", 1:ncol(w))
+  # }
+  colnames(pval) <- colnames(padj) <- colnames(es) <- colnames(nes) <- colnames(w)
 
   # reorder with hclust
   padj <- -log10(padj)
