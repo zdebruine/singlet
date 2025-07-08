@@ -240,7 +240,7 @@ AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=TRUE, ...){
                   color = negative_log10_fdr, 
                   size = lods)) + 
          geom_point() + 
-         scale_color_viridis_c(option = "B", end = 0.9) +
+         scale_color_viridis_c(direction = -1, option = "B", end = 0.9) +
          theme_minimal() + 
          labs(y = plot.field, 
               x = "NMF factor", 

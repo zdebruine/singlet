@@ -6,6 +6,7 @@
 \usage{
 RunGSEA(
   object,
+  ID = "gene_symbol",
   reduction = "nmf",
   species = "Homo sapiens",
   category = "C5",
@@ -14,11 +15,14 @@ RunGSEA(
   dims = NULL,
   verbose = TRUE,
   padj.sig = 0.01,
+  add.noise = FALSE,
   ...
 )
 }
 \arguments{
 \item{object}{a Seurat or RcppML::nmf object}
+
+\item{ID}{gene ID format (i.e. "gene_symbol", "ensembl_gene")}
 
 \item{reduction}{dimensional reduction to use (if Seurat)}
 
@@ -35,6 +39,8 @@ RunGSEA(
 \item{verbose}{print progress to console}
 
 \item{padj.sig}{significance cutoff for BH-adjusted p-values (default 0.01)}
+
+\item{add.noise}{add random noise to ranks to prevent hanging, known bug in fgsea(https://github.com/alserglab/fgsea/issues/151#issuecomment-2088857387)}
 
 \item{...}{additional params to pass to msigdbr}
 }

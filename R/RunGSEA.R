@@ -3,6 +3,7 @@
 #' Run GSEA to identify gene sets that are enriched within NMF factors.
 #'
 #' @param object a Seurat or RcppML::nmf object
+#' @param ID gene ID format (i.e. "gene_symbol", "ensembl_gene")
 #' @param reduction dimensional reduction to use (if Seurat)
 #' @param species species for which to load gene sets
 #' @param category msigdbr gene set category (i.e. "H", "C5", etc.)
@@ -11,6 +12,7 @@
 #' @param dims factors in the reduction to use, default \code{NULL} for all factors
 #' @param verbose print progress to console
 #' @param padj.sig significance cutoff for BH-adjusted p-values (default 0.01)
+#' @param add.noise  add random noise to ranks to prevent hanging, known bug in fgsea(https://github.com/alserglab/fgsea/issues/151#issuecomment-2088857387)
 #' @param ...   additional params to pass to msigdbr
 #'
 #' @return a Seurat or nmf object, with GSEA information in the misc slot. BH-adj p-values are on a -log10 scale.
@@ -20,15 +22,15 @@
 #'
 #' @export
 #'
-RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", category = "C5",
+RunGSEA <- function(object, ID = "gene_symbol", reduction = "nmf", species = "Homo sapiens", category = "C5",
                     min.size = 10, max.size = 500, dims = NULL,
-                    verbose = TRUE, padj.sig = 0.01, ...) {
+                    verbose = TRUE, padj.sig = 0.01, add.noise = FALSE,...) {
 
   if (verbose) cat("fetching gene sets\n")
   gene_sets <- msigdbr(species = species, category = category, ...)
 
   if (verbose) cat("filtering pathways\n")
-  pathways <- split(x = gene_sets$gene_symbol, f = gene_sets$gs_name)
+  pathways <- split(x = gene_sets[[ID]], f = gene_sets$gs_name)
   pathways <- pathways[lapply(pathways, length) > min.size]
 
   if (verbose) cat("filtering genes in pathways to those in reduction\n")
@@ -53,10 +55,18 @@ RunGSEA <- function(object, reduction = "nmf", species = "Homo sapiens", categor
   results <- list()
   for (i in 1:ncol(w)) {
     ranks <- sort(w[, i])
-    results[[i]] <- suppressWarnings(fgseaMultilevel(
-      pathways, ranks,
-      minSize = min.size, maxSize = max.size, scoreType = "pos"
-    ))
+    if (add.noise){
+      results[[i]] <- suppressWarnings(fgseaMultilevel(
+        pathways, ranks+rnorm(length(ranks), sd=0.001),
+        minSize = min.size, maxSize = max.size, scoreType = "pos"
+      ))
+    }else{
+      results[[i]] <- suppressWarnings(fgseaMultilevel(
+        pathways, ranks,
+        minSize = min.size, maxSize = max.size, scoreType = "pos"
+      ))
+    }
+    
     utils::setTxtProgressBar(pb, i)
   }
   close(pb)
