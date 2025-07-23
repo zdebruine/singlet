@@ -38,13 +38,7 @@ AnnotationPlot(object, ...)
 
 \method{AnnotationPlot}{list}(object, plot.field, dropEmpty = TRUE, ...)
 
-\method{AnnotationPlot}{data.frame}(
-  object,
-  plot.field,
-  dropEmpty = TRUE,
-  annotation.name = "annotations",
-  ...
-)
+\method{AnnotationPlot}{data.frame}(object, plot.field, dropEmpty = TRUE, ...)
 }
 \arguments{
 \item{object}{a compatible object (Seurat, DimReduc, nmf, data.frame)}

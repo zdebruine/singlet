@@ -60,7 +60,7 @@ RunGSEA <- function(object, ID = "gene_symbol", reduction = "nmf", species = "Ho
   row_sum = rowSums(w)
   if (any(row_sum == 0)){
     cat("Rows with all 0 detected. Removing...\n")
-    w = w[rowSums(w) !=0,]
+    w = w[row_sum !=0,]
   }
   
   
