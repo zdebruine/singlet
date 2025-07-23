@@ -6,17 +6,18 @@
 #' @param reduction a dimensional reduction for which GSEA analysis has been performed
 #' @param max.terms.per.factor show this number of top terms for each factor
 #' @param dropcommon  drop broadly enriched terms across factors? (TRUE) 
+#' @param gsea.name gsea name, gsea by default
 #'
 #' @return ggplot2 object
 #'
 #' @export
 #'
-GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3, dropcommon = TRUE) {
+GSEAHeatmap <- function(object, reduction = "nmf", max.terms.per.factor = 3, dropcommon = TRUE,gsea.name = "gsea") {
 
   if (is(object, "Seurat")) {
-    df <- object@reductions[[reduction]]@misc$gsea$padj
+    df <- object@reductions[[reduction]]@misc[[gsea.name]][["padj"]]
   } else if (is(object, "nmf")) {
-    df <- object@misc$gsea$padj
+    df <- object@misc[[gsea.name]][["padj"]]
   }
   
   # markers for each factor based on the proportion of signal in that factor

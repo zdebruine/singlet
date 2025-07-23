@@ -8,7 +8,8 @@ GSEAHeatmap(
   object,
   reduction = "nmf",
   max.terms.per.factor = 3,
-  dropcommon = TRUE
+  dropcommon = TRUE,
+  gsea.name = "gsea"
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ GSEAHeatmap(
 \item{max.terms.per.factor}{show this number of top terms for each factor}
 
 \item{dropcommon}{drop broadly enriched terms across factors? (TRUE)}
+
+\item{gsea.name}{gsea name, gsea by default}
 }
 \value{
 ggplot2 object
