@@ -8,7 +8,8 @@
 #' @param fit   an lmFit result from limma, shrunken with eBayes()
 #' @param noneg drop results with negative lods scores? (TRUE) 
 #' @param noint drop any results for '(Intercept)'? (TRUE) 
-#'
+#' @param tail add direction for one or two-tailed testing (pos,neg,std), default = pos
+#' 
 #' @return      a data.frame with columns 'factor', 'group', 'fc', and 'p' 
 #' 
 #' @details     If an (Intercept) term is found, it will be dropped, and if
@@ -19,7 +20,7 @@
 #' @import      limma
 #'
 #' @export
-getModelResults <- function(fit, noneg=TRUE, noint=TRUE) { 
+getModelResults <- function(fit, noneg=TRUE, noint=TRUE, tail = "pos") { 
 
   # fits are centered, so use signed lods for evidence 
   fcl <- with(fit, melt(lods))
@@ -29,7 +30,20 @@ getModelResults <- function(fit, noneg=TRUE, noint=TRUE) {
   fcp <- merge(fcl, fct)
   names(fcp)[1:2] <- c("factor", "group")
   fcp$df <- fit$df.total[fcp$factor]
-  fcp$p_raw <- with(fcp, pt(t, df, lower=FALSE))
+  
+  if (tail == "pos"){
+    fcp$p_raw <- with(fcp, pt(t, df, lower.tail = FALSE))
+  } else if (tail == "neg"){
+    fcp$p_raw <- with(fcp, pt(t, df, lower.tail = TRUE))
+  } else if (tail == "std") {
+    # can probably be simplified to 2 * pt(abs(t), df, lower.tail = FALSE) or 
+    # 2*pt(-abs(out$t),df=df.total) from limma since t dist is symmetric
+    fcp$p_raw <- with(fcp, pt(abs(t), df, lower.tail = FALSE) + pt(-abs(t), df, lower.tail = TRUE)) 
+  }else{
+    stop("Invalid tail selection. Choose 'pos','neg', or 'std'")
+  }
+  
+  
   fcp$p <- p.adjust(fcp$p_raw, method="fdr")
 
   # better might be to fit without an intercept term 

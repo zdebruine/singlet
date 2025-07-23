@@ -5,6 +5,7 @@
 #' @param plot.field  metadata grouping to plot
 #' @param reduction   the reduction to plot (default is 'nmf') 
 #' @param dropEmpty   drop factors without significant associations? (TRUE)
+#' @param annotation.name name of factor annotation, default = "annotations"
 #'
 #' @return            a ggplot2 object
 #'
@@ -19,8 +20,8 @@ AnnotationPlot <- function(object, ...) {
 #'
 #' @export
 #' 
-AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", dropEmpty=TRUE, ...){
-  AnnotationPlot(object@reductions[[reduction]], dropEmpty=dropEmpty)
+AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", dropEmpty=TRUE, annotation.name = "annotations", ...){
+  AnnotationPlot(object@reductions[[reduction]], dropEmpty=dropEmpty, annotation.name = annotation.name)
 }
 
 
@@ -50,13 +51,13 @@ AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", 
 #'
 #' @export
 #' 
-AnnotationPlot.DimReduc <- function(object, plot.field=NULL, dropEmpty=TRUE, ...) {
+AnnotationPlot.DimReduc <- function(object, plot.field=NULL, dropEmpty=TRUE, annotation.name = "annotations", ...) {
 
   if(!("annotations" %in% names(object@misc))){
     stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
   }
 
-  annot <- object@misc$annotations
+  annot <- object@misc[[annotation.name]]
   if (is.null(plot.field)) {
     plot.field <- names(annot)[[1]]
   } else {
@@ -99,14 +100,14 @@ AnnotationPlot.DimReduc <- function(object, plot.field=NULL, dropEmpty=TRUE, ...
 #'
 #' @export
 #' 
-AnnotationPlot.nmf <- function(object, plot.field=NULL, dropEmpty=TRUE, ...) {
+AnnotationPlot.nmf <- function(object, plot.field=NULL, dropEmpty=TRUE, annotation.name = "annotations",...) {
 
   # nmf objects can have a @misc slot too, so...
   if(!("annotations" %in% names(object@misc))){
     stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
   }
 
-  annot <- object@misc$annotations
+  annot <- object@misc[[annotation.name]]
   AnnotationPlot(annot, plot.field=plot.field, dropEmpty=dropEmpty)
 
 }
@@ -125,7 +126,7 @@ AnnotationPlot.nmf <- function(object, plot.field=NULL, dropEmpty=TRUE, ...) {
 #' @name AnnotationPlot
 #'
 #' @export
-AnnotationPlot.list <- function(object, plot.field, dropEmpty=TRUE, ...) {
+AnnotationPlot.list <- function(object, plot.field, dropEmpty=TRUE,...) {
 
   stopifnot(plot.field %in% names(object))
   AnnotationPlot.data.frame(object[[plot.field]], 
@@ -164,7 +165,7 @@ AnnotationPlot.list <- function(object, plot.field, dropEmpty=TRUE, ...) {
 #' @import     ggplot2
 #'
 #' @export
-AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=TRUE, ...){
+AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=TRUE, annotation.name = "annotations", ...){
 
   pcols <- c("factor","group","p")
   fcols <- c("factor","group","fc")

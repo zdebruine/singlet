@@ -4,7 +4,7 @@
 \alias{getModelResults}
 \title{extract data.frame of lods and pvalues for differential factor representation}
 \usage{
-getModelResults(fit, noneg = TRUE, noint = TRUE)
+getModelResults(fit, noneg = TRUE, noint = TRUE, tail = "pos")
 }
 \arguments{
 \item{fit}{an lmFit result from limma, shrunken with eBayes()}
@@ -12,6 +12,8 @@ getModelResults(fit, noneg = TRUE, noint = TRUE)
 \item{noneg}{drop results with negative lods scores? (TRUE)}
 
 \item{noint}{drop any results for '(Intercept)'? (TRUE)}
+
+\item{tail}{add direction for one or two-tailed testing (pos,neg,std), default = pos}
 }
 \value{
 a data.frame with columns 'factor', 'group', 'fc', and 'p'
