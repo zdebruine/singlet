@@ -16,12 +16,25 @@ AnnotationPlot(object, ...)
   plot.field = NULL,
   reduction = "nmf",
   dropEmpty = TRUE,
+  annotation.name = "annotations",
   ...
 )
 
-\method{AnnotationPlot}{DimReduc}(object, plot.field = NULL, dropEmpty = TRUE, ...)
+\method{AnnotationPlot}{DimReduc}(
+  object,
+  plot.field = NULL,
+  dropEmpty = TRUE,
+  annotation.name = "annotations",
+  ...
+)
 
-\method{AnnotationPlot}{nmf}(object, plot.field = NULL, dropEmpty = TRUE, ...)
+\method{AnnotationPlot}{nmf}(
+  object,
+  plot.field = NULL,
+  dropEmpty = TRUE,
+  annotation.name = "annotations",
+  ...
+)
 
 \method{AnnotationPlot}{list}(object, plot.field, dropEmpty = TRUE, ...)
 
@@ -37,6 +50,8 @@ AnnotationPlot(object, ...)
 \item{reduction}{the reduction to plot (default is 'nmf')}
 
 \item{dropEmpty}{drop factors without significant associations? (TRUE)}
+
+\item{annotation.name}{name of factor annotation, default = "annotations"}
 }
 \value{
 a ggplot2 object

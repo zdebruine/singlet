@@ -7,6 +7,8 @@
 #' @param center    center the factor matrix for testing? (TRUE)
 #' @param scale     scale the factor matrix for testing? (FALSE)
 #' @param max.levels maximum number of levels a factor may have in order to be included in analysis
+#' @param tail      add direction for one or two-tailed testing (pos,neg,std), default = pos
+#' @param annotation.name name of factor annotation, default = "annotations"
 #' @param ... not implemented
 #' @export
 #'
@@ -24,7 +26,7 @@ AnnotateNMF <- function(object, ...) {
 #'
 #' @export
 #'
-AnnotateNMF.DimReduc <- function(object, meta.data = NULL, columns = NULL, designs = NULL, center = TRUE, scale = FALSE, max.levels = 200, ...) {
+AnnotateNMF.DimReduc <- function(object, meta.data = NULL, columns = NULL, designs = NULL, center = TRUE, scale = FALSE, max.levels = 200, tail = "pos", annotation.name = "annotations",...) {
   designs <- getDesigns(columns = columns,
                         meta.data = meta.data, 
                         designs = designs, 
@@ -34,8 +36,7 @@ AnnotateNMF.DimReduc <- function(object, meta.data = NULL, columns = NULL, desig
                  object = object, 
                  center = center, 
                  scale = scale)
-  object@misc$annotations <- lapply(fits, 
-                                    getModelResults)
+  object@misc[[annotation.name]] <- lapply(fits, getModelResults, tail = tail)
   return(object)
 }
 
@@ -63,13 +64,15 @@ AnnotateNMF.DimReduc <- function(object, meta.data = NULL, columns = NULL, desig
 #'
 #' @export
 #'
-AnnotateNMF.Seurat <- function(object, columns = NULL, reduction = "nmf", ...) {
+AnnotateNMF.Seurat <- function(object, columns = NULL, reduction = "nmf", tail = "pos", annotation.name = "annotations",...) {
   if (is.null(columns)) columns <- colnames(object@meta.data)
   object@reductions[[reduction]] <-
     AnnotateNMF.DimReduc(
       object = object@reductions[[reduction]],
       meta.data = object@meta.data[, columns],
-      columns = columns, ...
+      columns = columns, 
+      tail = tail,
+      annotation.name = annotation.name,...
     )
   return(object)
 }
@@ -94,10 +97,10 @@ AnnotateNMF.Seurat <- function(object, columns = NULL, reduction = "nmf", ...) {
 #'
 #' @export
 #'
-AnnotateNMF.nmf <- function(object, meta.data, columns = NULL, designs = NULL, center = TRUE, scale = FALSE, max.levels = 200, ...) {
+AnnotateNMF.nmf <- function(object, meta.data, columns = NULL, designs = NULL, center = TRUE, scale = FALSE, max.levels = 200, tail = "pos",annotation.name = "annotations", ...) {
   designs <- getDesigns(columns = columns, meta.data = meta.data, designs = designs, max.levels, ...)
   fits <- lapply(designs, getModelFit, object = object, center = center, scale = scale)
-  object@misc$annotations <- lapply(fits, getModelResults)
+  object@misc[[annotation.name]] <- lapply(fits, getModelResults, tail = tail)
   return(object)
 }
 

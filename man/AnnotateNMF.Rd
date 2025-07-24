@@ -17,10 +17,19 @@ AnnotateNMF(object, ...)
   center = TRUE,
   scale = FALSE,
   max.levels = 200,
+  tail = "pos",
+  annotation.name = "annotations",
   ...
 )
 
-\method{AnnotateNMF}{Seurat}(object, columns = NULL, reduction = "nmf", ...)
+\method{AnnotateNMF}{Seurat}(
+  object,
+  columns = NULL,
+  reduction = "nmf",
+  tail = "pos",
+  annotation.name = "annotations",
+  ...
+)
 
 \method{AnnotateNMF}{nmf}(
   object,
@@ -30,6 +39,8 @@ AnnotateNMF(object, ...)
   center = TRUE,
   scale = FALSE,
   max.levels = 200,
+  tail = "pos",
+  annotation.name = "annotations",
   ...
 )
 }
@@ -49,6 +60,10 @@ AnnotateNMF(object, ...)
 \item{scale}{scale the factor matrix for testing? (FALSE)}
 
 \item{max.levels}{maximum number of levels a factor may have in order to be included in analysis}
+
+\item{tail}{add direction for one or two-tailed testing (pos,neg,std), default = pos}
+
+\item{annotation.name}{name of factor annotation, default = "annotations"}
 
 \item{reduction}{the reductions slot in the Seurat object containing the model to annotate}
 }
