@@ -15,6 +15,7 @@ the same data projected onto (-Inf, +Inf)
 \description{
 given data in rankable order, squash it into 0-1 and project onto a Gaussian.
 }
+
 \examples{
 par(mfrow=c(1,2))
 
@@ -27,6 +28,7 @@ plot(density(y), main="normit-transformed")
 par(mfrow=c(1,1))
 
 }
+
 \seealso{
 normitAll for matrices or other rectangular shaped things
 }
