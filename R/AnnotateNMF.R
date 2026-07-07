@@ -26,11 +26,21 @@ AnnotateNMF <- function(object, ...) {
 #'
 #' @export
 #'
-AnnotateNMF.DimReduc <- function(object, meta.data = NULL, columns = NULL, designs = NULL, center = TRUE, scale = FALSE, max.levels = 200, tail = "pos", annotation.name = "annotations",...) {
-  designs <- getDesigns(columns = columns,
-                        meta.data = meta.data, 
-                        designs = designs, 
-                        max.levels)
+AnnotateNMF.DimReduc <- function(object, 
+                                 meta.data = NULL, 
+                                 columns = NULL, 
+                                 designs = NULL, 
+                                 center = TRUE, 
+                                 scale = FALSE, 
+                                 max.levels = 200, 
+                                 tail = "pos", 
+                                 annotation.name = "annotations",
+                                 ...) {
+  designs <- getDesigns(
+    columns = columns,
+    meta.data = meta.data, 
+    designs = designs, 
+    max.levels = max.levels)
   fits <- lapply(designs, 
                  getModelFit, 
                  object = object, 
@@ -48,6 +58,82 @@ AnnotateNMF.DimReduc <- function(object, meta.data = NULL, columns = NULL, desig
 #'
 .S3method("AnnotateNMF", "DimReduc", AnnotateNMF.DimReduc)
 
+#' Annotate NMF model with cell metadata
+#'
+#' @details Maps factor information in an RcppML::nmf object against meta.data
+#'
+#' @rdname AnnotateNMF
+#' @aliases AnnotateNMF
+#'
+#' @import limma
+#'
+#' @export
+#'
+AnnotateNMF.nmf <- function(object, 
+                            meta.data, 
+                            columns = NULL, 
+                            designs = NULL, 
+                            center = TRUE, 
+                            scale = FALSE, 
+                            max.levels = 200, 
+                            tail = "pos",
+                            annotation.name = "annotations", ...) {
+  designs <- getDesigns(
+    columns = columns, 
+    meta.data = meta.data, 
+    designs = designs, 
+    max.levels = max.levels, ...)
+  fits <- lapply(designs, 
+                 getModelFit, 
+                 object = object, 
+                 center = center, 
+                 scale = scale)
+  object@misc[[annotation.name]] <- lapply(fits, getModelResults, tail = tail)
+  return(object)
+}
+
+#' Annotate NMF model from singlet with cell metadata
+#'
+#' @details Maps factor information in an singlet list nmf object against meta.data
+#'
+#' @rdname AnnotateNMF
+#' @aliases AnnotateNMF
+#'
+#' @import limma
+#' @import SingleCellExperiment
+#'
+#' @export
+#'
+AnnotateNMF.list <- function(object, 
+                             meta.data, 
+                             columns = NULL, 
+                             designs = NULL, 
+                             center = TRUE, 
+                             scale = FALSE, 
+                             max.levels = 200, 
+                             tail = "pos", 
+                             annotation.name = "annotations", ...) {
+  designs <- getDesigns(
+    columns = columns, 
+    meta.data = meta.data, 
+    designs = designs, 
+    max.levels = max.levels, ...)
+  fits <- lapply(designs, 
+                 getModelFit, 
+                 object = object, 
+                 center = center, 
+                 scale = scale)
+  object[[annotation.name]] <- lapply(fits, getModelResults, tail = tail)
+  return(object)
+}
+
+
+#' @rdname AnnotateNMF
+#' @name AnnotateNMF
+#'
+#' @export
+#'
+.S3method("AnnotateNMF", "list", AnnotateNMF.list)
 
 #' @rdname AnnotateNMF
 #'
@@ -64,7 +150,11 @@ AnnotateNMF.DimReduc <- function(object, meta.data = NULL, columns = NULL, desig
 #'
 #' @export
 #'
-AnnotateNMF.Seurat <- function(object, columns = NULL, reduction = "nmf", tail = "pos", annotation.name = "annotations",...) {
+AnnotateNMF.Seurat <- function(object, 
+                               columns = NULL, 
+                               reduction = "nmf", 
+                               tail = "pos", 
+                               annotation.name = "annotations",...) {
   if (is.null(columns)) columns <- colnames(object@meta.data)
   object@reductions[[reduction]] <-
     AnnotateNMF.DimReduc(
@@ -86,21 +176,31 @@ AnnotateNMF.Seurat <- function(object, columns = NULL, reduction = "nmf", tail =
 .S3method("AnnotateNMF", "Seurat", AnnotateNMF.Seurat)
 
 
-#' Annotate NMF model with cell metadata
-#'
-#' @details Maps factor information in an RcppML::nmf object against meta.data
-#'
 #' @rdname AnnotateNMF
-#' @aliases AnnotateNMF
 #'
-#' @import limma
+#' @param reduction the reductions slot in the Seurat object containing the model to annotate
+#'
+#' @examples
+#' \dontrun{
+#' get_pbmc3k_data() %>%
+#'   NormalizeData() %>%
+#'   RunNMF() -> pbmc3k
+#' AnnotateNMF(pbmc3k)
+#' }
+#' @aliases AnnotateNMF
 #'
 #' @export
 #'
-AnnotateNMF.nmf <- function(object, meta.data, columns = NULL, designs = NULL, center = TRUE, scale = FALSE, max.levels = 200, tail = "pos",annotation.name = "annotations", ...) {
-  designs <- getDesigns(columns = columns, meta.data = meta.data, designs = designs, max.levels, ...)
-  fits <- lapply(designs, getModelFit, object = object, center = center, scale = scale)
-  object@misc[[annotation.name]] <- lapply(fits, getModelResults, tail = tail)
+AnnotateNMF.SingleCellExperiment <- function(object, columns = NULL, reduction = "nmf", tail = "pos", annotation.name = "annotations",...) {
+  if (is.null(columns)) columns <- colnames(SingleCellExperiment::colData(object))
+  object@metadata[[reduction]] <-
+    AnnotateNMF(
+      object = object@metadata[[reduction]],
+      meta.data = object@colData[, columns],
+      columns = columns, 
+      tail = tail,
+      annotation.name = annotation.name,...
+    )
   return(object)
 }
 
@@ -110,4 +210,6 @@ AnnotateNMF.nmf <- function(object, meta.data, columns = NULL, designs = NULL, c
 #'
 #' @export
 #'
-.S3method("AnnotateNMF", "nmf", AnnotateNMF.nmf)
+.S3method("AnnotateNMF", "SingleCellExperiment", AnnotateNMF.SingleCellExperiment)
+
+

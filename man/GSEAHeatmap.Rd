@@ -2,30 +2,106 @@
 % Please edit documentation in R/GSEAHeatmap.R
 \name{GSEAHeatmap}
 \alias{GSEAHeatmap}
+\alias{GSEAHeatmap.Seurat}
+\alias{GSEAHeatmap.SingleCellExperiment}
+\alias{GSEAHeatmap.nmfList}
+\alias{GSEAHeatmap.nmf}
+\alias{GSEAHeatmap.list}
+\alias{GSEAHeatmap.matrix}
 \title{Plot GSEA results on a heatmap}
 \usage{
-GSEAHeatmap(
+GSEAHeatmap(object, ...)
+
+\method{GSEAHeatmap}{Seurat}(
   object,
   reduction = "nmf",
+  collapse = NULL,
+  padj.sig = 0.05,
   max.terms.per.factor = 3,
   dropcommon = TRUE,
-  gsea.name = "gsea"
+  gsea.name = "gsea",
+  truncate.terms = 48,
+  ...
+)
+
+\method{GSEAHeatmap}{SingleCellExperiment}(
+  object,
+  reduction = "nmf",
+  collapse = NULL,
+  padj.sig = 0.05,
+  max.terms.per.factor = 3,
+  dropcommon = TRUE,
+  gsea.name = "gsea",
+  truncate.terms = 48,
+  ...
+)
+
+\method{GSEAHeatmap}{nmfList}(
+  object,
+  collapse = NULL,
+  padj.sig = 0.05,
+  max.terms.per.factor = 3,
+  dropcommon = TRUE,
+  gsea.name = "gsea",
+  truncate.terms = 48,
+  ...
+)
+
+\method{GSEAHeatmap}{nmf}(
+  object,
+  collapse = NULL,
+  padj.sig = 0.05,
+  max.terms.per.factor = 3,
+  dropcommon = TRUE,
+  gsea.name = "gsea",
+  truncate.terms = 48,
+  ...
+)
+
+\method{GSEAHeatmap}{list}(
+  object,
+  collapse = NULL,
+  padj.sig = 0.05,
+  max.terms.per.factor = 3,
+  dropcommon = TRUE,
+  truncate.terms = 48,
+  ...
+)
+
+\method{GSEAHeatmap}{matrix}(
+  object,
+  padj.sig = 0.05,
+  max.terms.per.factor = 3,
+  dropcommon = TRUE,
+  truncate.terms = 48,
+  ...
 )
 }
 \arguments{
-\item{object}{Seurat or RcppML::nmf object}
+\item{object}{A Seurat, SingleCellExperiment, or RcppML::nmf object,
+a list of GSEA results, or a matrix of -log10 adjusted p-values.}
 
-\item{reduction}{a dimensional reduction for which GSEA analysis has been performed}
+\item{...}{Additional arguments.}
 
-\item{max.terms.per.factor}{show this number of top terms for each factor}
+\item{reduction}{Dimensional reduction for which GSEA analysis has been performed.}
 
-\item{dropcommon}{drop broadly enriched terms across factors? (TRUE)}
+\item{collapse}{collapse slot in GSEA result}
 
-\item{gsea.name}{gsea name, gsea by default}
+\item{padj.sig}{Adjusted p-value threshold for selecting significant pathways.}
+
+\item{max.terms.per.factor}{Maximum number of top pathways to show per NMF factor.}
+
+\item{dropcommon}{Whether to remove pathways significant in more than half
+of the NMF factors.}
+
+\item{gsea.name}{Name under which GSEA results are stored. Default is "gsea".}
+
+\item{truncate.terms}{Maximum number of characters to retain in pathway names.
+Set to NULL to keep full names.}
 }
 \value{
-ggplot2 object
+A ggplot2 object.
 }
 \description{
-Plot top GSEA terms for each NMF factor on a heatmap
+Plot top GSEA terms for each NMF factor on a heatmap.
 }

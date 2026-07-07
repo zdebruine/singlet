@@ -2,9 +2,16 @@
 % Please edit documentation in R/RunGSEA.R
 \name{RunGSEA}
 \alias{RunGSEA}
+\alias{RunGSEA.Seurat}
+\alias{RunGSEA.SingleCellExperiment}
+\alias{RunGSEA.nmfList}
+\alias{RunGSEA.nmf}
+\alias{RunGSEA.matrix}
 \title{Run Gene Set Enrichment Analysis on a Reduction}
 \usage{
-RunGSEA(
+RunGSEA(object, ...)
+
+\method{RunGSEA}{Seurat}(
   object,
   ID = "gene_symbol",
   reduction = "nmf",
@@ -21,9 +28,79 @@ RunGSEA(
   remove.zeros.per.factor = FALSE,
   ...
 )
+
+\method{RunGSEA}{SingleCellExperiment}(
+  object,
+  ID = "gene_symbol",
+  reduction = "nmf",
+  species = "Homo sapiens",
+  category = "C5",
+  min.size = 10,
+  max.size = 500,
+  dims = NULL,
+  verbose = TRUE,
+  padj.sig = 0.01,
+  add.noise = FALSE,
+  scoreType = "pos",
+  gsea.name = "gsea",
+  remove.zeros.per.factor = FALSE,
+  ...
+)
+
+\method{RunGSEA}{nmfList}(
+  object,
+  ID = "gene_symbol",
+  species = "Homo sapiens",
+  category = "C5",
+  min.size = 10,
+  max.size = 500,
+  dims = NULL,
+  verbose = TRUE,
+  padj.sig = 0.01,
+  add.noise = FALSE,
+  scoreType = "pos",
+  gsea.name = "gsea",
+  remove.zeros.per.factor = FALSE,
+  ...
+)
+
+\method{RunGSEA}{nmf}(
+  object,
+  ID = "gene_symbol",
+  species = "Homo sapiens",
+  category = "C5",
+  min.size = 10,
+  max.size = 500,
+  dims = NULL,
+  verbose = TRUE,
+  padj.sig = 0.01,
+  add.noise = FALSE,
+  scoreType = "pos",
+  gsea.name = "gsea",
+  remove.zeros.per.factor = FALSE,
+  ...
+)
+
+\method{RunGSEA}{matrix}(
+  object,
+  ID = "gene_symbol",
+  species = "Homo sapiens",
+  category = "C5",
+  min.size = 10,
+  max.size = 500,
+  dims = NULL,
+  verbose = TRUE,
+  padj.sig = 0.01,
+  add.noise = FALSE,
+  scoreType = "pos",
+  remove.zeros.per.factor = FALSE,
+  ...
+)
 }
 \arguments{
 \item{object}{a Seurat or RcppML::nmf object}
+
+\item{...}{additional params to pass to msigdbr}
 
 \item{ID}{gene ID format (i.e. "gene_symbol", "ensembl_gene")}
 
@@ -47,12 +124,9 @@ RunGSEA(
 
 \item{scoreType}{scoring type passed to \code{fgsea::fgsea}: \code{"pos"} (default, positive weights only), \code{"std"} or \code{"neg"}}
 
-
 \item{gsea.name}{gsea name, gsea by default}
 
 \item{remove.zeros.per.factor}{option to remove genes that have weight 0 within factor (not recommended unless you can prove this is unbiased filtering)}
-
-\item{...}{additional params to pass to msigdbr}
 }
 \value{
 a Seurat or nmf object, with GSEA information in the misc slot. BH-adj p-values are on a -log10 scale.

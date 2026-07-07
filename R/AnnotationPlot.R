@@ -20,8 +20,18 @@ AnnotationPlot <- function(object, ...) {
 #'
 #' @export
 #' 
-AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", dropEmpty=TRUE, annotation.name = "annotations", cluster_by="pos", ...){
-  AnnotationPlot(object@reductions[[reduction]],plot.field = plot.field, dropEmpty=dropEmpty, annotation.name = annotation.name, cluster_by = cluster_by)
+AnnotationPlot.Seurat <- function(object, 
+                                  plot.field = NULL, 
+                                  reduction = "nmf", 
+                                  dropEmpty=TRUE, 
+                                  annotation.name = "annotations", 
+                                  cluster_by="pos", 
+                                  ...){
+  AnnotationPlot(object@reductions[[reduction]],
+                 plot.field = plot.field, 
+                 dropEmpty = dropEmpty, 
+                 annotation.name = annotation.name, 
+                 cluster_by = cluster_by)
 }
 
 
@@ -30,6 +40,54 @@ AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", 
 #'
 #' @export
 .S3method("AnnotationPlot", "Seurat", AnnotationPlot.Seurat)
+
+
+#' @rdname AnnotationPlot
+#' @name AnnotationPlot
+#'
+#' @export
+#' 
+AnnotationPlot.SingleCellExperiment <- function(object, 
+                                                plot.field = NULL, 
+                                                reduction = "nmf", 
+                                                dropEmpty=TRUE, 
+                                                annotation.name = "annotations", 
+                                                cluster_by="pos", 
+                                                ...){
+  
+  reduc = object@metadata[[reduction]]
+  if (is.null(reduc)) {
+    stop("Reduction not found.")
+  }
+  # # Handle NMF list: list(w, d, h, cv_data, gsea)
+  # if (all(c("w", "d", "h") %in% names(reduc))){
+  #   if (is.null(reduc[[annotation.name]])) {
+  #     stop("This reduct object has no ",annotation.name," slot. Run 'AnnotateNMF' first.")
+  #   }
+  #   annot = reduc[[annotation.name]]
+  #   plot.field=verifyPlotfield(annot = annot,plot.field = plot.field)
+  #   AnnotationPlot(object = annot,
+  #                  plot.field = plot.field, 
+  #                  dropEmpty = dropEmpty, 
+  #                  cluster_by = cluster_by)
+  # }else{
+  AnnotationPlot(object = reduc,
+                 plot.field = plot.field, 
+                 dropEmpty = dropEmpty, 
+                 annotation.name = annotation.name,
+                 cluster_by = cluster_by)
+  # }
+  
+  
+  
+}
+
+
+#' @rdname AnnotationPlot
+#' @name   AnnotationPlot
+#'
+#' @export
+.S3method("AnnotationPlot", "SingleCellExperiment", AnnotationPlot.SingleCellExperiment)
 
 
 #' Plot metadata enrichment in NMF factors
@@ -51,26 +109,21 @@ AnnotationPlot.Seurat <- function(object, plot.field = NULL, reduction = "nmf", 
 #'
 #' @export
 #' 
-AnnotationPlot.DimReduc <- function(object, plot.field=NULL, dropEmpty=TRUE, annotation.name = "annotations", cluster_by="pos", ...) {
+AnnotationPlot.DimReduc <- function(object, 
+                                    plot.field=NULL, 
+                                    dropEmpty=TRUE, 
+                                    annotation.name = "annotations", 
+                                    cluster_by="pos", 
+                                    ...) {
   
   if(!(annotation.name %in% names(object@misc))){
-    stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
+    stop("This reduct object has no ",annotation.name," slot. Run 'AnnotateNMF' first.")
   }
   
   annot <- object@misc[[annotation.name]]
-  if (is.null(plot.field)) {
-    plot.field <- names(annot)[[1]]
-  } else {
-    if(!(plot.field %in% names(annot))) {
-      stop(plot.field, "not found in the annotation columns")
-    }
-    if(length(plot.field) > 1) {
-      plot.field <- plot.field[[1]]
-    }
-  }
   
   # plot per factor by group
-  AnnotationPlot.data.frame(annot[[plot.field]], 
+  AnnotationPlot.data.frame(object = annot[[plot.field]], 
                             plot.field=plot.field,
                             dropEmpty=dropEmpty,
                             cluster_by = cluster_by)
@@ -101,15 +154,26 @@ AnnotationPlot.DimReduc <- function(object, plot.field=NULL, dropEmpty=TRUE, ann
 #'
 #' @export
 #' 
-AnnotationPlot.nmf <- function(object, plot.field=NULL, dropEmpty=TRUE, annotation.name = "annotations", cluster_by="pos",...) {
+AnnotationPlot.nmf <- function(object, 
+                               plot.field=NULL, 
+                               dropEmpty=TRUE, 
+                               annotation.name = "annotations", 
+                               cluster_by="pos",
+                               ...) {
   
   # nmf objects can have a @misc slot too, so...
-  if(!("annotations" %in% names(object@misc))){
-    stop("the ", reduction, " reduction of this object has no 'annotations' slot. Run 'AnnotateNMF' first.")
+  if(!(annotation.name %in% names(object@misc))){
+    stop("This reduct object has no ",annotation.name," slot. Run 'AnnotateNMF' first.")
   }
   
   annot <- object@misc[[annotation.name]]
-  AnnotationPlot(annot, plot.field=plot.field, dropEmpty=dropEmpty,cluster_by = cluster_by)
+  
+  plot.field = verifyPlotfield(annot = annot, plot.field = plot.field)
+  
+  AnnotationPlot(object = annot, 
+                 plot.field=plot.field, 
+                 dropEmpty=dropEmpty,
+                 cluster_by = cluster_by)
   
 }
 
@@ -120,6 +184,37 @@ AnnotationPlot.nmf <- function(object, plot.field=NULL, dropEmpty=TRUE, annotati
 #' @export
 .S3method("AnnotationPlot", "nmf", AnnotationPlot.nmf)
 
+#' Plot metadata enrichment in NMF factors, if a list of data.frames
+#'
+#' @rdname AnnotationPlot
+#' @name AnnotationPlot
+#'
+#' @export
+AnnotationPlot.nmfList <- function(object,
+                                   annotation.name = "annotations",
+                                   plot.field=NULL, 
+                                   dropEmpty=TRUE,
+                                   cluster_by="pos",
+                                   ...) {
+  if(!(annotation.name %in% names(object))){
+    stop("This reduct object has no ",annotation.name," slot. Run 'AnnotateNMF' first.")
+  }
+  
+  annot <- object[[annotation.name]]
+  
+  AnnotationPlot(object = annot, 
+                 plot.field=plot.field, 
+                 dropEmpty=dropEmpty,
+                 cluster_by = cluster_by)
+  
+}
+
+
+#' @rdname AnnotationPlot
+#' @name   AnnotationPlot
+#'
+#' @export
+.S3method("AnnotationPlot", "nmfList", AnnotationPlot.nmfList)
 
 #' Plot metadata enrichment in NMF factors, if a list of data.frames
 #'
@@ -127,15 +222,19 @@ AnnotationPlot.nmf <- function(object, plot.field=NULL, dropEmpty=TRUE, annotati
 #' @name AnnotationPlot
 #'
 #' @export
-AnnotationPlot.list <- function(object, plot.field, dropEmpty=TRUE, cluster_by="pos",...) {
-  
+AnnotationPlot.list <- function(object, 
+                                plot.field=NULL, 
+                                dropEmpty=TRUE,
+                                cluster_by="pos",
+                                ...) {
+  plot.field = verifyPlotfield(annot = object,plot.field = plot.field)
   stopifnot(plot.field %in% names(object))
-  AnnotationPlot.data.frame(object[[plot.field]], 
-                            plot.field=plot.field, 
-                            dropEmpty=dropEmpty,
-                            cluster_by = cluster_by,
-                            ...)
-  
+  AnnotationPlot(object = object[[plot.field]], 
+                                        plot.field=plot.field, 
+                                        dropEmpty=dropEmpty,
+                                        cluster_by = cluster_by,
+                                        ...)
+                 
 }
 
 
@@ -167,7 +266,11 @@ AnnotationPlot.list <- function(object, plot.field, dropEmpty=TRUE, cluster_by="
 #' @import     ggplot2
 #'
 #' @export
-AnnotationPlot.data.frame <- function(object, plot.field, dropEmpty=TRUE, cluster_by="pos",...){
+AnnotationPlot.data.frame <- function(object, 
+                                      plot.field, 
+                                      dropEmpty=TRUE, 
+                                      cluster_by="pos",
+                                      ...){
   
   pcols <- c("factor","group","p")
   fcols <- c("factor","group","fc")
@@ -317,4 +420,24 @@ getClusterIdx = function(fc,coeff,cluster_by="pos"){
   idx = rev(hclust(dist(fc, method = "binary"), method = "ward.D2")$order)
   
   return(idx)
+}
+
+
+verifyPlotfield = function(annot,plot.field){
+  
+  if (is.null(plot.field)) {
+    plot.field <- names(annot)[[1]]
+  } else {
+    
+    if(!(plot.field %in% names(annot))) {
+      stop(plot.field, "not found in the annotation columns")
+    }
+    
+    if(length(plot.field) > 1) {
+      plot.field <- plot.field[[1]]
+    }
+    
+  }
+  
+  return(plot.field)
 }
