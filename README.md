@@ -1,3 +1,5 @@
+
+
 # singlet v.0.0.99
 
 See the [pkgdown website](https://zdebruine.github.io/singlet/)!
@@ -17,8 +19,7 @@ devtools::install_github("zdebruine/RcppML")
 Then install required dependencies, including `limma` and `fgsea`:
 
 ```{R}
-BiocManager::install("fgsea")
-BiocManager::install("limma")
+BiocManager::install(c("fgsea", "limma"))
 ```
 
 Now install `singlet`:
@@ -30,6 +31,7 @@ devtools::install_github("zdebruine/singlet")
 ## Introductory Vignette
 
 [Guided clustering tutorial](https://zdebruine.github.io/singlet/articles/Guided_Clustering_with_NMF.html)
+[Batch integration tutorial](https://zdebruine.github.io/singlet/articles/Batch_Integration_with_Linked_NMF.html)
 
 ## Dimension Reduction with NMF
 
