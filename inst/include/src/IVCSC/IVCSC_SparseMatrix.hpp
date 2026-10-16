@@ -83,6 +83,11 @@ namespace IVSparse {
         // Matrix Vector Multiplication
         inline Eigen::Matrix<T, -1, 1> vectorMultiply(Eigen::Matrix<T, -1, 1>& vec);
 
+        // Declared here because vectorMultiply below names it
+    public:
+        class Vector;
+
+    private:
         // Matrix Vector Multiplication 2 (with IVSparse Vector)
         inline Eigen::Matrix<T, -1, 1> vectorMultiply(typename SparseMatrix<T, indexT, compressionLevel, columnMajor>::Vector& vec);
 
@@ -116,7 +121,6 @@ namespace IVSparse {
         //* Nested Subclasses *//
 
         // Vector Class for IVCSC Sparse Matrix
-        class Vector;
 
         // Iterator Class for IVCSC Sparse Matrix
         class InnerIterator;
