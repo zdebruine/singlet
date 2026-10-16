@@ -44,6 +44,8 @@ Suggests:
     viridis,
     testthat (>= 3.0.0),
     SingleCellExperiment,
+    S4Vectors,
+    SummarizedExperiment,
     scuttle,
     rWikiPathways,
     plotly,
