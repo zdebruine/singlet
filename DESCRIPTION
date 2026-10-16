@@ -18,7 +18,7 @@ License: MIT + file LICENSE
 Depends:
     R (>= 4.1.0),
     Seurat,
-    RcppML,
+    RcppML (>= 1.0.0),
     dplyr
 Imports:
     Matrix,
