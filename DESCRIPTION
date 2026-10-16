@@ -14,7 +14,7 @@ Authors@R: c(person("Zach", "DeBruine",
              role = c("fnd"), 
              comment = "https://chanzuckerberg.com/science/programs-resources/single-cell-biology/data-insights/efficient-data-structures-for-single-cell-data-integration/"))
 Description: Fast NMF with automatic rank-determination for dimension reduction of single-cell data using Seurat, RcppML nmf, SingleCellExperiments and similar.
-License: GPL (>= 2)
+License: MIT + file LICENSE
 Depends:
     R (>= 4.1.0),
     Seurat,
