@@ -1,10 +1,7 @@
 Package: singlet
 Type: Package
 Title: Non-negative Matrix Factorization for single-cell analysis
-Version: 0.99.8
-Date: 2024-10-15
-Author: Zach Debruine <debruinz@gvsu.edu>
-Maintainer: Zach Debruine <debruinz@gvsu.edu>
+Version: 0.99.9
 Authors@R: c(person("Zach", "DeBruine", 
              email = "debruinz@gvsu.edu", 
              role = c("aut", "cre"), 
@@ -19,12 +16,13 @@ Authors@R: c(person("Zach", "DeBruine",
 Description: Fast NMF with automatic rank-determination for dimension reduction of single-cell data using Seurat, RcppML nmf, SingleCellExperiments and similar.
 License: GPL (>= 2)
 Depends:
+    R (>= 4.1.0),
     Seurat,
     RcppML,
-    dplyr,
-    RcppEigen
+    dplyr
 Imports:
     Matrix,
+    SeuratObject,
     methods,
     stats,
     knitr,
@@ -34,7 +32,6 @@ Imports:
     utils,
     fgsea,
     msigdbr,
-    RcppML,
     statmod
 LinkingTo: 
     Rcpp,
@@ -46,6 +43,7 @@ Suggests:
     viridis,
     testthat (>= 3.0.0),
     SingleCellExperiment,
+    scuttle,
     rWikiPathways,
     plotly,
     igvR

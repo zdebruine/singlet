@@ -76,7 +76,7 @@ if (requireNamespace("Seurat") & requireNamespace("SingleCellExperiment")) {
   setMethod("assay", "Seurat", function(x, i, withDimnames = TRUE, ...) x@assays[[i]])
   setMethod("assays", "Seurat", function(x, withDimnames = TRUE, ...) x@assays)
   setMethod("assayNames", "Seurat", function(x, ...) names(x@assays))
-  setMethod("metadata", "Seurat", function(x, withDimnames = TRUE, ...) x@assays[[i]])
+  setMethod("metadata", "Seurat", function(x, ...) x@misc)
   setMethod("reducedDim", "Seurat", function(x, i, ...) x@reductions[[i]])
   setMethod("reducedDims", "Seurat", function(x, ...) x@reductions)
   setMethod("reducedDimNames", "Seurat", function(x) names(x@reductions))

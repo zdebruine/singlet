@@ -62,16 +62,13 @@ RunNMF.Seurat <- function(object,
     assay <- names(object@assays)[[1]]
   }
 
-  # check if data has been normalized
-  v <- object@assays[[assay]]$data@x
-  if (sum(as.integer(v)) == sum(v)) {
-    object <- PreprocessData(object, assay = assay)
-  }
-  A <- object@assays[[assay]]$data
+  # make sure the assay holds log-normalized data (works for Seurat v3/v4 Assay and v5 Assay5)
+  object <- .ensure_normalized(object, assay)
+  A <- .assay_matrix(object, assay, "data")
 
   if (!is.null(features)) {
     if (features[[1]] == "var.features") {
-      A <- A[object@assays[[assay]]@var.features, ]
+      A <- A[Seurat::VariableFeatures(object, assay = assay), ]
     } else if (is.integer(features) || is.character(features)) {
       # array of indices or rownames
       A <- A[features, ]
@@ -244,8 +241,12 @@ RunNMF.SingleCellExperiment <- function(object,
   # the kludge to end all kludges
   if (is.null(assay)) assay <- "logcounts"
   if (!assay %in% assayNames(object)) {
-    requireNamespace("scater")
-    object <- scater::logNormCounts(object)
+    # scuttle::logNormCounts is what scater::logNormCounts now calls
+    if (!requireNamespace("scuttle", quietly = TRUE)) {
+      stop("assay '", assay, "' is not in the object and 'scuttle' is needed to create it. ",
+           "Install it with BiocManager::install(\"scuttle\"), or supply a normalized assay.", call. = FALSE)
+    }
+    object <- scuttle::logNormCounts(object)
   }
   A <- assays(object)[[assay]]
 

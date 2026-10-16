@@ -112,7 +112,7 @@ RunLNMF.Seurat <- function(object,
   w <- object@reductions[[reduction.use]]@feature.loadings
   h <- object@reductions[[reduction.use]]@cell.embeddings
   assay <- object@reductions[[reduction.use]]@assay.used
-  A <- object@assays[[assay]]@data
+  A <- .assay_matrix(object, assay, "data")
   rnames <- rownames(A)
   cnames <- colnames(A)
   transpose_model <- FALSE
