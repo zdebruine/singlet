@@ -6,6 +6,7 @@
 #' @param ranks a vector of ranks at which to fit a model and compute test set reconstruction error
 #' @param n_replicates number of random test sets
 #' @param test_density fraction of values to include in the test set
+#' @param tol.overfit tolerance used when plotting the cross-validation data (see \code{plot})
 #' @param tol_overfit stopping criterion, maximum increase in test set reconstruction error at any iteration compared to test set reconstruction error at \code{trace_test_mse}
 #' @param trace_test_mse first iteration at which to calculate test set reconstruction error, and the error to compare all later iterations to when determining whether overfitting has occurred.
 #' @return a \code{data.frame} of test set reconstruction error vs. rank of class \code{nmf_cross_validate_data}. Use \code{plot} method to visualize or \code{min} to compute optimal rank.

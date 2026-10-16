@@ -9,7 +9,10 @@
 #' 3. Annotate the NMF model against existing multi-level factor information
 #' 4. Extract the model and annotations and save to an RDS file
 #'
-#' @param url download url for a Seurat v4 object
+#' @param filename path to a Seurat v4 object saved with \code{saveRDS} (download it first; this function does not fetch URLs)
+#' @param reps number of replicates for the rank search
+#' @param verbose verbosity passed to \code{RunNMF}
+#' @param L1 L1/LASSO penalty passed to \code{RunNMF}
 #' @param ... arguments to \code{RunNMF}
 #' @export
 #' @md

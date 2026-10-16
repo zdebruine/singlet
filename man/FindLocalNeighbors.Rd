@@ -31,6 +31,8 @@ FindLocalNeighbors(object, ...)
 
 \item{k.param}{Defines k for the k-nearest neighbor algorithm}
 
+\item{spatial.radius}{Radius, in the units of the spatial coordinates, within which neighbors are searched. It must not exceed the largest coordinate on either axis.}
+
 \item{spatial.reduction}{Spatial coordinates to use as input for building the (S)NN. Ensure that radius is given in the same units as spatial coordinates, and that spatial coordinates are fixed on both axes (not scaled).}
 
 \item{reduction}{Reduction to use as input for building the (S)NN}

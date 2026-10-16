@@ -7,9 +7,15 @@
 cellxgene_pipeline(filename, reps = 1, verbose = 3, L1 = 0.05, ...)
 }
 \arguments{
-\item{...}{arguments to \code{RunNMF}}
+\item{filename}{path to a Seurat v4 object saved with \code{saveRDS} (download it first; this function does not fetch URLs)}
 
-\item{url}{download url for a Seurat v4 object}
+\item{reps}{number of replicates for the rank search}
+
+\item{verbose}{verbosity passed to \code{RunNMF}}
+
+\item{L1}{L1/LASSO penalty passed to \code{RunNMF}}
+
+\item{...}{arguments to \code{RunNMF}}
 }
 \description{
 Provide a link to download a cellxgene Seurat object, and this pipeline will return a standardized annotated NMF object at the optimal rank
