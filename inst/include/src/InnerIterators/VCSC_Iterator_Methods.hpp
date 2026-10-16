@@ -145,25 +145,25 @@ namespace IVSparse {
     // Equality Operator
     template <typename T, typename indexT, bool columnMajor>
     bool SparseMatrix<T, indexT, 2, columnMajor>::InnerIterator::operator==(const InnerIterator& other) {
-        return values == other.values;
+        return vals == other.vals;
     }
 
     // Inequality Operator
     template <typename T, typename indexT, bool columnMajor>
     bool SparseMatrix<T, indexT, 2, columnMajor>::InnerIterator::operator!=(const InnerIterator& other) {
-        return values != other.values;
+        return vals != other.vals;
     }
 
     // Less Than Operator
     template <typename T, typename indexT, bool columnMajor>
     bool SparseMatrix<T, indexT, 2, columnMajor>::InnerIterator::operator<(const InnerIterator& other) {
-        return values < other.values;
+        return vals < other.vals;
     }
 
     // Greater Than Operator
     template <typename T, typename indexT, bool columnMajor>
     bool SparseMatrix<T, indexT, 2, columnMajor>::InnerIterator::operator>(const InnerIterator& other) {
-        return values > other.values;
+        return vals > other.vals;
     }
 
     // Increment Operator

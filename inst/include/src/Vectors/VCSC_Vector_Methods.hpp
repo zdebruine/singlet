@@ -42,7 +42,14 @@ SparseMatrix<T, indexT, 2, columnMajor>::Vector::Vector(
 
 
   // copy the data[vec] to the vector
-  data = mat.getMap(vec);
+  // rebuild the value -> indices map from the matrix's value/count/index arrays
+  {
+    indexT pos = 0;
+    for (indexT u = 0; u < mat.getNumUniqueVals(vec); ++u) {
+      std::vector<indexT> &idx = data[mat.values[vec][u]];
+      for (indexT k = 0; k < mat.counts[vec][u]; ++k) idx.push_back(mat.indices[vec][pos++]);
+    }
+  }
 
   calculateCompSize();
 }
