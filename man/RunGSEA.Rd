@@ -45,6 +45,8 @@ RunGSEA(
 
 \item{add.noise}{add random noise to ranks to prevent hanging, known bug in fgsea(https://github.com/alserglab/fgsea/issues/151#issuecomment-2088857387)}
 
+\item{scoreType}{scoring type passed to \code{fgsea::fgsea}: \code{"pos"} (default, positive weights only), \code{"std"} or \code{"neg"}}
+
 \item{gsea.name}{gsea name, gsea by default}
 
 \item{remove.zeros.per.factor}{option to remove genes that have weight 0 within factor (not recommended unless you can prove this is unbiased filtering)}

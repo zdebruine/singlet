@@ -102,7 +102,7 @@ ard_nmf <- function(A, k_init = 2, k_max = 100, k_min = 2, n_replicates = 1, tol
       if (verbose > 0) cat("k =", curr_rank, ", rep =", curr_rep, "\n")
       # compute the test set reconstruction error at curr_rank
       set.seed(test_seed)
-      w_init_this <- w_init[[curr_rep]][1:curr_rank, ]
+      w_init_this <- w_init[[curr_rep]][1:curr_rank, , drop = FALSE]
 
       if (!sparse_list) {
         if (dense_mode) {
@@ -115,6 +115,14 @@ ard_nmf <- function(A, k_init = 2, k_max = 100, k_min = 2, n_replicates = 1, tol
       }
       err <- tail(model$test_mse, n = 1L)
       overfit_score <- tail(model$score_overfit, n = 1L)
+      if (!is.finite(err) || length(overfit_score) != 1L || is.na(overfit_score)) {
+        # A fit that produced no usable test error (NaN from an empty test set, a degenerate
+        # matrix or a diverged model) must not reach the comparisons below, which need TRUE/FALSE.
+        warning("test-set error was not finite at k = ", curr_rank, " (replicate ", curr_rep,
+                "); the rank search for this replicate stops here", call. = FALSE)
+        k_max <- min(k_max, curr_rank)
+        break
+      }
       df <- rbind(df, data.frame("k" = as.integer(curr_rank), "rep" = as.integer(curr_rep), "test_error" = model$test_mse, "iter" = model$iter, "tol" = model$tol, "overfit_score" = overfit_score))
       if (verbose > 1) {
         cat("   test_error =", sprintf(err, fmt = "%#.4e"), "\n")
@@ -127,8 +135,12 @@ ard_nmf <- function(A, k_init = 2, k_max = 100, k_min = 2, n_replicates = 1, tol
       df_rep <- subset(df, rep == curr_rep)
       df_rep <- df_rep[order(df_rep$k), ]
       best_rank <- GetBestRank(subset(df_rep, k < k_max))
+      # every fitted rank is at or above the overfit limit: the smallest one fitted is the best we have
+      if (!is.finite(best_rank)) best_rank <- min(df_rep$k)
       df_rep <- group_by(df_rep, k) %>% slice(which.max(iter))
       rank_ind <- which(df_rep$k == best_rank)
+      # the best rank may be one that was not fitted in this replicate (it is a mean over replicates)
+      if (!length(rank_ind)) rank_ind <- which.min(abs(df_rep$k - best_rank))
       if (verbose > 1) cat("   best rank in replicate =", best_rank, "\n\n")
       if (rank_ind == nrow(df_rep)) {
         # best rank is the largest rank fit so far
@@ -158,6 +170,10 @@ ard_nmf <- function(A, k_init = 2, k_max = 100, k_min = 2, n_replicates = 1, tol
       }
     }
   }
+  if (nrow(df) == 0L) {
+    stop("rank search failed: no fit produced a finite test-set error. ",
+         "Is the matrix empty, all zeros, or much smaller than 'k_min'?", call. = FALSE)
+  }
   df$rep <- factor(df$rep)
   class(df) <- c("cross_validate_nmf_data", "data.frame")
 
@@ -170,7 +186,7 @@ ard_nmf <- function(A, k_init = 2, k_max = 100, k_min = 2, n_replicates = 1, tol
   if (verbose > 0) cat("\nFitting final model at k =", best_rank, "\n")
 
   set.seed(test_seed)
-  w_init_this <- w_init[[1]][1:best_rank, ]
+  w_init_this <- w_init[[1]][1:best_rank, , drop = FALSE]
   if (!sparse_list) {
     if (dense_mode) {
       model <- c_nmf_dense(A, At, tol, maxit, verbose > 2, L1, L2, threads, w_init_this)

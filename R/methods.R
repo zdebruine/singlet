@@ -68,17 +68,32 @@ setReplaceMethod("$", "nmf",
           })
 
 
-# make seurat objects behave vaguely like reasonable data structures 
-# if SingleCellExperiment has been loaded, since otherwise who knows
-if (requireNamespace("Seurat") & requireNamespace("SingleCellExperiment")) {
-  require("Seurat")
-  require("SingleCellExperiment")
-  setMethod("assay", "Seurat", function(x, i, withDimnames = TRUE, ...) x@assays[[i]])
-  setMethod("assays", "Seurat", function(x, withDimnames = TRUE, ...) x@assays)
-  setMethod("assayNames", "Seurat", function(x, ...) names(x@assays))
-  setMethod("metadata", "Seurat", function(x, withDimnames = TRUE, ...) x@assays[[i]])
-  setMethod("reducedDim", "Seurat", function(x, i, ...) x@reductions[[i]])
-  setMethod("reducedDims", "Seurat", function(x, ...) x@reductions)
-  setMethod("reducedDimNames", "Seurat", function(x) names(x@reductions))
+# Make Seurat objects answer the SummarizedExperiment/SingleCellExperiment accessors.
+# Registered at load time, and only when those packages are installed, so the
+# methods exist whether the package is built, installed or loaded with load_all().
+.register_seurat_accessors <- function() {
+  if (!requireNamespace("SingleCellExperiment", quietly = TRUE)) {
+    return(invisible(FALSE))
+  }
+  env <- topenv(environment(.register_seurat_accessors))
+  gen <- function(name, pkg) methods::getGeneric(name, package = pkg)
+  methods::setMethod(gen("assay", "SummarizedExperiment"), "Seurat",
+    function(x, i, withDimnames = TRUE, ...) x@assays[[i]], where = env)
+  methods::setMethod(gen("assays", "SummarizedExperiment"), "Seurat",
+    function(x, withDimnames = TRUE, ...) x@assays, where = env)
+  methods::setMethod(gen("assayNames", "SummarizedExperiment"), "Seurat",
+    function(x, ...) names(x@assays), where = env)
+  methods::setMethod(gen("metadata", "S4Vectors"), "Seurat",
+    function(x, ...) x@misc, where = env)
+  methods::setMethod(gen("reducedDim", "SingleCellExperiment"), "Seurat",
+    function(x, i, ...) x@reductions[[i]], where = env)
+  methods::setMethod(gen("reducedDims", "SingleCellExperiment"), "Seurat",
+    function(x, ...) x@reductions, where = env)
+  methods::setMethod(gen("reducedDimNames", "SingleCellExperiment"), "Seurat",
+    function(x) names(x@reductions), where = env)
+  invisible(TRUE)
 }
 
+.onLoad <- function(libname, pkgname) {
+  tryCatch(.register_seurat_accessors(), error = function(e) NULL)
+}

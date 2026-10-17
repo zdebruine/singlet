@@ -11,20 +11,24 @@
 #'
 PreprocessData.Seurat <- function(object, scale.factor = 10000, assay = NULL, ...) {
   if (is.null(assay)) assay <- names(object@assays)[[1]]
-  if (is.null(object@assays[[assay]]@key)) {
-    object@assays[[assay]]@key <- paste0(assay, "_")
+  # Normalize the raw counts when the assay has them, otherwise whatever is in the data layer.
+  # This goes through the layer accessors, so it serves Assay (v3/v4) and Assay5 (v5) alike.
+  counts <- .assay_matrix(object, assay, "counts")
+  if (is.null(counts)) counts <- .assay_matrix(object, assay, "data")
+  if (is.null(counts)) {
+    stop("assay '", assay, "' has neither a 'counts' nor a 'data' layer to normalize. ",
+         "If the layers are split, join them first with SeuratObject::JoinLayers().", call. = FALSE)
   }
-  object@assays[[assay]] <- PreprocessData(object@assays[[assay]], ...)
-  object
+  .set_assay_matrix(object, assay, "data", PreprocessData(counts, scale.factor = scale.factor, ...))
 }
 
 #' @rdname PreprocessData
 #' @export
 PreprocessData.Assay <- function(object, scale.factor = 10000, ...) {
   if (ncol(object@counts) == 0) {
-    object@data <- PreprocessData(object@data, ...)
+    object@data <- PreprocessData(object@data, scale.factor = scale.factor, ...)
   } else {
-    object@data <- PreprocessData(object@counts, ...)
+    object@data <- PreprocessData(object@counts, scale.factor = scale.factor, ...)
   }
   object
 }

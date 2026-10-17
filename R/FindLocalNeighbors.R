@@ -14,6 +14,7 @@
 #' @param object An object
 #' @param ... not implemented
 #' @param k.param Defines k for the k-nearest neighbor algorithm
+#' @param spatial.radius Radius, in the units of the spatial coordinates, within which neighbors are searched. It must not exceed the largest coordinate on either axis.
 #' @param spatial.reduction Spatial coordinates to use as input for building the (S)NN. Ensure that radius is given in the same units as spatial coordinates, and that spatial coordinates are fixed on both axes (not scaled).
 #' @param compute.SNN also compute the shared nearest neighbor graph
 #' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 = no pruning, 1 = prune everything).

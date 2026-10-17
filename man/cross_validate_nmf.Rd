@@ -52,6 +52,8 @@ cross_validate_nmf(
 
 \item{detail}{level of detail to plot}
 
+\item{tol.overfit}{tolerance used when plotting the cross-validation data (see \code{plot})}
+
 \item{...}{additional arguments (not implemented)}
 }
 \value{

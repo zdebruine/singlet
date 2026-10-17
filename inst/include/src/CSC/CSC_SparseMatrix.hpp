@@ -74,6 +74,11 @@ namespace IVSparse {
         // Matrix Vector Multiplication
         inline Eigen::VectorXd vectorMultiply(Eigen::VectorXd& vec);
 
+        // Declared here because vectorMultiply below names it
+    public:
+        class Vector;
+
+    private:
         // Matrix Vector Multiplication 2 (with IVSparse Vector)
         inline Eigen::VectorXd vectorMultiply(
             typename SparseMatrix<T, indexT, 1, columnMajor>::Vector& vec);
@@ -104,7 +109,6 @@ namespace IVSparse {
         //* Nested Subclasses *//
 
         // Vector Class for CSC Sparse Matrices
-        class Vector;
 
         // Iterator Class for CSC Sparse Matrices
         class InnerIterator;

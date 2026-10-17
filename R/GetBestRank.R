@@ -6,6 +6,8 @@
 #' @export
 #'
 GetBestRank <- function(df, tol.overfit = 1e-4, ...) {
+  # nothing was fitted (for example every candidate rank is above an overfit limit): no best rank
+  if (nrow(df) == 0L) return(NA_integer_)
   df$rep <- factor(df$rep)
   best_ranks <- c()
   for (replicate in levels(df$rep)) {

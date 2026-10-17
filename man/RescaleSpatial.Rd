@@ -5,12 +5,16 @@
 \alias{RescaleSpatial}
 \title{Rescale spatial coordinates}
 \usage{
-\method{RescaleSpatial}{Seurat}(object, reduction = "spatial")
+\method{RescaleSpatial}{Seurat}(object, reduction = "spatial", ...)
+
+RescaleSpatial(object, ...)
 }
 \arguments{
 \item{object}{Seurat object}
 
 \item{reduction}{the name of the spatial reduction to use}
+
+\item{...}{not implemented}
 }
 \value{
 Seurat object with rescaled spatial coordinates

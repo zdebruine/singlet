@@ -4,11 +4,12 @@
 #' 
 #' @param object Seurat object
 #' @param reduction the name of the spatial reduction to use
+#' @param ... not implemented
 #' @export
 #' @return Seurat object with rescaled spatial coordinates
 #' @aliases RescaleSpatial.Seurat
 #' @rdname RescaleSpatial
-RescaleSpatial.Seurat <- function(object, reduction = "spatial"){
+RescaleSpatial.Seurat <- function(object, reduction = "spatial", ...){
   df <- object@reductions[[reduction]]@cell.embeddings
   df[,1] <- df[,1] - min(df[,1])
   df[,2] <- df[,2] - min(df[,2])
@@ -22,8 +23,8 @@ RescaleSpatial.Seurat <- function(object, reduction = "spatial"){
 }
 
 
-#' @rdname RunGCNMF
-#' @name RunGCNMF
+#' @rdname RescaleSpatial
+#' @name RescaleSpatial
 #' @export
 #'
 RescaleSpatial <- function(object, ...) {

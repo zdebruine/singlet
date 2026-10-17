@@ -48,12 +48,9 @@ ProjectData.Seurat <- function(object, w,
     assay <- names(object@assays)[[1]]
   }
   
-  # check if data has been normalized
-  v <- object@assays[[assay]]@data@x
-  if (sum(as.integer(v)) == sum(v)) {
-    object <- PreprocessData(object, assay = assay)
-  }
-  A <- object@assays[[assay]]@data
+  # make sure the assay holds log-normalized data (works for Seurat v3/v4 Assay and v5 Assay5)
+  object <- .ensure_normalized(object, assay)
+  A <- .assay_matrix(object, assay, "data")
   rnames <- rownames(A)
   cnames <- colnames(A)
   
@@ -65,7 +62,7 @@ ProjectData.Seurat <- function(object, w,
     A <- weight_by_split(A, split.by, length(unique(split.by)))
   }
   
-  w <- w[which(rownames(w) %in% rownames(A)), ]
+  w <- w[which(rownames(w) %in% rownames(A)), , drop = FALSE]
   A <- A[which(rownames(A) %in% rownames(w)), ]
   
   nmf_model <- project_model(A, w, L1, L2, threads)
@@ -86,6 +83,7 @@ ProjectData.Seurat <- function(object, w,
                                              feature.loadings.projected = nmf_model$w,
                                              assay.used = assay,
                                              stdev = nmf_model$d,
+                                             global = FALSE,
                                              key = reduction.key)
   object
 }
@@ -147,7 +145,7 @@ ProjectData.SingleCellExperiment <- function(object,
       !all(rownames(A) %in% rownames(w))) {
     warning("Some genes are missing from the data to be projected.")
   }
-  w <- w[which(rownames(w) %in% rownames(A)), ]
+  w <- w[which(rownames(w) %in% rownames(A)), , drop = FALSE]
   A <- A[which(rownames(A) %in% rownames(w)), ]
  
   # project

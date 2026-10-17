@@ -1,0 +1,55 @@
+name: R-CMD-check
+
+# Builds the package (including the C++ code) and runs the tests on Linux, macOS and
+# Windows against current Seurat. Bioconductor dependencies (limma, fgsea) are resolved
+# by the setup action.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  R-CMD-check:
+    runs-on: ${{ matrix.config.os }}
+    name: ${{ matrix.config.os }} (R ${{ matrix.config.r }})
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { os: ubuntu-latest,  r: release }
+          - { os: macos-latest,   r: release }
+          - { os: windows-latest, r: release }
+          - { os: ubuntu-latest,  r: oldrel-1 }
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: r-lib/actions/setup-pandoc@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          http-user-agent: ${{ matrix.config.http-user-agent }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          # The vignettes need SeuratData and a long download, so they are not rebuilt here.
+          # Warnings from the vendored C++ headers and undocumented S4 methods are reported
+          # but do not fail the job; errors do.
+          args: 'c("--no-manual", "--as-cran", "--ignore-vignettes")'
+          build_args: 'c("--no-build-vignettes")'
+          error-on: '"error"'
+          upload-snapshots: true
