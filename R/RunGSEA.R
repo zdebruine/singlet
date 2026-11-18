@@ -25,58 +25,210 @@
 #'
 #' @export
 #'
-RunGSEA <- function(object, ID = "gene_symbol", reduction = "nmf", species = "Homo sapiens", category = "C5",
-                    min.size = 10, max.size = 500, dims = NULL,
-                    verbose = TRUE, padj.sig = 0.01, add.noise = FALSE, scoreType = "pos", gsea.name = "gsea",remove.zeros.per.factor = FALSE,...) {
+RunGSEA <- function(object,...){
+  UseMethod("RunGSEA")
+}
 
+#' Annotate NMF model with cell or sample metadata
+#'
+#' @rdname RunGSEA
+#' @aliases RunGSEA
+#'
+#' @export
+#'
+RunGSEA.Seurat = function(object, ID = "gene_symbol", reduction = "nmf", species = "Homo sapiens", category = "C5",
+                          min.size = 10, max.size = 500, dims = NULL,
+                          verbose = TRUE, padj.sig = 0.01, add.noise = FALSE, scoreType = "pos", gsea.name = "gsea",remove.zeros.per.factor = FALSE,...){
+  
+  w <- object@reductions[[reduction]]@feature.loadings
+  
+  object@reductions[[reduction]]@misc[[gsea.name]] = RunGSEA(object = w,
+                                                                    ID = ID,
+                                                                    species = species,
+                                                                    category = category,
+                                                                    min.size = min.size,
+                                                                    max.size = max.size,
+                                                                    dims = dims,
+                                                                    verbose = verbose,
+                                                                    padj.sig = padj.sig,
+                                                                    add.noise = add.noise,
+                                                                    scoreType = scoreType,
+                                                                    remove.zeros.per.factor = remove.zeros.per.factor,
+                                                                    ...)
+  
+  return(object)
+}
+
+#' @rdname RunGSEA
+#' @name RunGSEA
+#'
+#' @export
+#'
+.S3method("RunGSEA", "Seurat", RunGSEA.Seurat)
+
+
+#' Annotate NMF model with cell or sample metadata
+#'
+#' @rdname RunGSEA
+#' @aliases RunGSEA
+#'
+#' @export
+#'
+RunGSEA.SingleCellExperiment = function(object, ID = "gene_symbol", reduction = "nmf", species = "Homo sapiens", category = "C5",
+                                        min.size = 10, max.size = 500, dims = NULL,
+                                        verbose = TRUE, padj.sig = 0.01, add.noise = FALSE, scoreType = "pos", gsea.name = "gsea",remove.zeros.per.factor = FALSE,...){
+  object@metadata[[reduction]] = RunGSEA(object = object@metadata[[reduction]],
+                                         ID = ID,
+                                         species = species,
+                                         category = category,
+                                         min.size = min.size,
+                                         max.size = max.size,
+                                         dims = dims,
+                                         verbose = verbose,
+                                         padj.sig = padj.sig,
+                                         add.noise = add.noise,
+                                         scoreType = scoreType,
+                                         gsea.name = gsea.name,
+                                         remove.zeros.per.factor = remove.zeros.per.factor,
+                                         ...)
+  
+  return(object)
+}
+
+#' @rdname RunGSEA
+#' @name RunGSEA
+#'
+#' @export
+#'
+.S3method("RunGSEA", "SingleCellExperiment", RunGSEA.SingleCellExperiment)
+
+#' Annotate NMF model with cell or sample metadata
+#'
+#' @rdname RunGSEA
+#' @aliases RunGSEA
+#'
+#' @export
+#'
+RunGSEA.nmfList = function(object, ID = "gene_symbol", species = "Homo sapiens", category = "C5",
+                        min.size = 10, max.size = 500, dims = NULL,
+                        verbose = TRUE, padj.sig = 0.01, add.noise = FALSE, scoreType = "pos", gsea.name = "gsea",remove.zeros.per.factor = FALSE,...){
+  w = object$w
+  
+  object[[gsea.name]] = RunGSEA(object = w,
+                                       ID = ID,
+                                       species = species,
+                                       category = category,
+                                       min.size = min.size,
+                                       max.size = max.size,
+                                       dims = dims,
+                                       verbose = verbose,
+                                       padj.sig = padj.sig,
+                                       add.noise = add.noise,
+                                       scoreType = scoreType,
+                                       remove.zeros.per.factor = remove.zeros.per.factor,
+                                       ...)
+  return(object)
+}
+
+#' @rdname RunGSEA
+#' @name RunGSEA
+#'
+#' @export
+#'
+.S3method("RunGSEA", "nmfList", RunGSEA.nmfList)
+
+#' Annotate NMF model with cell or sample metadata
+#'
+#' @rdname RunGSEA
+#' @aliases RunGSEA
+#'
+#' @export
+#'
+RunGSEA.nmf = function(object, ID = "gene_symbol", species = "Homo sapiens", category = "C5",
+                       min.size = 10, max.size = 500, dims = NULL,
+                       verbose = TRUE, padj.sig = 0.01, add.noise = FALSE, scoreType = "pos", gsea.name = "gsea",remove.zeros.per.factor = FALSE,...){
+  w <- object@w
+  
+  object@misc[[gsea.name]] = RunGSEA(object = w,
+                                            ID = ID,
+                                            species = species,
+                                            category = category,
+                                            min.size = min.size,
+                                            max.size = max.size,
+                                            dims = dims,
+                                            verbose = verbose,
+                                            padj.sig = padj.sig,
+                                            add.noise = add.noise,
+                                            scoreType = scoreType,
+                                            remove.zeros.per.factor = remove.zeros.per.factor,
+                                            ...)
+  return(object)
+}
+
+#' @rdname RunGSEA
+#' @name RunGSEA
+#'
+#' @export
+#'
+.S3method("RunGSEA", "nmf", RunGSEA.nmf)
+
+
+
+#' Annotate NMF model with cell or sample metadata
+#'
+#' @rdname RunGSEA
+#' @aliases RunGSEA
+#'
+#' @export
+#'
+RunGSEA.matrix <- function(object, ID = "gene_symbol", species = "Homo sapiens", category = "C5",
+                           min.size = 10, max.size = 500, dims = NULL,
+                           verbose = TRUE, padj.sig = 0.01, add.noise = FALSE, scoreType = "pos",remove.zeros.per.factor = FALSE,...) {
+  
   if (verbose) cat("fetching gene sets\n")
   gene_sets <- msigdbr(species = species, category = category, ...)
-
+  
   if (verbose) cat("filtering pathways\n")
   pathways <- split(x = gene_sets[[ID]], f = gene_sets$gs_name)
   pathways <- pathways[lapply(pathways, length) > min.size]
-
+  
   if (verbose) cat("filtering genes in pathways to those in reduction\n")
   genes_in_pathways <- unique(unlist(pathways))
-
-  # work on RcppML nmf objects too: 
-  if (is(object, "Seurat")) {
-    w <- object@reductions[[reduction]]@feature.loadings
-  } else if (is(object, "nmf")) { 
-    w <- object@w
-  }
-  if (!is.null(dims)) w <- w[, dims]
+  
+  if (!is.null(dims)) object <- object[, dims,drop=FALSE]
   
   
   #this might be redundant fgsea looks to already be removing pathways in preparePathways() based on genes
   #they are also removing pathways that do not meet the max and min size
   #https://github.com/alserglab/fgsea/blob/d6f1670c60bbc48ad1a95f98dc52921ec98d2542/R/util.R#L1
   if (verbose) cat("filtering genes in reduction to those in pathways\n")
-  w <- w[which(rownames(w) %in% genes_in_pathways), ]
-  pathways <- lapply(pathways, function(x) x[x %in% rownames(w)])
+  object <- object[which(rownames(object) %in% genes_in_pathways), ,drop=FALSE]
+  pathways <- lapply(pathways, function(x) x[x %in% rownames(object)])
   v <- lapply(pathways, length)
   pathways <- pathways[which(v > min.size & v < max.size)]
-
+  
   #remove genes that are 0 across all factors
-  row_sum = rowSums(w)
+  #abs make it work for more than just nmf factors
+  row_sum = rowSums(abs(object))
   if (any(row_sum == 0)){
     cat("Rows with all 0 detected. Removing...\n")
-    w = w[row_sum !=0,]
+    object = object[row_sum !=0,,drop=FALSE]
   }
   
   
-  cat("running GSEA on", ncol(w), "factors...\n")
-  pb <- utils::txtProgressBar(min = 0, max = ncol(w), style = 3)
+  cat("running GSEA on", ncol(object), "factors...\n")
+  pb <- utils::txtProgressBar(min = 0, max = ncol(object), style = 3)
   results <- list()
-  for (i in 1:ncol(w)) {
+  ranksList = list()
+  for (i in 1:ncol(object)) {
     #this is also redundant as fgsea also sorts automatically in preparePathwaysAndStats()
     #https://github.com/alserglab/fgsea/blob/d6f1670c60bbc48ad1a95f98dc52921ec98d2542/R/fgsea.R#L41
-    ranks <- sort(w[, i])
+    ranks <- sort(object[, i])
     
     #I need to check if this is unbiased filtering.
     if(remove.zeros.per.factor){
       ranks = ranks[ranks != 0]
-
+      
     }
     
     
@@ -91,78 +243,28 @@ RunGSEA <- function(object, ID = "gene_symbol", reduction = "nmf", species = "Ho
       pathways, ranks,
       minSize = min.size, maxSize = max.size, scoreType = scoreType
     ))
-    
+    ranksList[[i]] = ranks
     
     utils::setTxtProgressBar(pb, i)
   }
   close(pb)
   
-  results = padData(results)
-  
-  pval <- do.call(cbind, lapply(results, function(x) x$pval))
-  padj <- do.call(cbind, lapply(results, function(x) x$padj))
-  es <- do.call(cbind, lapply(results, function(x) x$ES))
-  nes <- do.call(cbind, lapply(results, function(x) x$NES))
-  rownames(pval) <- rownames(padj) <- rownames(es) <- rownames(nes) <- results[[1]]$pathway
-
-  idx <- which(apply(padj, 1, function(x) min(x) < padj.sig))
-
-  if (!is.null(dims)) {
-    dims <- paste0(reduction, dims)
-  } else if (is(object, "Seurat")) {
-    dims <- paste0(reduction, 1:ncol(object@reductions[[reduction]]))
-  } else if (is(object, "nmf")) {
-    dims <- paste0("nmf", 1:ncol(w))
+  factor_names = colnames(object)
+  if (is.null(factor_names)) {
+    factor_names = paste0("factor", seq_len(ncol(object)))
   }
-  colnames(pval) <- colnames(padj) <- colnames(es) <- colnames(nes) <- dims
-
-  # reorder with hclust
-  padj <- -log10(padj)
-  pval <- -log10(pval)
+  names(results) = factor_names
+  names(ranksList) = factor_names
   
-  row_order <- hclust(dist(na.omit(padj)), method = "ward.D2")$order
-  col_order <- hclust(dist(t(na.omit(padj))), method = "ward.D2")$order
-  pval <- pval[row_order, col_order]
-  padj <- padj[row_order, col_order]
-  es <- es[row_order, col_order]
-  nes <- nes[row_order, col_order]
-
-  if (is(object, "Seurat")) {
-    object@reductions[[reduction]]@misc[[gsea.name]] <- 
-      list("pval" = pval, "padj" = padj, "es" = es, "nes" = nes)
-  } else if (is(object, "nmf")) { 
-    object@misc[[gsea.name]] <- 
-      list("pval" = pval, "padj" = padj, "es" = es, "nes" = nes)
-  }
-
-  object
+  
+  return(list(gsea = results,ranks = ranksList,pathways = pathways))
 }
+#' @rdname RunGSEA
+#' @name RunGSEA
+#'
+#' @export
+#'
+.S3method("RunGSEA", "matrix", RunGSEA.matrix)
 
-uniquePathways = function(resultList){
-  vec = character()
-  for (i in 1:length(resultList) ){
-    vec = c(vec,resultList[[i]]$pathway)
-  }
-  
-  return(unique(vec))
-}
 
-fill_missing = function(df,pathways){
-  temp = data.frame(pathway = pathways)
-  joined = merge(temp, df, by = "pathway", all.x = TRUE)
-  
-  reordered_ind = match(pathways,joined$pathway)
-  joined = joined[reordered_ind,]
-  rownames(joined) = 1:nrow(joined)
-  
-  return(joined)
-}
 
-padData = function(resultList){
-  pathways = uniquePathways(resultList)
-  
-  padded_results = lapply(resultList,fill_missing,pathways = pathways)
-  
-  return(padded_results)
-  
-}

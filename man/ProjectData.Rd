@@ -76,6 +76,4 @@ Use \code{set.seed()} to guarantee reproducibility!
 }
 \seealso{
 \code{\link{RunLNMF}}, \code{\link{MetadataSummary}}
-
-\code{\link{RunLNMF}}, \code{\link{MetadataSummary}}
 }

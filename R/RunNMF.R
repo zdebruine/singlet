@@ -249,7 +249,9 @@ RunNMF.SingleCellExperiment <- function(object,
     object <- scuttle::logNormCounts(object)
   }
   A <- assays(object)[[assay]]
-
+  if (!inherits(A, "dgCMatrix")) {
+    A <- methods::as(A, "dgCMatrix")
+  }
   if (!is.null(split.by)) {
     split.by <- as.integer(as.numeric(as.factor(colData(object)[[split.by]]))) - 1
     if (any(sapply(split.by, is.na))) stop("'split.by' can't contain NA values")
@@ -257,6 +259,7 @@ RunNMF.SingleCellExperiment <- function(object,
   }
 
   At <- Matrix::t(A)
+  
   seed.use <- abs(.Random.seed[[3]])
 
   if (!is.null(k) && length(k) > 1) {
@@ -318,9 +321,11 @@ RunNMF.SingleCellExperiment <- function(object,
   rownames(nmf_model$w) <- rownames(object)
   colnames(nmf_model$h) <- colnames(object)
   requireNamespace("SummarizedExperiment")
-  metadata(object)[["nmf_model"]] <- nmf_model
-  metadata(object)[["cv_data"]] <- nmf_model$cv_data
+  class(nmf_model) <- c("nmfList","list")
+  metadata(object)[[reduction.name]] <- nmf_model
+  metadata(object)[[paste0(reduction.name,"_cv_data")]] <- nmf_model$cv_data
   SingleCellExperiment::reducedDim(object, reduction.name) <- t(nmf_model$h)
+  
   object
 }
 

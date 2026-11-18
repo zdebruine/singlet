@@ -6,3 +6,8 @@ src/*.o
 src/*.so
 src/*.dll
 Makefile
+
+# R data files in home dir
+/*.rds
+/*.RData
+/test_sce

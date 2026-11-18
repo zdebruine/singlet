@@ -27,7 +27,10 @@ getModelResults <- function(fit, noneg=TRUE, noint=TRUE, tail = "pos") {
   names(fcl)[3] <- "lods"
   fct <- with(fit, melt(t))
   names(fct)[3] <- "t"
+  fcc <- with(fit, melt(coefficients))
+  names(fcc)[3] <- "coefficients"
   fcp <- merge(fcl, fct)
+  fcp = merge(fcp,fcc)
   names(fcp)[1:2] <- c("factor", "group")
   fcp$df <- fit$df.total[fcp$factor]
   
@@ -51,6 +54,6 @@ getModelResults <- function(fit, noneg=TRUE, noint=TRUE, tail = "pos") {
   if (noint) fcp <- subset(fcp, group != "(Intercept)")
   if (length(fcp) == 0) message("No associations after filtering.")
   names(fcp) <- sub("^lods$", "fc", names(fcp))
-  return(fcp[, c("group", "factor", "fc", "p")])
+  return(fcp[, c("group", "factor", "fc", "p","coefficients")])
 
 }

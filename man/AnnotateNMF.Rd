@@ -3,8 +3,10 @@
 \name{AnnotateNMF}
 \alias{AnnotateNMF}
 \alias{AnnotateNMF.DimReduc}
-\alias{AnnotateNMF.Seurat}
 \alias{AnnotateNMF.nmf}
+\alias{AnnotateNMF.list}
+\alias{AnnotateNMF.Seurat}
+\alias{AnnotateNMF.SingleCellExperiment}
 \title{annotate an NMF model}
 \usage{
 AnnotateNMF(object, ...)
@@ -12,6 +14,32 @@ AnnotateNMF(object, ...)
 \method{AnnotateNMF}{DimReduc}(
   object,
   meta.data = NULL,
+  columns = NULL,
+  designs = NULL,
+  center = TRUE,
+  scale = FALSE,
+  max.levels = 200,
+  tail = "pos",
+  annotation.name = "annotations",
+  ...
+)
+
+\method{AnnotateNMF}{nmf}(
+  object,
+  meta.data,
+  columns = NULL,
+  designs = NULL,
+  center = TRUE,
+  scale = FALSE,
+  max.levels = 200,
+  tail = "pos",
+  annotation.name = "annotations",
+  ...
+)
+
+\method{AnnotateNMF}{list}(
+  object,
+  meta.data,
   columns = NULL,
   designs = NULL,
   center = TRUE,
@@ -31,14 +59,10 @@ AnnotateNMF(object, ...)
   ...
 )
 
-\method{AnnotateNMF}{nmf}(
+\method{AnnotateNMF}{SingleCellExperiment}(
   object,
-  meta.data,
   columns = NULL,
-  designs = NULL,
-  center = TRUE,
-  scale = FALSE,
-  max.levels = 200,
+  reduction = "nmf",
   tail = "pos",
   annotation.name = "annotations",
   ...
@@ -73,11 +97,21 @@ annotate an NMF model
 Annotate NMF model with cell or sample metadata
 
 Annotate NMF model with cell metadata
+
+Annotate NMF model from singlet with cell metadata
 }
 \details{
 Maps factor information in an RcppML::nmf object against meta.data
+
+Maps factor information in an singlet list nmf object against meta.data
 }
 \examples{
+\dontrun{
+get_pbmc3k_data() \%>\%
+  NormalizeData() \%>\%
+  RunNMF() -> pbmc3k
+AnnotateNMF(pbmc3k)
+}
 \dontrun{
 get_pbmc3k_data() \%>\%
   NormalizeData() \%>\%
