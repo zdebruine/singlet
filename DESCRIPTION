@@ -19,6 +19,7 @@ Remotes: zdebruine/RcppML
 Depends:
     R (>= 4.1.0),
     Seurat,
+    SingleCellExperiment,
     RcppML (>= 1.0.0),
     dplyr
 Imports:
@@ -43,7 +44,6 @@ Suggests:
     cowplot,
     viridis,
     testthat (>= 3.0.0),
-    SingleCellExperiment,
     S4Vectors,
     SummarizedExperiment,
     scuttle,
